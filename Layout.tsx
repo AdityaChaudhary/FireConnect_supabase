@@ -1,12 +1,14 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import BottomNav from './components/BottomNav';
+import { useAuth } from './context/AuthContext';
 
 interface LayoutProps {
     children: React.ReactNode;
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
+    const { user } = useAuth();
     const location = useLocation();
     // Hide bottom nav on specific pages
     const hideOn = ['/welcome', '/credits-welcome', '/notifications'];
@@ -17,7 +19,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
     return (
         <div className="bg-background-dark min-h-screen font-display">
-            <div className="max-w-md mx-auto min-h-screen relative bg-background-dark">
+            <div className={`${location.pathname === '/landing' || !user ? '' : 'max-w-md mx-auto'} min-h-screen relative bg-background-dark`}>
                 {children}
             </div>
             {showBottomNav && <BottomNav />}

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { PLAN_THEMES, PLAN_DESCRIPTIONS, PLAN_FEATURES } from '../config/plans';
 import CdnImage from '../components/CdnImage';
+import { getDefaultAvatar } from '../lib/image-utils';
 
 interface Plan {
     id: string;
@@ -200,8 +201,11 @@ const Landing: React.FC = () => {
 
             <section className="relative min-h-[95vh] flex items-center justify-center pt-52 pb-32 overflow-hidden">
                 <div className="absolute inset-0 z-0">
-                    <div className="w-full h-full bg-cover bg-center bg-no-repeat scale-105" style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuAgjxMpW4WVYBYghX_t95Rgw78gdZgzFBpi-KjvaLXjabyRFG1eEW0ITSD1ZESiSUhn7doxUfIQtjFWeIGL7D967lqoyvJ2WWeCa5YesTrThpx7GVJCeYQclNvGzaHIxX6RBmfTdee1nmUEsFZpSWiI1RYW1KLPE21YGZK6SN7hsqZM6jaIaBfBaVXVZfAEihl313HV5whoqRt9gVI3YXEOuceAGPQPcD1_IpzXpJBqpqg_PoDg1Je3cHJRVRjvPQ8aVGD9f4zDbUuI")' }}>
-                    </div>
+                    <CdnImage
+                        path="https://lh3.googleusercontent.com/aida-public/AB6AXuAgjxMpW4WVYBYghX_t95Rgw78gdZgzFBpi-KjvaLXjabyRFG1eEW0ITSD1ZESiSUhn7doxUfIQtjFWeIGL7D967lqoyvJ2WWeCa5YesTrThpx7GVJCeYQclNvGzaHIxX6RBmfTdee1nmUEsFZpSWiI1RYW1KLPE21YGZK6SN7hsqZM6jaIaBfBaVXVZfAEihl313HV5whoqRt9gVI3YXEOuceAGPQPcD1_IpzXpJBqpqg_PoDg1Je3cHJRVRjvPQ8aVGD9f4zDbUuI"
+                        useAsBackground
+                        className="w-full h-full bg-cover bg-center bg-no-repeat scale-105"
+                    />
                     <div className="absolute inset-0 bg-gradient-to-b from-charcoal/90 via-charcoal/80 to-charcoal"></div>
                     <div className="absolute inset-0 bg-gradient-to-r from-charcoal via-transparent to-charcoal/90"></div>
                     <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-neon-purple/20 rounded-full blur-[120px] mix-blend-screen animate-pulse-slow"></div>
@@ -285,6 +289,7 @@ const Landing: React.FC = () => {
                             const lastSeen = member.user_online_status?.[0]?.last_seen_at;
                             const isOnline = lastSeen ? (Date.now() - new Date(lastSeen).getTime()) < 120000 : false;
                             const age = member.date_of_birth ? new Date().getFullYear() - new Date(member.date_of_birth).getFullYear() : 22;
+                            const profilePic = member.profile_picture_url || getDefaultAvatar(member.gender);
 
                             return (
                                 <div key={`${member.id}-${i}`} className="min-w-[280px] md:min-w-[320px] snap-center group relative cursor-pointer" onClick={() => handleAuth(member.id)}>
@@ -295,7 +300,8 @@ const Landing: React.FC = () => {
                                                 <span className="text-[10px] font-bold uppercase tracking-wider text-white">{isOnline ? 'Online' : 'Offline'}</span>
                                             </div>
                                             <CdnImage
-                                                path={member.profile_picture_url}
+                                                path={profilePic}
+                                                placeholder={getDefaultAvatar(member.gender)}
                                                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                                             />
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60"></div>
@@ -359,8 +365,11 @@ const Landing: React.FC = () => {
                             <div className="relative order-1 md:order-2">
                                 <div className="relative w-full aspect-[4/5] md:aspect-square rounded-[40px] overflow-hidden border border-white/10 shadow-2xl">
                                     <div className="absolute inset-0 w-full h-full bg-black">
-                                        <div className="w-full h-full bg-cover bg-center filter blur-lg scale-105" style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuA9Pg6jndpLLJVSPEMbe9GHz4kGr0UJnWGDkFhG3qHpIeivNctbFVSYFcyJEj3WOywabNBu1zGDnnJ47T2SisF6XR6pNePY1hZJc3TrRGGScP4ZsweTLPv2WLR435fuiWEDzmm9os_q2GZdudsiyMtKhTRLGRHFfHpmQe2pwPIx7wV-TAC2wjwV27j26ekEWAw3FYeAW4uTmVe514Wdfoy3iGc4nxedAiZpFYTrphL8aJyX9wIX5qa90Y-JI1X4DEVNSWeuLKEkUJ9X")', opacity: 0.8 }}>
-                                        </div>
+                                        <CdnImage
+                                            path="https://lh3.googleusercontent.com/aida-public/AB6AXuA9Pg6jndpLLJVSPEMbe9GHz4kGr0UJnWGDkFhG3qHpIeivNctbFVSYFcyJEj3WOywabNBu1zGDnnJ47T2SisF6XR6pNePY1hZJc3TrRGGScP4ZsweTLPv2WLR435fuiWEDzmm9os_q2GZdudsiyMtKhTRLGRHFfHpmQe2pwPIx7wV-TAC2wjwV27j26ekEWAw3FYeAW4uTmVe514Wdfoy3iGc4nxedAiZpFYTrphL8aJyX9wIX5qa90Y-JI1X4DEVNSWeuLKEkUJ9X"
+                                            useAsBackground
+                                            className="w-full h-full bg-cover bg-center filter blur-lg scale-105 opacity-80"
+                                        />
                                         <div className="absolute w-full h-1 bg-fire-pink shadow-[0_0_20px_#ff0055] animate-scan z-20 top-0 left-0"></div>
                                         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-fire-pink/10 to-transparent z-10 animate-scan" style={{ height: '20%' }}></div>
                                         <div className="absolute inset-0 flex flex-col items-center justify-center z-30">
