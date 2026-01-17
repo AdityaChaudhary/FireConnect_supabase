@@ -33,3 +33,7 @@ exportedData/
 
 scripts/bucket/
 scripts/bucket_local/
+
+# Env files
+.env
+.env.local
