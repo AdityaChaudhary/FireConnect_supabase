@@ -38,7 +38,7 @@ const Discover: React.FC = () => {
                         ${(stripeRole || 'FREE').toUpperCase() === 'MAX' ? 'bg-purple-500/10 border-purple-500/30 text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.2)]' :
                             (stripeRole || 'FREE').toUpperCase() === 'PRO' ? 'bg-primary/10 border-primary/30 text-primary shadow-[0_0_15px_rgba(236,19,146,0.2)]' :
                                 'bg-white/5 border-white/10 text-white/40'}`}>
-                        {stripeRole || 'FREE'}
+                        {stripeRole || 'LITE'}
                     </div>
                 </div>
                 <h1 className="absolute left-1/2 -translate-x-1/2 text-2xl font-bold bg-gradient-to-r from-white via-primary/80 to-primary bg-clip-text text-transparent tracking-tight">

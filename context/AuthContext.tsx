@@ -71,7 +71,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 console.log("AuthContext: Profile loaded", data?.username || "no username");
                 setProfile(data as Profile);
 
-                // Fetch real-time subscription from Stripe Wrapper
+                // Immediately set stripeRole from profile cache to avoid jitter
+                if (data?.stripe_role) {
+                    console.log("AuthContext: Setting stripeRole from profile cache:", data.stripe_role);
+                    setStripeRole(data.stripe_role.toLowerCase());
+                }
+
+                // Fetch real-time subscription from Stripe Wrapper in background
                 console.log("AuthContext: Fetching subscription for", currentUser.id);
                 const { data: subData, error: subError } = await supabase.rpc('get_subscription_info', {
                     user_id: currentUser.id
@@ -79,16 +85,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                 if (subError) {
                     console.error("AuthContext: Error fetching subscription:", subError);
-                    setStripeRole(data?.stripe_role?.toLowerCase() || 'free');
+                    // Fallback to profile role which we already set
+                    if (!data?.stripe_role) setStripeRole('free');
                     setSubscription(null);
                 } else {
                     const activeSub = subData && subData.length > 0 ? subData[0] : null;
                     console.log("AuthContext: Subscription details:", activeSub);
                     setSubscription(activeSub);
                     if (activeSub && activeSub.status === 'active') {
-                        setStripeRole(activeSub.role?.toLowerCase() || 'free');
+                        const newRole = activeSub.role?.toLowerCase() || 'free';
+                        setStripeRole(newRole);
+                        
+                        // If cached role is different, update it silently in background
+                        if (data?.stripe_role?.toLowerCase() !== newRole) {
+                            console.log("AuthContext: Syncing cache... cache:", data?.stripe_role, "real:", newRole);
+                            supabase.from('users').update({ stripe_role: newRole.toUpperCase() }).eq('id', currentUser.id).then();
+                        }
                     } else {
                         setStripeRole('free');
+                        if (data?.stripe_role !== 'FREE') {
+                            supabase.from('users').update({ stripe_role: 'FREE' }).eq('id', currentUser.id).then();
+                        }
                     }
                 }
 
@@ -116,8 +133,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if (initialSession) {
                     setSession(initialSession);
                     setUser(initialSession.user);
-                    // Start profile refresh in background, don't await to avoid blocking UI
-                    refreshProfile(initialSession.user);
+                    // Await profile refresh on first load to prevent flash of "FREE" status
+                    await refreshProfile(initialSession.user);
                 }
             } catch (err) {
                 console.error("AuthContext: Error during initialization:", err);

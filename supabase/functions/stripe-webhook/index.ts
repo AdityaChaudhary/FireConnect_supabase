@@ -2,7 +2,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import Stripe from "https://esm.sh/stripe@14.14.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { handleAddSpyCredits } from "./credits.ts";
+import { handleAddSpyCredits, handleSubscriptionDeleted } from "./credits.ts";
 
 const stripe = new Stripe(
     Deno.env.get("STRIPE_SECRET_KEY") || "",
@@ -102,6 +102,12 @@ Deno.serve(async (req) => {
                 if (shouldAddCredits) {
                     await handleAddSpyCredits(supabaseClient, stripe, subscription, 'subscription');
                 }
+                break;
+            }
+
+            case 'customer.subscription.deleted': {
+                const subscription = event.data.object as Stripe.Subscription;
+                await handleSubscriptionDeleted(supabaseClient, subscription);
                 break;
             }
 

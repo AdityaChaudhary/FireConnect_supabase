@@ -68,30 +68,104 @@ export async function handleAddSpyCredits(
 
     console.log(`Adding ${creditsToAdd} credits to user ${userId}`);
 
-    // 5. Update spy credits in database
+    // 5. Determine the role from the product metadata (if applicable)
+    let newRole: string | undefined;
+    try {
+        let productId: string | undefined;
+        if (type === 'subscription') {
+            const sub = object as Stripe.Subscription;
+            productId = sub.items.data[0].plan?.product as string || sub.items.data[0].price?.product as string;
+        } else {
+            const session = object as Stripe.Checkout.Session;
+            const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
+            if (lineItems.data.length > 0) {
+                productId = lineItems.data[0].price?.product as string;
+            }
+        }
+
+        if (productId) {
+            const product = await stripe.products.retrieve(productId);
+            // Use firebaseRole (migration-standard) or role metadata
+            newRole = (product.metadata?.firebaseRole || product.metadata?.role)?.toUpperCase();
+            if (newRole && !['FREE', 'PRO', 'MAX'].includes(newRole)) {
+                console.warn(`Unexpected role from metadata: ${newRole}, ignoring.`);
+                newRole = undefined;
+            }
+        }
+    } catch (err) {
+        console.warn('Failed to determine role from Stripe product metadata', err);
+    }
+
+    // 6. Update user in database
     // Fetch current credits
     const { data: userData, error: fetchError } = await supabaseClient
         .from('users')
-        .select('spy_credits')
+        .select('spy_credits, stripe_role')
         .eq('id', userId)
         .single();
     
     if (fetchError) {
-        console.error('Error fetching current credits:', fetchError);
+        console.error('Error fetching current user data:', fetchError);
         return;
     }
 
     const currentCredits = userData.spy_credits || 0;
-    const newCredits = currentCredits + creditsToAdd;
+    const updatePayload: Record<string, unknown> = {
+        spy_credits: currentCredits + creditsToAdd,
+        updated_at: new Date().toISOString()
+    };
+
+    if (newRole) {
+        console.log(`Setting stripe_role to ${newRole} for user ${userId}`);
+        updatePayload.stripe_role = newRole;
+    }
 
     const { error: updateError } = await supabaseClient
         .from('users')
-        .update({ spy_credits: newCredits })
+        .update(updatePayload)
         .eq('id', userId);
 
     if (updateError) {
-        console.error('Error updating credits:', updateError);
+        console.error('Error updating user data:', updateError);
     } else {
-        console.log(`Successfully updated spy credits for user ${userId} to ${newCredits}`);
+        console.log(`Successfully updated user data for ${userId}: credits=${updatePayload.spy_credits}${newRole ? `, role=${newRole}` : ''}`);
+    }
+}
+
+/**
+ * Helper to reset role when subscription is deleted
+ */
+export async function handleSubscriptionDeleted(
+    supabaseClient: SupabaseClient,
+    subscription: Stripe.Subscription
+) {
+    const customerId = subscription.customer as string;
+    
+    // Find user by customer ID
+    const { data: userData, error: fetchError } = await supabaseClient
+        .from('users')
+        .select('id')
+        .eq('stripe_customer_id', customerId)
+        .single();
+    
+    if (fetchError || !userData) {
+        console.warn(`Could not find user for deleted subscription (customer: ${customerId})`);
+        return;
+    }
+
+    console.log(`Resetting stripe_role to FREE for user ${userData.id} due to subscription deletion`);
+    
+    const { error: updateError } = await supabaseClient
+        .from('users')
+        .update({ 
+            stripe_role: 'FREE',
+            updated_at: new Date().toISOString()
+        })
+        .eq('id', userData.id);
+
+    if (updateError) {
+        console.error('Error resetting role:', updateError);
+    } else {
+        console.log(`Successfully reset role for user ${userData.id}`);
     }
 }
