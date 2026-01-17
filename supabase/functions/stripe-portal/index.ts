@@ -23,20 +23,42 @@ Deno.serve(async (req) => {
     }
 
     try {
-        const { returnUrl } = await req.json();
+        const body = await req.json();
+        console.log("Received request body:", body);
+
+        const {
+            returnUrl,
+            locale = 'auto',
+            configuration,
+            flow_data
+        } = body;
+
+        if (!returnUrl) {
+            console.error("Missing returnUrl in request body");
+            throw new Error("Missing returnUrl");
+        }
 
         // Initialize Supabase Client
+        const authHeader = req.headers.get('Authorization');
+        console.log("Auth header present:", !!authHeader);
+
         const supabaseClient = createClient(
             Deno.env.get('SUPABASE_URL') ?? '',
             Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-            { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+            { global: { headers: { Authorization: authHeader! } } }
         );
 
-        // Get User
-        const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+        // Get User from Auth Header manually to be robust
+        const token = authHeader?.replace('Bearer ', '');
+        console.log("Extracting token for manual auth check...");
+
+        const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
+        
         if (authError || !user) {
+             console.error("Authentication failed or user not found:", authError);
              throw new Error("Unauthorized");
         }
+        console.log("Authenticated user ID:", user.id);
 
         // Get Stripe Customer ID
         const { data: userProfile, error: profileError } = await supabaseClient
@@ -45,14 +67,33 @@ Deno.serve(async (req) => {
             .eq('id', user.id)
             .single();
 
-        if (!userProfile?.stripe_customer_id) {
-            throw new Error("No Stripe Customer found for this user.");
+        if (profileError) {
+            console.error("Error fetching user profile:", profileError);
+            throw new Error("Failed to fetch user profile");
         }
 
-        const session = await stripe.billingPortal.sessions.create({
+        if (!userProfile?.stripe_customer_id) {
+            console.error("Stripe Customer ID not found for user:", user.id);
+            throw new Error("No Stripe Customer found for this user.");
+        }
+        console.log("Found Stripe Customer ID:", userProfile.stripe_customer_id);
+
+        const params: any = {
             customer: userProfile.stripe_customer_id,
             return_url: returnUrl,
-        });
+            locale: locale,
+        };
+
+        if (configuration) {
+            params.configuration = configuration;
+        }
+        if (flow_data) {
+            params.flow_data = flow_data;
+        }
+
+        console.log("Creating portal session with params:", params);
+        const session = await stripe.billingPortal.sessions.create(params);
+        console.log("Portal session created successfully:", session.id);
 
         return new Response(
             JSON.stringify({ url: session.url }),
@@ -63,6 +104,7 @@ Deno.serve(async (req) => {
         );
 
     } catch (error: any) {
+        console.error("Error creating portal session:", error.message, error.stack);
         return new Response(
             JSON.stringify({ error: error.message }),
             {
