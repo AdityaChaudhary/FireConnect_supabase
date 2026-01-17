@@ -15,6 +15,8 @@ CREATE TABLE public.users (
   user_type TEXT DEFAULT 'HUMAN' CHECK (user_type IN ('HUMAN', 'AI')),
   stripe_role TEXT DEFAULT 'FREE' CHECK (stripe_role IN ('FREE', 'PRO', 'MAX')),
   spy_credits INTEGER DEFAULT 0,
+  date_of_birth DATE,
+  is_onboarded BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -85,6 +87,15 @@ CREATE TABLE public.notification_check (
   last_checked_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Spied Profiles Table
+CREATE TABLE public.spied_profiles (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users NOT NULL,
+  target_user_id UUID REFERENCES public.users NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, target_user_id)
+);
+
 -- 2. Enable Row Level Security (RLS)
 
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
@@ -100,7 +111,8 @@ ALTER TABLE public.notification_check ENABLE ROW LEVEL SECURITY;
 
 -- Public Users: Everyone can read for discovery, only self can update
 CREATE POLICY "Users are viewable by everyone" ON public.users FOR SELECT USING (true);
-CREATE POLICY "Users can update own record" ON public.users FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Users can insert their own record" ON public.users FOR INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY "Users can update own record" ON public.users FOR UPDATE USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
 
 -- Profile Images: 
 -- 1. Everyone can see PUBLIC images.
