@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 
 /**
@@ -160,5 +161,216 @@ export const useStripeProducts = () => {
                 });
         },
         staleTime: 60 * 60 * 1000, // 1 hour
+    });
+};
+
+/**
+ * Hook to fetch a user's details including online status.
+ */
+export const useUserDetail = (userId: string) => {
+    return useQuery({
+        queryKey: ['user-detail', userId],
+        queryFn: async () => {
+            if (!userId) return null;
+            const { data, error } = await supabase
+                .from('users')
+                .select(`
+                    *,
+                    user_online_status (last_seen_at)
+                `)
+                .eq('id', userId)
+                .single();
+
+            if (error) throw error;
+            return data;
+        },
+        enabled: !!userId,
+        staleTime: 30 * 1000,
+    });
+};
+
+/**
+ * Hook to fetch connection status between two users.
+ */
+export const useUserConnection = (targetUserId: string, authUserId?: string) => {
+    return useQuery({
+        queryKey: ['user-connection', targetUserId, authUserId],
+        queryFn: async () => {
+            if (!targetUserId || !authUserId) return null;
+            const { data, error } = await supabase
+                .from('connections')
+                .select('*')
+                .or(`and(requester_id.eq.${authUserId},recipient_id.eq.${targetUserId}),and(requester_id.eq.${targetUserId},recipient_id.eq.${authUserId})`)
+                .maybeSingle();
+
+            if (error) throw error;
+            if (!data) return null;
+
+            const isRequester = data.requester_id === authUserId;
+            return {
+                ...data,
+                status: data.status,
+                incomingStatus: isRequester ? null : data.status,
+                outgoingStatus: isRequester ? data.status : null
+            };
+        },
+        enabled: !!targetUserId && !!authUserId,
+        staleTime: 30 * 1000,
+    });
+};
+
+/**
+ * Hook to check if a user has spied on a profile.
+ */
+export const useSpiedStatus = (targetUserId: string, authUserId?: string) => {
+    return useQuery({
+        queryKey: ['spied-status', targetUserId, authUserId],
+        queryFn: async () => {
+            if (!targetUserId || !authUserId) return false;
+            const { data, error } = await supabase
+                .from('spied_profiles')
+                .select('*')
+                .eq('user_id', authUserId)
+                .eq('target_user_id', targetUserId)
+                .maybeSingle();
+
+            if (error) throw error;
+            return !!data;
+        },
+        enabled: !!targetUserId && !!authUserId,
+        staleTime: 5 * 60 * 1000,
+    });
+};
+
+/**
+ * Hook to check if any message has been received from a specific user.
+ */
+export const useHasReceivedMessage = (targetUserId: string, authUserId?: string) => {
+    return useQuery({
+        queryKey: ['received-message', targetUserId, authUserId],
+        queryFn: async () => {
+            if (!targetUserId || !authUserId) return false;
+
+            // First find the thread
+            const { data: thread, error: threadError } = await supabase
+                .from('threads')
+                .select('id')
+                .contains('participants', [targetUserId, authUserId])
+                .maybeSingle();
+
+            if (threadError) throw threadError;
+            if (!thread) return false;
+
+            // Then check for messages from targetUserId in that thread
+            const { data: message, error: messageError } = await supabase
+                .from('messages')
+                .select('id')
+                .eq('thread_id', thread.id)
+                .eq('sender_id', targetUserId)
+                .limit(1)
+                .maybeSingle();
+
+            if (messageError) throw messageError;
+            return !!message;
+        },
+        enabled: !!targetUserId && !!authUserId,
+        staleTime: 60 * 1000,
+    });
+};
+
+/**
+ * Hook to fetch message threads for a user.
+ */
+export const useThreads = (userId?: string) => {
+    return useQuery({
+        queryKey: ['threads', userId],
+        queryFn: async () => {
+            if (!userId) return [];
+
+            // Fetch threads where user is a participant
+            const { data: threads, error } = await supabase
+                .from('threads')
+                .select('*')
+                .contains('participants', [userId])
+                .order('last_message_time', { ascending: false });
+
+            if (error) throw error;
+
+            // For each thread, find the OTHER participant and get their details
+            const threadsWithDetails = await Promise.all((threads || []).map(async (thread) => {
+                const otherParticipantId = thread.participants.find((p: string) => p !== userId);
+
+                if (!otherParticipantId) return { ...thread, otherUser: null };
+
+                const { data: userData } = await supabase
+                    .from('users')
+                    .select('*, user_online_status(*)')
+                    .eq('id', otherParticipantId)
+                    .single();
+
+                return {
+                    ...thread,
+                    otherUser: userData
+                };
+            }));
+
+            return threadsWithDetails;
+        },
+        enabled: !!userId,
+        refetchInterval: 30000, // Regular refresh for message updates
+    });
+};
+
+/**
+ * Hook to fetch messages for a specific thread and subscribe to updates.
+ */
+export const useMessages = (threadId?: string) => {
+    const queryClient = useQueryClient();
+
+    useEffect(() => {
+        if (!threadId) return;
+
+        // Subscribe to new messages in this thread
+        const channel = supabase
+            .channel(`thread:${threadId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'messages',
+                    filter: `thread_id=eq.${threadId}`,
+                },
+                (payload) => {
+                    // Update the cache immediately
+                    queryClient.setQueryData(['messages', threadId], (old: any) => {
+                        const exists = (old || []).find((m: any) => m.id === payload.new.id);
+                        if (exists) return old;
+                        return [...(old || []), payload.new];
+                    });
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [threadId, queryClient]);
+
+    return useQuery({
+        queryKey: ['messages', threadId],
+        queryFn: async () => {
+            if (!threadId) return [];
+
+            const { data, error } = await supabase
+                .from('messages')
+                .select('*')
+                .eq('thread_id', threadId)
+                .order('created_at', { ascending: true });
+
+            if (error) throw error;
+            return data;
+        },
+        enabled: !!threadId,
     });
 };

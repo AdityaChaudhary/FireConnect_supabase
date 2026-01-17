@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Icon from './Icon';
 import { supabase } from '../lib/supabase';
@@ -12,6 +13,7 @@ interface UserDiscoveryCardProps {
 }
 
 const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, onUpgradeClick }) => {
+    const navigate = useNavigate();
     const { stripeRole, profile, refreshProfile, user: authUser } = useAuth();
     const [images, setImages] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -28,7 +30,8 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, onUpgradeCl
         rootMargin: '200px',
     });
 
-    const isProOrMax = stripeRole === 'PRO' || stripeRole === 'MAX';
+    const normalizedRole = (stripeRole || 'free').toUpperCase();
+    const isProOrMax = normalizedRole === 'PRO' || normalizedRole === 'MAX';
 
     useEffect(() => {
         const intervalId = setInterval(() => {
@@ -76,7 +79,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, onUpgradeCl
         if (!hasBeenInView || !authUser) return;
 
         const checkSpied = async () => {
-            if (!stripeRole || stripeRole === 'FREE') return;
+            if (normalizedRole === 'FREE') return;
             try {
                 const { data, error } = await supabase
                     .from('spied_profiles')
@@ -87,7 +90,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, onUpgradeCl
 
                 if (data) {
                     setIsSpied(true);
-                    if (stripeRole !== 'MAX') {
+                    if (normalizedRole !== 'MAX') {
                         setIsRevealed(true);
                     }
                 }
@@ -114,7 +117,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, onUpgradeCl
 
             images.forEach((img, idx) => {
                 const isPrivate = img.visibility === 'PRIVATE';
-                const canFetchPrivate = stripeRole === 'MAX' || (stripeRole === 'PRO' && isSpied);
+                const canFetchPrivate = normalizedRole === 'MAX' || (normalizedRole === 'PRO' && isSpied);
 
                 if (img.blurred_url && !bUrls[idx]) {
                     const { data } = supabase.storage.from('profile-images').getPublicUrl(img.blurred_url);
@@ -369,13 +372,13 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, onUpgradeCl
 
                 <div className="flex items-center gap-3">
                     <button
-                        onClick={(e) => { e.stopPropagation(); window.location.hash = `#/profile/${user.id}`; }}
+                        onClick={(e) => { e.stopPropagation(); navigate(`/profile/${user.id}`); }}
                         className="size-14 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all active:scale-90"
                     >
                         <Icon name="person" className="text-2xl" />
                     </button>
                     <button
-                        onClick={(e) => { e.stopPropagation(); window.location.hash = `#/chat/${user.id}`; }}
+                        onClick={(e) => { e.stopPropagation(); navigate(`/chat/${user.id}`); }}
                         className="flex-1 h-14 rounded-full bg-primary flex items-center justify-center gap-2 text-white font-bold tracking-wide shadow-lg shadow-primary/20 active:scale-95 transition-all"
                     >
                         <Icon name="favorite" className="text-xl" filled />
