@@ -1,9 +1,37 @@
 import { supabase } from './supabase';
 
+const fetchWithRetry = async <T>(
+    operation: () => Promise<{ data: T | null; error: any }>,
+    maxRetries = 3,
+    delay = 1000
+): Promise<T | null> => {
+    let lastError;
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            const { data, error } = await operation();
+            if (!error) return data;
+
+            // If error is likely temporary (connection, recovery), we retry
+            // PGRST000 = Recovery mode, PGRST001 = Connection refused
+            const isRetryable = error?.code?.startsWith('PGRST') || error?.message?.includes('fetch') || error?.status >= 500;
+
+            if (!isRetryable) throw error; // Don't retry auth errors, etc.
+
+            lastError = error;
+            console.warn(`Attempt ${i + 1} failed, retrying in ${delay}ms...`, error);
+            await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i))); // Exponential backoff
+        } catch (err) {
+            // Network errors (fetch failed) often end up here
+            lastError = err;
+            console.warn(`Attempt ${i + 1} threw error, retrying...`, err);
+            await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
+        }
+    }
+    throw lastError;
+};
+
 export const getStripeProducts = async () => {
-    const { data, error } = await supabase.rpc('get_active_plans');
-    if (error) throw error;
-    return data;
+    return fetchWithRetry(async () => await supabase.rpc('get_active_plans'));
 };
 
 export const startStripeCheckout = async (priceId: string, mode: 'payment' | 'subscription' = 'subscription', options?: { planId?: string, credits?: number, oldBalance?: number }) => {

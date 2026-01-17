@@ -38,6 +38,7 @@ const Subscription: React.FC = () => {
     const [portalLoading, setPortalLoading] = useState(false);
     const [plans, setPlans] = useState<Plan[]>([]);
     const [loadingProducts, setLoadingProducts] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     const mapProductToPlan = (product: StripeProduct): Plan => {
         const metadata = product.metadata || {};
@@ -84,66 +85,45 @@ const Subscription: React.FC = () => {
         };
     };
 
-    useEffect(() => {
-        const fetchPlans = async () => {
-            try {
-                const data = await getStripeProducts();
-                // Filter out non-subscription products or "Spy Credits" if they appear here
-                // Also ensure we only get unique plans per role if multiple exist (priority ?)
-                // For now, map all and then dedup based on role logic
+    const fetchPlans = async () => {
+        setLoadingProducts(true);
+        setError(null);
+        try {
+            const data = await getStripeProducts();
+            // Filter out non-subscription products or "Spy Credits" if they appear here
+            // Also ensure we only get unique plans per role if multiple exist (priority ?)
+            // For now, map all and then dedup based on role logic
 
-                const validProducts = (data as StripeProduct[]).filter(p => {
-                    const name = p.name.toUpperCase();
-                    return !name.includes('CREDIT') && !name.includes('SPY');
+            // Check if data is null or undefined which might happen if retry failed ultimately
+            if (!data) throw new Error("No data received from payment service");
+
+            const validProducts = (data as StripeProduct[]).filter(p => {
+                const name = p.name.toUpperCase();
+                return !name.includes('CREDIT') && !name.includes('SPY');
+            });
+
+            if (validProducts.length > 0) {
+                const mappedPlans = validProducts.map(mapProductToPlan);
+
+                // If we have duplicates for a role (e.g. multiple PRO plans), we might need to pick one.
+                // Assuming backend returns active ones.
+
+                // Sort to ensure FREE < PRO < MAX order
+                const roleOrder = { FREE: 0, PRO: 1, MAX: 2 };
+                mappedPlans.sort((a, b) => {
+                    const rA = roleOrder[a.id as keyof typeof roleOrder] ?? 1;
+                    const rB = roleOrder[b.id as keyof typeof roleOrder] ?? 1;
+                    return rA - rB;
                 });
 
-                if (validProducts.length > 0) {
-                    const mappedPlans = validProducts.map(mapProductToPlan);
+                // Ensure we have a FREE plan visual even if not in Stripe (or if purely DB based)
+                // Source code manually adds FREE if list is empty? Source logic:
+                // plans = stripeProducts.length > 0 ? mapped... : [Default FREE]
+                // We should probably allow mixing.
 
-                    // If we have duplicates for a role (e.g. multiple PRO plans), we might need to pick one.
-                    // Assuming backend returns active ones.
-
-                    // Sort to ensure FREE < PRO < MAX order
-                    const roleOrder = { FREE: 0, PRO: 1, MAX: 2 };
-                    mappedPlans.sort((a, b) => {
-                        const rA = roleOrder[a.id as keyof typeof roleOrder] ?? 1;
-                        const rB = roleOrder[b.id as keyof typeof roleOrder] ?? 1;
-                        return rA - rB;
-                    });
-
-                    // Ensure we have a FREE plan visual even if not in Stripe (or if purely DB based)
-                    // Source code manually adds FREE if list is empty? Source logic:
-                    // plans = stripeProducts.length > 0 ? mapped... : [Default FREE]
-                    // We should probably allow mixing.
-
-                    // Check if FREE exists
-                    if (!mappedPlans.find(p => p.id === 'FREE')) {
-                        mappedPlans.unshift({
-                            id: 'FREE',
-                            name: 'LITE',
-                            price: '$0',
-                            period: '/ mo',
-                            description: PLAN_DESCRIPTIONS.FREE,
-                            features: PLAN_FEATURES.FREE,
-                            ...PLAN_THEMES.FREE
-                        });
-                    }
-
-                    // Remove duplicates, keeping the one appearing last (or first? usually first is best if sorted)
-                    // Actually let's just keep unique IDs
-                    const uniquePlans: Plan[] = [];
-                    const seen = new Set();
-                    mappedPlans.forEach(p => {
-                        if (!seen.has(p.id)) {
-                            uniquePlans.push(p);
-                            seen.add(p.id);
-                        }
-                    });
-
-                    setPlans(uniquePlans);
-                } else {
-                    // Fallback if no products found
-                    setPlans([{
+                // Check if FREE exists
+                if (!mappedPlans.find(p => p.id === 'FREE')) {
+                    mappedPlans.unshift({
                         id: 'FREE',
                         name: 'LITE',
                         price: '$0',
@@ -151,16 +131,43 @@ const Subscription: React.FC = () => {
                         description: PLAN_DESCRIPTIONS.FREE,
                         features: PLAN_FEATURES.FREE,
                         ...PLAN_THEMES.FREE
-                    }]);
+                    });
                 }
 
-            } catch (err) {
-                console.error("Failed to load plans:", err);
-            } finally {
-                setLoadingProducts(false);
-            }
-        };
+                // Remove duplicates, keeping the one appearing last (or first? usually first is best if sorted)
+                // Actually let's just keep unique IDs
+                const uniquePlans: Plan[] = [];
+                const seen = new Set();
+                mappedPlans.forEach(p => {
+                    if (!seen.has(p.id)) {
+                        uniquePlans.push(p);
+                        seen.add(p.id);
+                    }
+                });
 
+                setPlans(uniquePlans);
+            } else {
+                // Fallback if no products found
+                setPlans([{
+                    id: 'FREE',
+                    name: 'LITE',
+                    price: '$0',
+                    period: '/ mo',
+                    description: PLAN_DESCRIPTIONS.FREE,
+                    features: PLAN_FEATURES.FREE,
+                    ...PLAN_THEMES.FREE
+                }]);
+            }
+
+        } catch (err: any) {
+            console.error("Failed to load plans:", err);
+            setError(err.message || "Failed to load subscription plans. Please try again.");
+        } finally {
+            setLoadingProducts(false);
+        }
+    };
+
+    useEffect(() => {
         fetchPlans();
     }, []);
 
@@ -252,6 +259,24 @@ const Subscription: React.FC = () => {
         return (
             <div className="flex-1 flex items-center justify-center p-6 bg-background-dark min-h-screen">
                 <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex-1 flex flex-col items-center justify-center p-6 bg-background-dark min-h-screen gap-4">
+                <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-2">
+                    <Icon name="error_outline" className="text-3xl text-red-500" />
+                </div>
+                <h3 className="text-xl font-bold text-white">Connection Error</h3>
+                <p className="text-white/60 text-center max-w-xs">{error}</p>
+                <button
+                    onClick={fetchPlans}
+                    className="mt-4 px-8 py-3 bg-white/10 hover:bg-white/20 rounded-full text-white font-semibold transition-all active:scale-95"
+                >
+                    Retry Connection
+                </button>
             </div>
         );
     }
