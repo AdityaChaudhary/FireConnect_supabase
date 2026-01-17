@@ -29,14 +29,14 @@ Deno.serve(async (req) => {
         }
 
         // Initialize Supabase Client
+        const authHeader = req.headers.get('Authorization');
         const supabaseClient = createClient(
             Deno.env.get('SUPABASE_URL') ?? '',
             Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-            { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+            authHeader ? { global: { headers: { Authorization: authHeader } } } : {}
         );
 
         // Get User from Auth Header manually to be robust
-        const authHeader = req.headers.get('Authorization');
         const token = authHeader?.replace('Bearer ', '');
         let user = null;
 
@@ -55,7 +55,20 @@ Deno.serve(async (req) => {
              // throw new Error("Unauthorized");
         }
 
-        const session = await stripe.checkout.sessions.create({
+        let customerId = undefined;
+        if (user) {
+            const { data: userProfile, error: profileError } = await supabaseClient
+                .from('users')
+                .select('stripe_customer_id')
+                .eq('id', user.id)
+                .single();
+
+            if (userProfile?.stripe_customer_id) {
+                customerId = userProfile.stripe_customer_id;
+            }
+        }
+
+        const sessionConfig: any = {
             line_items: [
                 {
                     price: priceId,
@@ -65,9 +78,6 @@ Deno.serve(async (req) => {
             mode: mode || "subscription",
             success_url: successUrl,
             cancel_url: cancelUrl,
-            // Pre-fill user email
-            customer_email: user?.email,
-            // Add metadata for webhook linking
             metadata: {
                 user_id: user?.id,
             },
@@ -76,7 +86,15 @@ Deno.serve(async (req) => {
                     user_id: user?.id
                 }
             } : undefined,
-        });
+        };
+
+        if (customerId) {
+            sessionConfig.customer = customerId;
+        } else {
+            sessionConfig.customer_email = user?.email;
+        }
+
+        const session = await stripe.checkout.sessions.create(sessionConfig);
 
         return new Response(
             JSON.stringify({ url: session.url }),

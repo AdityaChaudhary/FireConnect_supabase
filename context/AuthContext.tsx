@@ -32,6 +32,7 @@ interface AuthContextType {
     signInWithGoogle: () => Promise<void>;
     logout: () => Promise<void>;
     refreshProfile: () => Promise<void>;
+    subscription: any | null;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -41,6 +42,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [session, setSession] = useState<Session | null>(null);
     const [profile, setProfile] = useState<Profile | null>(null);
     const [stripeRole, setStripeRole] = useState<string | null>(null);
+    const [subscription, setSubscription] = useState<any | null>(null);
     const [loading, setLoading] = useState(true);
 
     const refreshProfile = async (specificUser?: User) => {
@@ -68,7 +70,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                 console.log("AuthContext: Profile loaded", data?.username || "no username");
                 setProfile(data as Profile);
-                setStripeRole(data?.stripe_role?.toLowerCase() || 'free');
+
+                // Fetch real-time subscription from Stripe Wrapper
+                console.log("AuthContext: Fetching subscription for", currentUser.id);
+                const { data: subData, error: subError } = await supabase.rpc('get_subscription_info', {
+                    user_id: currentUser.id
+                });
+
+                if (subError) {
+                    console.error("AuthContext: Error fetching subscription:", subError);
+                    setStripeRole(data?.stripe_role?.toLowerCase() || 'free');
+                    setSubscription(null);
+                } else {
+                    const activeSub = subData && subData.length > 0 ? subData[0] : null;
+                    console.log("AuthContext: Subscription details:", activeSub);
+                    setSubscription(activeSub);
+                    if (activeSub && activeSub.status === 'active') {
+                        setStripeRole(activeSub.role?.toLowerCase() || 'free');
+                    } else {
+                        setStripeRole('free');
+                    }
+                }
+
             } catch (err) {
                 console.error("AuthContext: Error in refreshProfile fetch:", err);
             }
@@ -123,6 +146,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             } else {
                 setProfile(null);
                 setStripeRole(null);
+                setSubscription(null);
             }
 
             setLoading(false);
@@ -155,6 +179,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             session,
             profile,
             stripeRole,
+            subscription,
             loading,
             signInWithGoogle,
             logout,

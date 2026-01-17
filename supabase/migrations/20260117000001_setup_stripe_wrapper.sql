@@ -112,3 +112,47 @@ BEGIN
     AND pr.active = true;
 END;
 $$;
+
+-- Create function to get comprehensive user subscription details
+CREATE OR REPLACE FUNCTION public.get_subscription_info(user_id uuid)
+RETURNS TABLE (
+    id text,
+    status text,
+    current_period_end timestamptz,
+    cancel_at_period_end boolean,
+    role text,
+    plan_name text
+) SECURITY DEFINER AS $$
+DECLARE
+    v_stripe_customer_id text;
+BEGIN
+    -- Get the Stripe Customer ID for the user
+    SELECT stripe_customer_id INTO v_stripe_customer_id
+    FROM public.users
+    WHERE public.users.id = user_id;
+
+    -- If no customer ID found, return empty
+    IF v_stripe_customer_id IS NULL THEN
+        RETURN;
+    END IF;
+
+    RETURN QUERY
+    SELECT 
+        s.id,
+        s.attrs->>'status',
+        s.current_period_end AT TIME ZONE 'UTC',
+        (s.attrs->>'cancel_at_period_end')::boolean,
+        -- COALESCE(p.attrs->'metadata'->>'role', 'FREE'),
+        COALESCE(p.attrs->'metadata'->>'firebaseRole', 'FREE'),
+        p.name
+    FROM stripe.subscriptions s
+    JOIN stripe.prices pr ON (s.attrs->'plan'->>'id') = pr.id
+    JOIN stripe.products p ON pr.product = p.id
+    WHERE s.customer = v_stripe_customer_id
+      AND s.attrs->>'status' IN ('active', 'trialing', 'past_due')
+    ORDER BY s.current_period_start DESC
+    LIMIT 1;
+END;
+$$ LANGUAGE plpgsql;
+
+GRANT EXECUTE ON FUNCTION public.get_subscription_info(uuid) TO anon, authenticated, service_role;

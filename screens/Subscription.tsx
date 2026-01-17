@@ -32,7 +32,7 @@ interface StripeProduct {
 }
 
 const Subscription: React.FC = () => {
-    const { stripeRole, refreshProfile } = useAuth();
+    const { stripeRole, subscription, refreshProfile } = useAuth();
     const navigate = useNavigate();
     const [updating, setUpdating] = useState(false);
     const [portalLoading, setPortalLoading] = useState(false);
@@ -399,7 +399,21 @@ const Subscription: React.FC = () => {
                 </div>
 
                 {currentSubscriptionLevel !== 'FREE' && (
-                    <div className="w-full mt-4 px-4 pb-4">
+                    <div className="w-full mt-4 px-4 flex flex-col gap-3">
+                        {subscription && (
+                            <div className="flex flex-col gap-1 px-4 py-3 rounded-2xl bg-white/5 border border-white/5 text-center">
+                                <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
+                                    {subscription.cancel_at_period_end ? 'Subscription Ends' : 'Next Renewal'}
+                                </span>
+                                <span className="text-sm font-bold text-white/80">
+                                    {new Date(subscription.current_period_end).toLocaleDateString('en-US', {
+                                        month: 'long',
+                                        day: 'numeric',
+                                        year: 'numeric'
+                                    })}
+                                </span>
+                            </div>
+                        )}
                         <button
                             onClick={handleManageSubscription}
                             disabled={portalLoading}
