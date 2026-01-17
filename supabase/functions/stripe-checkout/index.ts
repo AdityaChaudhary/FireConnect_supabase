@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
         if (!user) {
              console.warn("Proceeding as guest checkout (no valid auth session found)");
              // Optional: throw error if authentication is mandatory
-             // throw new Error("Unauthorized");
+             throw new Error("Unauthorized");
         }
 
         let customerId = undefined;
@@ -104,6 +104,7 @@ Deno.serve(async (req) => {
             }
         );
     } catch (error: any) {
+        console.error("Error creating checkout session:", error.message);
         return new Response(
             JSON.stringify({ error: error.message }),
             {
