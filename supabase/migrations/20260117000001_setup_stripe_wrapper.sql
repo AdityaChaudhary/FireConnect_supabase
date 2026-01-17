@@ -85,7 +85,8 @@ RETURNS TABLE (
   price_amount bigint,
   price_currency text,
   "interval" text,
-  metadata jsonb
+  metadata jsonb,
+  price_attrs jsonb
 ) 
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -100,7 +101,8 @@ BEGIN
     pr.unit_amount AS price_amount,
     pr.currency AS price_currency,
     pr.attrs->'recurring'->>'interval' as "interval",
-    p.attrs->'metadata' as metadata
+    p.attrs->'metadata' as metadata,
+    pr.attrs as price_attrs
   FROM 
     stripe.products p
   JOIN 

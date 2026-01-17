@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { getStripeProducts } from '../lib/stripe-utils';
 import { PLAN_THEMES, PLAN_DESCRIPTIONS, PLAN_FEATURES } from '../config/plans';
 import CdnImage from '../components/CdnImage';
 import { getDefaultAvatar } from '../lib/image-utils';
@@ -20,7 +20,6 @@ interface Plan {
 
 const Landing: React.FC = () => {
     const { signInWithGoogle } = useAuth();
-    const navigate = useNavigate();
 
     const handleAuth = async (intent?: string | { type: string, id?: string } | React.MouseEvent) => {
         try {
@@ -44,11 +43,14 @@ const Landing: React.FC = () => {
     useEffect(() => {
         const fetchPlans = async () => {
             try {
-                const { data, error } = await supabase.rpc('get_active_plans');
-                if (error) throw error;
+                // Use the wrapper function for consistency
+                const products = await getStripeProducts() as any[];
 
-                if (data && Array.isArray(data)) {
-                    const mappedPlans = data.map((product: any) => {
+                // Filter out Spy Credits and map
+                const activePlans = products.filter(p => !p.name.includes('Spy Credits'));
+
+                if (activePlans && Array.isArray(activePlans)) {
+                    const mappedPlans = activePlans.map((product: any) => {
                         const metadata = product.metadata || {};
                         const role = (metadata.role || product.name || 'PRO').toUpperCase();
 
@@ -58,18 +60,40 @@ const Landing: React.FC = () => {
                         else if (role.includes('LITE') || role.includes('FREE')) themeKey = 'FREE';
 
                         const theme = PLAN_THEMES[themeKey] || PLAN_THEMES.PRO;
-                        const price = product.prices?.[0] || {};
 
-                        const formattedPrice = price.unit_amount
-                            ? (price.unit_amount / 100).toLocaleString('en-US', {
+                        // Handle price from the flat view returned by RPC or the nested structure if different
+                        // The RPC returns specific fields: price_amount, price_currency, interval
+                        // But getStripeProducts returns the usage of get_active_plans which returns:
+                        // id, name, description, price_id, price_amount, price_currency, interval, metadata
+
+                        const unitAmount = product.price_amount;
+                        const currency = product.price_currency || 'USD';
+                        const interval = product.interval;
+
+                        const formattedPrice = unitAmount
+                            ? (unitAmount / 100).toLocaleString('en-US', {
                                 style: 'currency',
-                                currency: price.currency?.toUpperCase() || 'USD',
+                                currency: currency.toUpperCase(),
                                 minimumFractionDigits: 0,
                                 maximumFractionDigits: 2
                             })
                             : '$0';
 
-                        const period = price.interval ? `/ ${price.interval === 'month' ? 'mo' : price.interval}` : '';
+                        const period = interval ? `/ ${interval === 'month' ? 'mo' : interval}` : '';
+
+                        // Feature mapping logic from Subscription.tsx/Source
+                        let features = PLAN_FEATURES[themeKey] || [];
+                        if (metadata.features) {
+                            try {
+                                const featuresList = (metadata.features as string).split(',').filter(f => f.trim().length > 0);
+                                features = featuresList.map(f => ({
+                                    text: f.trim(),
+                                    included: true
+                                }));
+                            } catch (e) {
+                                console.warn('Failed to parse plan features', e);
+                            }
+                        }
 
                         return {
                             id: themeKey,
@@ -77,10 +101,11 @@ const Landing: React.FC = () => {
                             price: formattedPrice,
                             period: period,
                             description: product.description || PLAN_DESCRIPTIONS[themeKey] || '',
-                            features: PLAN_FEATURES[themeKey] || [],
+                            features: features,
                             ...theme
                         };
                     });
+
                     setPlans(mappedPlans.sort((a, b) => {
                         const order = { 'FREE': 0, 'PRO': 1, 'MAX': 2 };
                         return (order[a.id as keyof typeof order] || 0) - (order[b.id as keyof typeof order] || 0);
@@ -88,7 +113,7 @@ const Landing: React.FC = () => {
                 }
             } catch (error) {
                 console.error("Error fetching plans:", error);
-                // Fallback to static plans if RPC fails or returns no data
+                // Fallback
                 setPlans([
                     {
                         id: 'FREE',
