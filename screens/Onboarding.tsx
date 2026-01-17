@@ -181,6 +181,11 @@ const Onboarding: React.FC = () => {
             console.error(err);
             if (err.message?.includes("users_username_key") || err.code === "23505") {
                 setError("Username is already taken. Please choose another one.");
+            } else if (err.code === "23503") {
+                // Foreign key violation (users_id_fkey) usually means the auth session exists 
+                // but the user record isn't in auth.users (local mismatch).
+                setError("Session error. Please sign out and sign in again.");
+                // Optionally auto-logout to fix it for them, but messaging is safer.
             } else {
                 setError(err.message || 'Failed to create profile');
             }

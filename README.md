@@ -71,3 +71,7 @@ export default defineConfig([
   },
 ])
 ```
+
+
+# Vault
+Supabase vault isn't available locally, so we use  placeholder for the secret key. Replace 'sk_test_placeholder' with your actual Stripe Secret Key.
