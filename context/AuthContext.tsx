@@ -43,9 +43,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [stripeRole, setStripeRole] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
 
-    const refreshProfile = async () => {
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
+    const refreshProfile = async (specificUser?: User) => {
+        let currentUser = specificUser;
+
+        if (!currentUser) {
+            const { data } = await supabase.auth.getSession();
+            currentUser = data.session?.user;
+        }
+
         if (currentUser) {
+            console.log("AuthContext: Refreshing profile for", currentUser.id);
             try {
                 const { data, error } = await supabase
                     .from('users')
@@ -53,43 +60,76 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     .eq('id', currentUser.id)
                     .single();
 
-                if (error) throw error;
+                if (error) {
+                    console.warn("AuthContext: Profile fetch result:", error.code, error.message);
+                    setProfile(null);
+                    return;
+                }
 
+                console.log("AuthContext: Profile loaded", data?.username || "no username");
                 setProfile(data as Profile);
                 setStripeRole(data?.stripe_role?.toLowerCase() || 'free');
             } catch (err) {
-                console.error("Error refreshing profile:", err);
+                console.error("AuthContext: Error in refreshProfile fetch:", err);
             }
+        } else {
+            console.log("AuthContext: No user available to refresh profile");
         }
     };
 
     useEffect(() => {
-        // Handle initial session
-        supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
-            setSession(initialSession);
-            setUser(initialSession?.user ?? null);
-            if (initialSession?.user) {
-                refreshProfile();
-            } else {
-                setLoading(false);
+        console.log("AuthContext: Initializing...");
+
+        let isMounted = true;
+
+        const initializeAuth = async () => {
+            try {
+                console.log("AuthContext: Fetching initial session...");
+                const { data: { session: initialSession } } = await supabase.auth.getSession();
+                console.log("AuthContext: Initial session fetch result:", initialSession ? "Session found" : "No session");
+
+                if (!isMounted) return;
+
+                if (initialSession) {
+                    setSession(initialSession);
+                    setUser(initialSession.user);
+                    // Start profile refresh in background, don't await to avoid blocking UI
+                    refreshProfile(initialSession.user);
+                }
+            } catch (err) {
+                console.error("AuthContext: Error during initialization:", err);
+            } finally {
+                if (isMounted) {
+                    setLoading(false);
+                    console.log("AuthContext: Initial load complete, loading=false");
+                }
             }
-        });
+        };
+
+        initializeAuth();
 
         // Listen for auth changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, currentSession) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+            console.log("AuthContext: onAuthStateChange event:", event, currentSession ? "Session active" : "No session");
+
+            if (!isMounted) return;
+
             setSession(currentSession);
             setUser(currentSession?.user ?? null);
 
             if (currentSession?.user) {
-                await refreshProfile();
+                // Don't await here either; let the app react to user presence first
+                refreshProfile(currentSession.user);
             } else {
                 setProfile(null);
                 setStripeRole(null);
             }
+
             setLoading(false);
         });
 
         return () => {
+            isMounted = false;
             subscription.unsubscribe();
         };
     }, []);

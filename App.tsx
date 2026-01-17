@@ -66,15 +66,19 @@ const AppRoutes: React.FC = () => {
     }
   }, [user, profile, navigate, location.pathname]);
 
+  console.log("AppRoutes: State", { loading, hasUser: !!user, hasProfile: !!profile });
+
   if (loading) {
     return (
-      <div className="min-h-screen w-full bg-background-dark flex items-center justify-center">
+      <div className="min-h-screen w-full bg-background-dark flex flex-col items-center justify-center gap-4">
         <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+        <p className="text-white/30 text-xs font-bold tracking-widest uppercase animate-pulse">Initializing Session</p>
       </div>
     );
   }
 
   if (!user) {
+    console.log("AppRoutes: No user, showing Landing");
     return <Landing />;
   }
 
