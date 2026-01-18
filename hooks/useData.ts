@@ -97,14 +97,16 @@ export const useNotifications = (userId?: string) => {
             const received = (requestsRes.data || []).map((n: any) => ({
                 ...n,
                 type: 'CONNECTION_REQUEST',
-                user: n.requester,
+                actor: n.requester,
+                actor_id: n.requester_id,
                 time: new Date(n.created_at).getTime()
             }));
 
             const spied = (spiedRes.data || []).map((n: any) => ({
                 ...n,
                 type: 'SPIED',
-                user: n.user,
+                actor: n.user,
+                actor_id: n.user_id,
                 time: new Date(n.created_at).getTime()
             }));
 

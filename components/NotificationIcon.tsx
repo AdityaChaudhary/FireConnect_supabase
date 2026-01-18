@@ -9,7 +9,6 @@ const NotificationIcon: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const [hasNew, setHasNew] = useState(false);
-    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         if (!user) return;
@@ -24,14 +23,14 @@ const NotificationIcon: React.FC = () => {
                         .order('updated_at', { ascending: false })
                         .limit(50),
                     supabase
-                        .from('users')
-                        .select('last_notification_check')
-                        .eq('id', user.id)
+                        .from('notification_check')
+                        .select('last_checked_at')
+                        .eq('user_id', user.id)
                         .single()
                 ]);
 
-                const lastCheckedAt = checkRes.data?.last_notification_check
-                    ? new Date(checkRes.data.last_notification_check).getTime()
+                const lastCheckedAt = checkRes.data?.last_checked_at
+                    ? new Date(checkRes.data.last_checked_at).getTime()
                     : 0;
 
                 const latestNotificationTime = (notifRes.data || []).reduce((max, n) => {
@@ -42,8 +41,6 @@ const NotificationIcon: React.FC = () => {
                 setHasNew(latestNotificationTime > lastCheckedAt);
             } catch (error) {
                 console.error("Error checking notifications:", error);
-            } finally {
-                setLoading(false);
             }
         };
 

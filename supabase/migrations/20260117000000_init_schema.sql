@@ -138,9 +138,14 @@ CREATE POLICY "Users can view own connections" ON public.connections
 CREATE POLICY "Users can manage own connections" ON public.connections 
   FOR ALL USING (auth.uid() = requester_id OR auth.uid() = recipient_id);
 
--- Threads: Participants can see
+-- Threads: Participants can see/create/update
 CREATE POLICY "Threads are viewable by participants" ON public.threads 
   FOR SELECT USING (auth.uid() = ANY(participants));
+CREATE POLICY "Users can create threads they are part of" ON public.threads
+  FOR INSERT WITH CHECK (auth.uid() = ANY(participants));
+CREATE POLICY "Users can update threads they are part of" ON public.threads
+  FOR UPDATE USING (auth.uid() = ANY(participants))
+  WITH CHECK (auth.uid() = ANY(participants));
 
 -- Messages: Thread participants can see/create
 CREATE POLICY "Messages are viewable by thread participants" ON public.messages 

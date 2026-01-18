@@ -44,23 +44,36 @@ const ChatDetail: React.FC = () => {
             if (thread) {
                 setThreadId(thread.id);
             } else {
+                const deterministicId = [authUser.id, otherUserId].sort().join('_');
+                
                 // Create thread if it doesn't exist
                 const { data: newThread, error: createError } = await supabase
                     .from('threads')
                     .insert({
-                        id: [authUser.id, otherUserId].sort().join('_'), // Use a deterministic ID for direct chats
+                        id: deterministicId,
                         participants: [authUser.id, otherUserId],
                         last_message: '',
                         last_message_time: new Date().toISOString()
                     })
                     .select('id')
-                    .single();
+                    .maybeSingle();
 
                 if (createError) {
-                    console.error("Error creating thread:", createError);
+                    // If it's a conflict, it means someone else created it, just fetch it
+                    if (createError.code === '23505') {
+                        setThreadId(deterministicId);
+                    } else {
+                        console.error("Error creating thread:", createError);
+                    }
                     return;
                 }
-                setThreadId(newThread.id);
+                
+                if (newThread) {
+                    setThreadId(newThread.id);
+                } else {
+                    // If insert worked but didn't return (unlikely with single/maybeSingle), use the ID
+                    setThreadId(deterministicId);
+                }
             }
         };
 

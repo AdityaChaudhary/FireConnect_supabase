@@ -5,11 +5,29 @@ import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../hooks/useData';
 import CdnImage from '../components/CdnImage';
 import { getDefaultAvatar } from '../lib/image-utils';
+import { supabase } from '../lib/supabase';
 
 const Notifications: React.FC = () => {
     const { user: authUser } = useAuth();
     const navigate = useNavigate();
     const { data: notifications = [], isLoading: loading } = useNotifications(authUser?.id);
+
+    React.useEffect(() => {
+        if (!authUser) return;
+
+        const markAsRead = async () => {
+            const { error } = await supabase
+                .from('notification_check')
+                .update({ last_checked_at: new Date().toISOString() })
+                .eq('user_id', authUser.id);
+            
+            if (error) {
+                console.error("Error updating notification check time:", error);
+            }
+        };
+
+        markAsRead();
+    }, [authUser]);
 
     const formatNotificationTime = (timestamp: string) => {
         const date = new Date(timestamp);
@@ -40,6 +58,13 @@ const Notifications: React.FC = () => {
                     text: `You are now connected with ${actorName}!`,
                     color: 'text-green-400',
                     link: `/chat/${notification.actor_id}`
+                };
+            case 'SPIED':
+                return {
+                    icon: 'visibility',
+                    text: `${actorName} revealed your private photos!`,
+                    color: 'text-amber-400',
+                    link: `/profile/${notification.actor_id}`
                 };
             case 'NEW_MESSAGE':
                 return {

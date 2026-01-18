@@ -23,20 +23,22 @@ const Discover: React.FC = () => {
 
     return (
         <div className="flex flex-col pb-24 min-h-screen bg-background-dark">
-            <header className="sticky top-0 z-50 flex items-center justify-between p-4 bg-background-dark/95 backdrop-blur-md border-b border-white/5">
+            <header className="sticky top-0 z-50 flex items-center justify-between p-4 bg-background-dark/95 backdrop-blur-md transition-all duration-300 border-b border-white/5">
                 <div className="flex items-center">
-                    <div className="relative group cursor-pointer z-0">
+                    <div className="relative group cursor-pointer z-0" onClick={() => window.location.hash = '#/profile'}>
                         <CdnImage
                             path={profile?.profile_picture_url || authUser?.user_metadata?.avatar_url}
                             gender={profile?.gender}
-                            className="size-10 rounded-full border-2 border-white/10"
+                            className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 ring-2 ring-white/10"
+                            useAsBackground
                         />
-                        <div className="absolute bottom-0 right-0 size-3 bg-green-500 rounded-full border-2 border-background-dark"></div>
+                        <div className="absolute bottom-0 right-0 size-3 bg-green-500 rounded-full border-2 border-[#160a11]"></div>
                     </div>
 
-                    <div className={`relative z-10 -ml-3 px-3 py-1 rounded-full text-[9px] font-black tracking-widest uppercase border backdrop-blur-md
-                        ${(stripeRole || 'FREE').toUpperCase() === 'MAX' ? 'bg-purple-500/10 border-purple-500/30 text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.2)]' :
-                            (stripeRole || 'FREE').toUpperCase() === 'PRO' ? 'bg-primary/10 border-primary/30 text-primary shadow-[0_0_15px_rgba(236,19,146,0.2)]' :
+                    {/* Subscription Badge */}
+                    <div className={`relative z-10 -ml-3 px-3 py-1 rounded-full text-[9px] font-black tracking-widest uppercase border backdrop-blur-md transition-all duration-500 hover:z-20 hover:scale-105 cursor-default
+                        ${(stripeRole || '').toLowerCase() === 'max' ? 'bg-purple-500/10 border-purple-500/30 text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.2)]' :
+                            (stripeRole || '').toLowerCase() === 'pro' ? 'bg-primary/10 border-primary/30 text-primary shadow-[0_0_15px_rgba(236,19,146,0.2)]' :
                                 'bg-white/5 border-white/10 text-white/40'}`}>
                         {stripeRole || 'LITE'}
                     </div>

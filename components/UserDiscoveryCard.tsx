@@ -230,7 +230,8 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, onUpgradeCl
     };
 
     const getOnlineStatus = () => {
-        const lastSeen = user.user_online_status?.[0]?.last_seen_at;
+        const statusObj = Array.isArray(user.user_online_status) ? user.user_online_status[0] : user.user_online_status;
+        const lastSeen = statusObj?.last_seen_at;
         if (!lastSeen) return null;
 
         const seenDate = new Date(lastSeen).getTime();
@@ -255,39 +256,54 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, onUpgradeCl
             onDragEnd={handleDragEnd}
             className="flex flex-col bg-surface-dark rounded-[32px] mx-4 overflow-hidden shadow-2xl relative aspect-[3/4.2] cursor-grab active:cursor-grabbing"
         >
+            {/* Loading State / Empty Card Placeholder */}
             <AnimatePresence>
                 {loading && (
                     <motion.div
                         initial={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="absolute inset-0 z-50 bg-background-dark flex items-center justify-center"
+                        transition={{ duration: 0.5, ease: "easeInOut" }}
+                        className="absolute inset-0 z-50 bg-[#1a0b14] flex items-center justify-center"
                     >
                         <div className="flex flex-col items-center gap-4">
-                            <Icon name="image" className="text-white/10 text-[64px]" />
+                            <div className="relative">
+                                <Icon name="image" className="text-white/10 text-[64px]" />
+                                <div className="absolute inset-0 border-2 border-primary/20 rounded-xl animate-ping"></div>
+                            </div>
+                            {!hasBeenInView && (
+                                <p className="text-white/20 text-[10px] font-black uppercase tracking-[0.2em] animate-pulse">
+                                    Waiting to load...
+                                </p>
+                            )}
                         </div>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            <div className="absolute inset-0 z-0">
+            {/* Main Image Swipe Area */}
+            <div className="absolute inset-0 z-0 group/card">
                 <div
                     className="flex h-full transition-transform duration-500 ease-out"
                     style={{ transform: `translateX(-${currentImageIndex * 100}%)` }}
                 >
                     {images.length === 0 ? (
                         <div className="relative flex-shrink-0 w-full h-full bg-black/40 flex items-center justify-center">
-                            <Icon name="image" className="text-white/20 text-4xl" />
+                            <div className="text-center p-6">
+                                <Icon name="image" className="text-white/20 text-4xl mb-4" />
+                                <p className="text-white font-bold text-sm">No media</p>
+                                <p className="text-white/40 text-xs">User has no uploaded pics</p>
+                            </div>
                         </div>
                     ) : images.map((img, idx) => {
-                        const isPrivate = img.visibility === 'PRIVATE';
-                        const isRevealedPrivate = isRevealed && isSpied;
-                        const showSpyOverlay = isPrivate && !isRevealedPrivate;
+                        const isImgPrivate = img.visibility === 'PRIVATE';
+                        const isImgRevealed = isRevealed && isSpied;
+                        const showImgSpyMode = isImgPrivate && !isImgRevealed;
                         const viewUrl = viewableUrls[idx];
                         const blurUrl = blurredViewableUrls[idx];
 
                         return (
                             <div key={img.id || idx} className="relative flex-shrink-0 w-full h-full">
-                                {blurUrl && (showSpyOverlay || !viewUrl) && (
+                                {blurUrl && (showImgSpyMode || !viewUrl) && (
                                     <div
                                         className="absolute inset-0 bg-cover bg-center blur-2xl scale-110"
                                         style={{ backgroundImage: `url("${blurUrl}")` }}
@@ -295,20 +311,27 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, onUpgradeCl
                                 )}
                                 {viewUrl && (
                                     <div
-                                        className={`absolute inset-0 bg-cover bg-center transition-opacity duration-700 ${showSpyOverlay ? 'opacity-0' : 'opacity-100'}`}
+                                        className={`absolute inset-0 bg-cover bg-center transition-all duration-700 ${showImgSpyMode ? 'opacity-0' : 'opacity-100'}`}
                                         style={{ backgroundImage: `url("${viewUrl}")` }}
                                     ></div>
                                 )}
-                                {showSpyOverlay && (
+                                {showImgSpyMode && (
                                     <div
                                         className="absolute inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center cursor-pointer z-20"
                                         onClick={handleSpyClick}
                                     >
-                                        <div className="text-center">
-                                            <Icon name="visibility_off" className="text-white/60 text-3xl mb-4" />
+                                        <div className="text-center p-6">
+                                            <div className="size-16 rounded-full bg-white/10 flex items-center justify-center mx-auto mb-4 border border-white/20 transition-transform active:scale-90">
+                                                <Icon name="visibility_off" className="text-white/60 text-3xl" />
+                                            </div>
                                             <p className="text-white font-bold">Private Media</p>
-                                            <p className="text-white/50 text-xs text-uppercase tracking-widest mt-1">Touch to Spy</p>
+                                            <p className="text-white/50 text-xs">Touch to Spy</p>
                                         </div>
+                                    </div>
+                                )}
+                                {loading && currentImageIndex === idx && !viewUrl && (
+                                    <div className="absolute inset-0 flex items-center justify-center z-20 bg-black/20 backdrop-blur-sm">
+                                        <div className="size-12 border-4 border-white/20 border-t-white rounded-full animate-spin -mt-16"></div>
                                     </div>
                                 )}
                             </div>
@@ -316,85 +339,191 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, onUpgradeCl
                     })}
                 </div>
 
-                <div className="absolute inset-y-0 left-0 w-1/4 z-30 flex items-center" onClick={handlePrevImage}></div>
-                <div className="absolute inset-y-0 right-0 w-1/4 z-30 flex items-center" onClick={handleNextImage}></div>
+                {/* Left/Right Click Nav & Desktop Arrows */}
+                <div
+                    className="absolute inset-y-0 left-0 w-1/4 z-30 flex items-center justify-start pl-4 cursor-pointer"
+                    onClick={handlePrevImage}
+                >
+                    <div className="flex size-10 rounded-full bg-black/20 backdrop-blur-md border border-white/10 items-center justify-center text-white opacity-0 group-hover/card:opacity-100 transition-opacity">
+                        <Icon name="chevron_left" />
+                    </div>
+                </div>
+                <div
+                    className="absolute inset-y-0 right-0 w-1/4 z-30 flex items-center justify-end pr-4 cursor-pointer"
+                    onClick={handleNextImage}
+                >
+                    <div className="flex size-10 rounded-full bg-black/20 backdrop-blur-md border border-white/10 items-center justify-center text-white opacity-0 group-hover/card:opacity-100 transition-opacity">
+                        <Icon name="chevron_right" />
+                    </div>
+                </div>
             </div>
 
-            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/40 pointer-events-none z-[1]"></div>
+            {/* Gradient Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-transparent to-black/50 pointer-events-none z-[1]"></div>
 
+            {/* Top Bar: Online Status */}
             <div className="absolute top-0 left-0 right-0 p-5 z-20 flex justify-between items-start">
-                <div className="flex flex-col gap-2">
-                    {onlineStatus && (
-                        <div className={`flex items-center gap-2 px-3 py-1 rounded-full backdrop-blur-md border border-white/10 ${onlineStatus.color}`}>
-                            <div className="size-1.5 rounded-full bg-white"></div>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-white">{onlineStatus.label}</span>
-                        </div>
-                    )}
+                <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-2">
+                        {onlineStatus && (
+                            <motion.div
+                                layout
+                                className={`flex items-center justify-center h-6 rounded-full backdrop-blur-md border border-white/10 overflow-hidden ${onlineStatus.color} transition-colors duration-500`}
+                                style={{
+                                    paddingLeft: '11px',
+                                    paddingRight: currentImageIndex === 0 ? '14px' : '11px',
+                                    minWidth: currentImageIndex === 0 ? 'auto' : '24px'
+                                }}
+                            >
+                                <div className={`size-1.5 rounded-full bg-white shrink-0 ${onlineStatus.label === 'Online' ? 'animate-pulse' : ''}`}></div>
+                                <AnimatePresence mode="wait">
+                                    {currentImageIndex === 0 && (
+                                        <motion.span
+                                            key="label"
+                                            initial={{ opacity: 0, width: 0 }}
+                                            animate={{ opacity: 1, width: 'auto' }}
+                                            exit={{ opacity: 0, width: 0 }}
+                                            transition={{ duration: 0.3, ease: "easeOut" }}
+                                            className="text-[10px] font-black uppercase tracking-widest text-white leading-none whitespace-nowrap overflow-hidden ml-2"
+                                        >
+                                            {onlineStatus.label}
+                                        </motion.span>
+                                    )}
+                                </AnimatePresence>
+                            </motion.div>
+                        )}
+
+                        {images[currentImageIndex]?.visibility === 'PRIVATE' && (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="flex items-center justify-center h-6 w-6 rounded-full backdrop-blur-md border border-white/10 bg-black/20"
+                            >
+                                <Icon
+                                    name={(!(isRevealed && isSpied)) ? 'lock' : 'key'}
+                                    className="text-[12px] text-primary"
+                                />
+                            </motion.div>
+                        )}
+                    </div>
                 </div>
 
-                {images.length > 1 && (
-                    <div className="flex flex-col gap-2 p-1.5 rounded-full bg-black/20 backdrop-blur-sm border border-white/5">
-                        {images.map((_, idx) => (
+                {/* Vertical Pagination Dots */}
+                {images.length > 0 && (
+                    <div className="flex flex-col gap-2.5 items-center bg-black/5 backdrop-blur-sm p-1.5 rounded-full border border-white/5">
+                        {images.map((img, idx) => (
                             <div
                                 key={idx}
-                                className={`size-1.5 rounded-full transition-all ${idx === currentImageIndex ? 'bg-white scale-125 shadow-lg' : 'bg-white/20'}`}
+                                className={`size-1.5 rounded-full transition-all duration-300 ${idx === currentImageIndex
+                                    ? 'bg-white scale-125 shadow-[0_0_10px_rgba(255,255,255,0.8)]'
+                                    : img.visibility === 'PRIVATE' ? 'bg-primary/20' : 'bg-white/10'
+                                    }`}
                             ></div>
                         ))}
                     </div>
                 )}
             </div>
 
+            {/* Notification */}
             <AnimatePresence>
                 {notification && (
                     <motion.div
                         initial={{ opacity: 0, y: -20, x: '-50%' }}
                         animate={{ opacity: 1, y: 0, x: '-50%' }}
                         exit={{ opacity: 0, y: -20, x: '-50%' }}
-                        className="absolute top-20 left-1/2 z-30 bg-primary/90 text-white px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider"
+                        className="absolute top-20 left-1/2 z-30 bg-white/10 backdrop-blur-xl border border-white/20 px-5 py-2.5 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.5)] flex items-center gap-2.5"
                     >
-                        {notification}
+                        <div className="size-5 rounded-full bg-primary/20 flex items-center justify-center">
+                            <Icon name="visibility" className="text-primary text-sm" filled />
+                        </div>
+                        <p className="text-white text-xs font-bold tracking-wide uppercase">{notification}</p>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            <div className="absolute bottom-0 left-0 right-0 p-6 z-10">
-                <div className="flex flex-col gap-1 mb-6">
-                    <h2 className="text-white text-3xl font-extrabold tracking-tight">
-                        {user.display_name || user.username}
-                    </h2>
-                    <div className="flex items-center gap-1.5 text-white/70 text-sm">
+            {/* Content Overlay */}
+            <div className="absolute bottom-0 left-0 right-0 p-6 z-10 flex flex-col gap-4">
+                {/* User Info */}
+                <div className="flex flex-col gap-1">
+                    <motion.div
+                        animate={{ y: currentImageIndex === 0 ? 0 : 20 }}
+                        transition={{ type: "spring", damping: 20, stiffness: 300 }}
+                        className="flex items-baseline gap-2"
+                    >
+                        <h2 className="text-white text-3xl font-extrabold tracking-tight">
+                            {user.display_name || user.username}
+                        </h2>
+                    </motion.div>
+
+                    <motion.div
+                        animate={{
+                            opacity: currentImageIndex === 0 ? 1 : 0,
+                            height: currentImageIndex === 0 ? 'auto' : 0,
+                            marginBottom: currentImageIndex === 0 ? 0 : -4
+                        }}
+                        className="flex items-center gap-2 text-white/70 text-sm font-medium overflow-hidden"
+                    >
                         <Icon name="location_on" className="text-primary text-base" />
                         <span>{user.location || 'Nearby'}</span>
-                    </div>
-                    {user.bio && (
-                        <p className="text-white/80 text-sm mt-2 line-clamp-2 leading-relaxed">
-                            {user.bio}
-                        </p>
-                    )}
-                    {user.interests && user.interests.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-3">
-                            {user.interests.slice(0, 3).map((interest: string, idx: number) => (
-                                <span key={idx} className="bg-white/10 backdrop-blur-md border border-white/5 px-2.5 py-0.5 rounded-full text-[10px] text-white/90 font-bold">
-                                    #{interest.replace(/\s+/g, '')}
-                                </span>
-                            ))}
-                        </div>
-                    )}
+                    </motion.div>
+
+                    <AnimatePresence>
+                        {currentImageIndex === 0 && user.bio && (
+                            <motion.p
+                                initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                                animate={{ opacity: 1, height: 'auto', marginTop: 2 }}
+                                exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                                className="text-white/80 text-sm line-clamp-2 leading-relaxed font-medium overflow-hidden"
+                            >
+                                {user.bio}
+                            </motion.p>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Interests */}
+                    <AnimatePresence>
+                        {currentImageIndex === 0 && user.interests && user.interests.length > 0 && (
+                            <motion.div
+                                initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                                animate={{ opacity: 1, height: 'auto', marginTop: 8 }}
+                                exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                                className="flex flex-wrap gap-2 overflow-hidden"
+                            >
+                                {user.interests.slice(0, 3).map((interest: string, idx: number) => (
+                                    <div key={idx} className="bg-white/10 backdrop-blur-md border border-white/5 px-3 py-1 rounded-full flex items-center">
+                                        <span className="text-white/90 text-[10px] font-bold leading-none">#{interest.replace(/\s+/g, '')}</span>
+                                    </div>
+                                ))}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
 
-                <div className="flex items-center gap-3">
+                {/* Bottom Actions */}
+                <div className="flex items-center justify-between gap-3 pt-2">
                     <button
                         onClick={(e) => { e.stopPropagation(); navigate(`/profile/${user.id}`); }}
-                        className="size-14 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all active:scale-90"
+                        className="size-14 shrink-0 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all active:scale-90"
                     >
-                        <Icon name="person" className="text-2xl" />
+                        <Icon name="star_rate" className="text-2xl" filled />
                     </button>
+
+                    {/* Spy Button - Theme Highlighted */}
+                    {!isSpied && images.some(img => img.visibility === 'PRIVATE') && (
+                        <button
+                            onClick={handleSpyClick}
+                            className="size-14 shrink-0 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all active:scale-90"
+                        >
+                            <Icon name="visibility_off" className="text-2xl" filled />
+                        </button>
+                    )}
+
                     <button
                         onClick={(e) => { e.stopPropagation(); navigate(`/chat/${user.id}`); }}
-                        className="flex-1 h-14 rounded-full bg-primary flex items-center justify-center gap-2 text-white font-bold tracking-wide shadow-lg shadow-primary/20 active:scale-95 transition-all"
+                        className="flex-1 h-14 rounded-full bg-white/10 backdrop-blur-md border border-white/10 flex items-center justify-center gap-2 text-white hover:bg-white/20 transition-all active:scale-95"
                     >
-                        <Icon name="favorite" className="text-xl" filled />
-                        <span>Connect</span>
+                        <Icon name="favorite" className="text-xl text-primary" filled />
+                        <span className="font-bold tracking-wide">Connect</span>
                     </button>
                 </div>
             </div>
