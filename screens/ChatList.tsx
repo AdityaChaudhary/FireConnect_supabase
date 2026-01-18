@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from '../components/Icon';
+import NotificationIcon from '../components/NotificationIcon';
 import { useAuth } from '../context/AuthContext';
 import { useConnections, useThreads } from '../hooks/useData';
 import CdnImage from '../components/CdnImage';
@@ -67,9 +68,7 @@ const ChatList: React.FC = () => {
                 <div className="flex items-center justify-between mb-6">
                     <h1 className="text-3xl font-black text-white tracking-tight">Messages</h1>
                     <div className="flex items-center gap-3">
-                        <button className="size-10 rounded-full bg-white/5 flex items-center justify-center text-white/40">
-                            <Icon name="edit_square" className="text-lg" />
-                        </button>
+                        <NotificationIcon />
                     </div>
                 </div>
 

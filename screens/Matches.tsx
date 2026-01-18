@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from '../components/Icon';
+import NotificationIcon from '../components/NotificationIcon';
 import { useAuth } from '../context/AuthContext';
 import { useConnections } from '../hooks/useData';
 import CdnImage from '../components/CdnImage';
@@ -11,11 +12,27 @@ import ConfirmDialog from '../components/ConfirmDialog';
 const Matches: React.FC = () => {
     const { user: authUser } = useAuth();
     const navigate = useNavigate();
+    const [searchQuery, setSearchQuery] = useState('');
     const { data, isLoading: loading, refetch: fetchMatches } = useConnections(authUser?.id);
 
-    const connections = data?.connections || [];
-    const sentRequests = data?.sentRequests || [];
-    const receivedRequests = data?.receivedRequests || [];
+    const rawConnections = data?.connections || [];
+    const rawSentRequests = data?.sentRequests || [];
+    const rawReceivedRequests = data?.receivedRequests || [];
+
+    const connections = useMemo(() => 
+        rawConnections.filter((c: any) => 
+            (c.display_name || c.username || '').toLowerCase().includes(searchQuery.toLowerCase())
+        ), [rawConnections, searchQuery]);
+
+    const sentRequests = useMemo(() => 
+        rawSentRequests.filter((c: any) => 
+            (c.display_name || c.username || '').toLowerCase().includes(searchQuery.toLowerCase())
+        ), [rawSentRequests, searchQuery]);
+
+    const receivedRequests = useMemo(() => 
+        rawReceivedRequests.filter((c: any) => 
+            (c.display_name || c.username || '').toLowerCase().includes(searchQuery.toLowerCase())
+        ), [rawReceivedRequests, searchQuery]);
 
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
@@ -72,9 +89,7 @@ const Matches: React.FC = () => {
             {/* Header */}
             <header className="flex items-center justify-between px-6 pt-6 pb-4 bg-background-dark sticky top-0 z-20">
                 <h1 className="text-3xl font-black text-white tracking-tight">Explore</h1>
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-white/40">
-                    <Icon name="explore" filled />
-                </div>
+                <NotificationIcon />
             </header>
 
             {/* Search */}
@@ -87,6 +102,8 @@ const Matches: React.FC = () => {
                         className="w-full py-3.5 pl-11 pr-4 bg-white/5 border border-white/5 rounded-full text-sm font-medium placeholder-gray-500 focus:ring-1 focus:ring-primary/50 transition-all shadow-sm outline-none text-white"
                         placeholder="Search matches..."
                         type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
             </div>
@@ -182,9 +199,6 @@ const Matches: React.FC = () => {
                 <section className="py-2">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-xl font-black text-white">All Connections</h3>
-                        <button className="size-10 rounded-full bg-white/5 flex items-center justify-center text-white/40 hover:bg-white/10 transition-colors">
-                            <Icon name="tune" className="text-lg" />
-                        </button>
                     </div>
 
                     {connections.length === 0 ? (
