@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Icon from './Icon';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
-import { getDefaultAvatar } from '../lib/image-utils';
+import { resolveImageUrl } from '../lib/image-resolver';
 import { useIntersectionObserver } from '../hooks/useIntersectionObserver';
 
 interface UserDiscoveryCardProps {
@@ -20,7 +20,6 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, onUpgradeCl
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [viewableUrls, setViewableUrls] = useState<Record<number, string>>({});
     const [blurredViewableUrls, setBlurredViewableUrls] = useState<Record<number, string>>({});
-    const [imageLoading, setImageLoading] = useState(false);
     const [isRevealed, setIsRevealed] = useState(false);
     const [isSpied, setIsSpied] = useState(false);
     const [notification, setNotification] = useState<string | null>(null);
@@ -31,7 +30,6 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, onUpgradeCl
     });
 
     const normalizedRole = (stripeRole || 'free').toUpperCase();
-    const isProOrMax = normalizedRole === 'PRO' || normalizedRole === 'MAX';
 
     useEffect(() => {
         const intervalId = setInterval(() => {
@@ -81,7 +79,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, onUpgradeCl
         const checkSpied = async () => {
             if (normalizedRole === 'FREE') return;
             try {
-                const { data, error } = await supabase
+                const { data } = await supabase
                     .from('spied_profiles')
                     .select('*')
                     .eq('target_user_id', user.id)
@@ -120,13 +118,11 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, onUpgradeCl
                 const canFetchPrivate = normalizedRole === 'MAX' || (normalizedRole === 'PRO' && isSpied);
 
                 if (img.blurred_url && !bUrls[idx]) {
-                    const { data } = supabase.storage.from('profile-images').getPublicUrl(img.blurred_url);
-                    bUrls[idx] = data.publicUrl;
+                    bUrls[idx] = resolveImageUrl(img.blurred_url);
                 }
 
                 if ((!isPrivate || canFetchPrivate) && !vUrls[idx]) {
-                    const { data } = supabase.storage.from('profile-images').getPublicUrl(img.url);
-                    vUrls[idx] = data.publicUrl;
+                    vUrls[idx] = resolveImageUrl(img.url);
                 }
             });
 

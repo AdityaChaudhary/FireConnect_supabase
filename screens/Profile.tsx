@@ -5,10 +5,8 @@ import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { STORAGE_PATHS, AVAILABLE_INTERESTS } from '../lib/config';
-import { blurImage, compressImage, getDefaultAvatar } from '../lib/image-utils';
-import { resolveImageUrl } from '../lib/image-resolver';
-import { redirectToCustomerPortal } from '../lib/stripe-utils';
+import { AVAILABLE_INTERESTS } from '../lib/config';
+import { blurImage, compressImage } from '../lib/image-utils';
 import CdnImage from '../components/CdnImage';
 
 const Profile: React.FC = () => {
@@ -24,7 +22,6 @@ const Profile: React.FC = () => {
     const [isAddInterestOpen, setIsAddInterestOpen] = useState(false);
     const [interestToRemove, setInterestToRemove] = useState<string | null>(null);
     const [updatingInterests, setUpdatingInterests] = useState(false);
-    const [portalLoading, setPortalLoading] = useState(false);
 
     const subscriptionLevel = (stripeRole || 'FREE').toUpperCase() as 'FREE' | 'PRO' | 'MAX';
     const displayName = profile?.display_name || user?.user_metadata?.full_name || 'User';
@@ -64,8 +61,9 @@ const Profile: React.FC = () => {
             const compressedBlob = await compressImage(file);
 
             // Upload Original
+            const bucket = activeTab === 'PRIVATE' ? 'private-media' : 'public-media';
             const { error: uploadError } = await supabase.storage
-                .from('profile-images')
+                .from(bucket)
                 .upload(storagePath, compressedBlob, { contentType: 'image/jpeg' });
 
             if (uploadError) throw uploadError;
@@ -77,7 +75,7 @@ const Profile: React.FC = () => {
                     blurredPath = `users/${user.id}/shared/PUBLIC/blurred/blurred_${fileName}`;
 
                     const { error: blurUploadError } = await supabase.storage
-                        .from('profile-images')
+                        .from('public-media')
                         .upload(blurredPath, blurredBlob, { contentType: 'image/jpeg' });
 
                     if (blurUploadError) throw blurUploadError;
@@ -124,17 +122,20 @@ const Profile: React.FC = () => {
         try {
             const { data: imgData, error: fetchError } = await supabase
                 .from('profile_images')
-                .select('url, blurred_url')
+                .select('url, blurred_url, visibility')
                 .eq('id', idToDelete)
                 .single();
 
             if (fetchError) throw fetchError;
 
             // Delete from storage
-            const filesToDelete = [imgData.url];
-            if (imgData.blurred_url) filesToDelete.push(imgData.blurred_url);
+            const bucket = imgData.visibility === 'PRIVATE' ? 'private-media' : 'public-media';
+            await supabase.storage.from(bucket).remove([imgData.url]);
 
-            await supabase.storage.from('profile-images').remove(filesToDelete);
+            if (imgData.blurred_url) {
+                // Blurred previews are always in public-media
+                await supabase.storage.from('public-media').remove([imgData.blurred_url]);
+            }
 
             // Delete from DB
             const { error: deleteError } = await supabase

@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import Icon from '../components/Icon';
-import { STORAGE_PATHS } from '../lib/config';
-import { compressImage, getDefaultAvatar } from '../lib/image-utils';
+import { compressImage } from '../lib/image-utils';
 import CdnImage from '../components/CdnImage';
 
 const EditProfile: React.FC = () => {
@@ -104,7 +103,7 @@ const EditProfile: React.FC = () => {
                 const compressedBlob = await compressImage(image, 512, 512, 0.9);
 
                 const { error: uploadError } = await supabase.storage
-                    .from('profile-images')
+                    .from('public-media')
                     .upload(storagePath, compressedBlob, { contentType: 'image/jpeg' });
 
                 if (uploadError) throw uploadError;
