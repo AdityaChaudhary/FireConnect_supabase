@@ -44,11 +44,8 @@ const ChatList: React.FC = () => {
     const isUnread = (thread: any) => {
         if (!authUser || !thread.last_message_time || !thread.last_message) return false;
         
-        // Find if we were the sender of the last message
-        // This is a bit tricky since we don't have the last message object here, 
-        // only last_message text and last_message_time.
-        // However, if we sent it, we technically "read" it.
-        // For now, let's keep it simple: if last_message_time > last_read[me]
+        // If we are the sender of the last message, it's not unread for us
+        if (thread.last_message_sender_id === authUser.id) return false;
         
         const lastRead = thread.last_read?.[authUser.id];
         if (!lastRead) return true; // Never read
@@ -190,7 +187,7 @@ const ChatList: React.FC = () => {
                                             </span>
                                         </div>
                                         <p className={`text-xs truncate leading-relaxed ${isUnread(thread) ? 'text-white/80 font-bold' : 'text-white/40'}`}>
-                                            {thread.last_message || 'Start a conversation...'}
+                                            {thread.last_message_sender_id === authUser?.id ? 'You: ' : ''}{thread.last_message || 'Start a conversation...'}
                                         </p>
                                     </div>
 

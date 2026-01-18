@@ -193,7 +193,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
 
         heartbeat(); // Run immediately
-        const interval = setInterval(heartbeat, 120000); // Every 2 minutes (120,000 ms)
+        const interval = setInterval(heartbeat, 30000); // Every 30 seconds
 
         return () => clearInterval(interval);
     }, [user]);

@@ -34,7 +34,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, onUpgradeCl
     useEffect(() => {
         const intervalId = setInterval(() => {
             setCurrentTime(Date.now());
-        }, 30000);
+        }, 10000); // Update every 10 seconds
         return () => clearInterval(intervalId);
     }, []);
 
@@ -235,9 +235,10 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, onUpgradeCl
         if (!lastSeen) return null;
 
         const seenDate = new Date(lastSeen).getTime();
-        const diffInMinutes = Math.floor((currentTime - seenDate) / (1000 * 60));
+        const diffInSeconds = Math.floor((currentTime - seenDate) / 1000);
+        const diffInMinutes = Math.floor(diffInSeconds / 60);
 
-        if (diffInMinutes < 5) {
+        if (diffInSeconds < 120) { // 2 minute threshold
             return { label: 'Online', color: 'bg-green-500' };
         } else if (diffInMinutes < 24 * 60) {
             const hrs = Math.floor(diffInMinutes / 60);

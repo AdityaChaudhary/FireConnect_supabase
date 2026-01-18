@@ -16,6 +16,9 @@ const BottomNav: React.FC = () => {
     const hasUnread = React.useMemo(() => {
         if (!authUser) return false;
         return threads.some((thread: any) => {
+            // If we are the sender, it's not unread for us
+            if (thread.last_message_sender_id === authUser.id) return false;
+
             const lastRead = thread.last_read?.[authUser.id];
             const lastMessageTime = thread.last_message_time;
 
