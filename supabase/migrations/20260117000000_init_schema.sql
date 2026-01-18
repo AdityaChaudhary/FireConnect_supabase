@@ -17,6 +17,8 @@ CREATE TABLE public.users (
   spy_credits INTEGER DEFAULT 0,
   date_of_birth DATE,
   is_onboarded BOOLEAN DEFAULT FALSE,
+  profile_picture_url TEXT,
+  stripe_customer_id TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

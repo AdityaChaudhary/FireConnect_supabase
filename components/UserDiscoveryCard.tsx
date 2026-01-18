@@ -113,8 +113,8 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, onUpgradeCl
             const vUrls: Record<number, string> = { ...viewableUrls };
             const bUrls: Record<number, string> = { ...blurredViewableUrls };
 
-            images.forEach((img, idx) => {
-                const isPrivate = img.visibility === 'PRIVATE';
+            const promises = images.map(async (img, idx) => {
+                const isPrivate = img.visibility === 'PRIVATE' || img.url.includes('/PRIVATE/') || img.url.includes('private-media/');
                 const canFetchPrivate = normalizedRole === 'MAX' || (normalizedRole === 'PRO' && isSpied);
 
                 if (img.blurred_url && !bUrls[idx]) {
@@ -122,9 +122,25 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, onUpgradeCl
                 }
 
                 if ((!isPrivate || canFetchPrivate) && !vUrls[idx]) {
-                    vUrls[idx] = resolveImageUrl(img.url);
+                    if (isPrivate) {
+                        const cleanPath = img.url
+                            .replace(/^(private-media)\//, '')
+                            .replace(/^\//, '');
+                        try {
+                            const { data } = await supabase.storage
+                                .from('private-media')
+                                .createSignedUrl(cleanPath, 3600);
+                            if (data) vUrls[idx] = data.signedUrl;
+                        } catch (e) {
+                            console.error("Error signing private URL", e);
+                        }
+                    } else {
+                        vUrls[idx] = resolveImageUrl(img.url);
+                    }
                 }
             });
+
+            await Promise.all(promises);
 
             setViewableUrls(vUrls);
             setBlurredViewableUrls(bUrls);

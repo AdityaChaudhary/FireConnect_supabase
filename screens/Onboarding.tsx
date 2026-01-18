@@ -165,6 +165,7 @@ const Onboarding: React.FC = () => {
                     username,
                     display_name: displayName,
                     email: user?.email || '',
+                    profile_picture_url: user?.user_metadata?.avatar_url || '',
                     gender,
                     date_of_birth: dateOfBirth,
                     location,

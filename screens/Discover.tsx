@@ -4,7 +4,6 @@ import NotificationIcon from '../components/NotificationIcon';
 import UserDiscoveryCard from '../components/UserDiscoveryCard';
 import UpgradeModal from '../components/UpgradeModal';
 import { useAuth } from '../context/AuthContext';
-import { getDefaultAvatar } from '../lib/image-utils';
 import { useDiscoveryUsers } from '../hooks/useData';
 import CdnImage from '../components/CdnImage';
 
@@ -29,6 +28,7 @@ const Discover: React.FC = () => {
                     <div className="relative group cursor-pointer z-0">
                         <CdnImage
                             path={profile?.profile_picture_url || authUser?.user_metadata?.avatar_url}
+                            gender={profile?.gender}
                             className="size-10 rounded-full border-2 border-white/10"
                         />
                         <div className="absolute bottom-0 right-0 size-3 bg-green-500 rounded-full border-2 border-background-dark"></div>

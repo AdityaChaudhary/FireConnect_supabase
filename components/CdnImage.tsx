@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useResolvedImage } from '../hooks/useResolvedImage';
+import { getDefaultAvatar } from '../lib/image-utils';
 
 interface CdnImageProps {
     path: string | undefined | null;
@@ -10,6 +11,7 @@ interface CdnImageProps {
     children?: React.ReactNode;
     onClick?: (e: React.MouseEvent) => void;
     placeholder?: string;
+    gender?: string | null;
 }
 
 /**
@@ -25,12 +27,22 @@ const CdnImage: React.FC<CdnImageProps> = ({
     useAsBackground = false,
     children,
     onClick,
-    placeholder
+    placeholder,
+    gender
 }) => {
     const { url, loading } = useResolvedImage(path);
 
+    const [error, setError] = useState(false);
+
+    // Reset error state when path changes
+    React.useEffect(() => {
+        setError(false);
+    }, [path]);
+
     // If we have a placeholder and no URL yet (including loading state), use it
-    const displayUrl = url || placeholder || undefined;
+    // If no path and no placeholder, use Dicebear fallback
+    const fallbackUrl = placeholder || getDefaultAvatar(gender);
+    const displayUrl = error ? fallbackUrl : (url || (!loading ? fallbackUrl : undefined));
 
     if (useAsBackground) {
         return (
@@ -48,16 +60,17 @@ const CdnImage: React.FC<CdnImageProps> = ({
         );
     }
 
-    if (!displayUrl) return null;
+    if (!displayUrl && loading) return null;
 
     return (
         <img
-            src={displayUrl}
+            src={displayUrl || placeholder}
             alt={alt}
             crossOrigin="anonymous"
             className={`${className} ${loading && !url ? 'opacity-0' : 'opacity-100 transition-opacity duration-300'}`}
             style={style}
             onClick={onClick}
+            onError={() => setError(true)}
         />
     );
 };

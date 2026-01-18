@@ -218,6 +218,7 @@ const ProfilePreview: React.FC = () => {
     const amIMax = (stripeRole || '').toLowerCase() === 'max';
     const amIPro = (stripeRole || '').toLowerCase() === 'pro';
     const isTheyMax = (user.stripe_role || '').toLowerCase() === 'max' || user.user_type === 'AI';
+    const isOwner = authUser?.id === targetUserId;
 
     return (
         <div className="relative flex min-h-screen w-full flex-col overflow-hidden pb-24 text-white bg-background-dark">
@@ -270,7 +271,7 @@ const ProfilePreview: React.FC = () => {
                         <div className="h-32 w-32 rounded-full p-1 bg-gradient-to-tr from-primary to-purple-600 shadow-xl shadow-primary/20">
                             <CdnImage
                                 path={user.profile_picture_url}
-                                placeholder={getDefaultAvatar(user.gender)}
+                                gender={user.gender}
                                 className="h-full w-full rounded-full bg-cover bg-center border-4 border-background-dark"
                                 useAsBackground
                             />
@@ -354,7 +355,7 @@ const ProfilePreview: React.FC = () => {
                     <div className="grid grid-cols-3 gap-2 w-full">
                         {filteredImages.map((img, idx) => {
                             const isImgPrivate = img.visibility === 'PRIVATE';
-                            const showImgSpyMode = isImgPrivate && !isRevealed;
+                            const showImgSpyMode = isImgPrivate && !isRevealed && !isOwner;
 
                             return (
                                 <div
@@ -373,6 +374,7 @@ const ProfilePreview: React.FC = () => {
                                     {showImgSpyMode && (
                                         <CdnImage
                                             path={img.blurred_url || img.url}
+                                            gender={user.gender}
                                             className="absolute inset-0 bg-cover bg-center blur-2xl scale-110"
                                             useAsBackground
                                         />
@@ -560,6 +562,7 @@ const ProfilePreview: React.FC = () => {
                         </motion.button>
                         <CdnImage
                             path={previewImage}
+                            gender={user.gender}
                             className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-2xl z-100"
                             onClick={(e: React.MouseEvent) => e.stopPropagation()}
                         />

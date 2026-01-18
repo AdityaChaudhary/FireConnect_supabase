@@ -107,7 +107,13 @@ const EditProfile: React.FC = () => {
                     .upload(storagePath, compressedBlob, { contentType: 'image/jpeg' });
 
                 if (uploadError) throw uploadError;
-                profilePictureUrl = storagePath;
+                
+                // Get public URL and store it directly, matching original Firebase behavior
+                const { data: publicUrlData } = supabase.storage
+                    .from('public-media')
+                    .getPublicUrl(storagePath);
+                
+                profilePictureUrl = publicUrlData.publicUrl;
             }
 
             const { error: updateError } = await supabase
@@ -158,6 +164,7 @@ const EditProfile: React.FC = () => {
                         <div className="h-32 w-32 rounded-full p-1 bg-gradient-to-tr from-primary to-purple-600 shadow-xl">
                             <CdnImage
                                 path={previewUrl}
+                                gender={gender}
                                 className="h-full w-full rounded-full object-cover border-4 border-background-dark"
                             />
                         </div>
