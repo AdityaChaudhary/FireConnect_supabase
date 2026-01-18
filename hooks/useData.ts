@@ -187,7 +187,8 @@ export const useUserDetail = (userId: string) => {
             return data;
         },
         enabled: !!userId,
-        staleTime: 30 * 1000,
+        staleTime: 5000,
+        refetchInterval: 5000, // Poll every 5 seconds for status updates
     });
 };
 
@@ -319,7 +320,7 @@ export const useThreads = (userId?: string) => {
             return threadsWithDetails;
         },
         enabled: !!userId,
-        refetchInterval: 30000, // Regular refresh for message updates
+        refetchInterval: 5000, // Poll every 5 seconds for list updates
     });
 };
 
@@ -332,24 +333,19 @@ export const useMessages = (threadId?: string) => {
     useEffect(() => {
         if (!threadId) return;
 
-        // Subscribe to new messages in this thread
+        // Subscribe to messages in this thread
         const channel = supabase
-            .channel(`thread:${threadId}`)
+            .channel(`thread-messages-${threadId}`)
             .on(
                 'postgres_changes',
                 {
-                    event: 'INSERT',
+                    event: '*',
                     schema: 'public',
                     table: 'messages',
                     filter: `thread_id=eq.${threadId}`,
                 },
-                (payload) => {
-                    // Update the cache immediately
-                    queryClient.setQueryData(['messages', threadId], (old: any) => {
-                        const exists = (old || []).find((m: any) => m.id === payload.new.id);
-                        if (exists) return old;
-                        return [...(old || []), payload.new];
-                    });
+                () => {
+                    queryClient.invalidateQueries({ queryKey: ['messages', threadId] });
                 }
             )
             .subscribe();

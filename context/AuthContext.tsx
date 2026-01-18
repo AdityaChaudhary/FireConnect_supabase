@@ -175,6 +175,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
     }, []);
 
+    // Heartbeat for online status
+    useEffect(() => {
+        if (!user) return;
+
+        const heartbeat = async () => {
+            try {
+                await supabase
+                    .from('user_online_status')
+                    .upsert({ 
+                        user_id: user.id, 
+                        last_seen_at: new Date().toISOString() 
+                    });
+            } catch (err) {
+                console.error("AuthContext: Heartbeat error:", err);
+            }
+        };
+
+        heartbeat(); // Run immediately
+        const interval = setInterval(heartbeat, 120000); // Every 2 minutes (120,000 ms)
+
+        return () => clearInterval(interval);
+    }, [user]);
+
     const signInWithGoogle = async () => {
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',

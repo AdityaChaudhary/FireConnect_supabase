@@ -41,6 +41,20 @@ const ChatList: React.FC = () => {
         return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
     };
 
+    const isUnread = (thread: any) => {
+        if (!authUser || !thread.last_message_time || !thread.last_message) return false;
+        
+        // Find if we were the sender of the last message
+        // This is a bit tricky since we don't have the last message object here, 
+        // only last_message text and last_message_time.
+        // However, if we sent it, we technically "read" it.
+        // For now, let's keep it simple: if last_message_time > last_read[me]
+        
+        const lastRead = thread.last_read?.[authUser.id];
+        if (!lastRead) return true; // Never read
+        return new Date(thread.last_message_time) > new Date(lastRead);
+    };
+
     if ((threadsLoading || connectionsLoading) && threads.length === 0) {
         return (
             <div className="flex-1 flex items-center justify-center bg-background-dark">
@@ -168,15 +182,21 @@ const ChatList: React.FC = () => {
 
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between mb-0.5">
-                                            <h4 className="text-sm font-bold text-white truncate">{otherUser.display_name || otherUser.username}</h4>
-                                            <span className="text-[10px] font-bold text-white/20">{formatMessageTime(thread.last_message_time)}</span>
+                                            <h4 className={`text-sm tracking-tight truncate ${isUnread(thread) ? 'font-black text-white' : 'font-bold text-white/80'}`}>
+                                                {otherUser.display_name || otherUser.username}
+                                            </h4>
+                                            <span className={`text-[10px] font-bold ${isUnread(thread) ? 'text-primary' : 'text-white/20'}`}>
+                                                {formatMessageTime(thread.last_message_time)}
+                                            </span>
                                         </div>
-                                        <p className="text-xs text-white/40 truncate leading-relaxed">
+                                        <p className={`text-xs truncate leading-relaxed ${isUnread(thread) ? 'text-white/80 font-bold' : 'text-white/40'}`}>
                                             {thread.last_message || 'Start a conversation...'}
                                         </p>
                                     </div>
 
-                                    {/* Unread dot logic if we had it */}
+                                    {isUnread(thread) && (
+                                        <div className="size-2.5 rounded-full bg-primary shadow-lg shadow-primary/40 flex-shrink-0 animate-pulse"></div>
+                                    )}
                                 </div>
                             );
                         })

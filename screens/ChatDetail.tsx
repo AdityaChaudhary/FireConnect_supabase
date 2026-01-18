@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import Icon from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
 import { useMessages, useUserDetail } from '../hooks/useData';
@@ -11,6 +12,7 @@ const ChatDetail: React.FC = () => {
     const { id: otherUserId } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const location = useLocation();
+    const queryClient = useQueryClient();
     const { user: authUser } = useAuth();
 
     // Initial user data from navigation state if available
@@ -80,10 +82,41 @@ const ChatDetail: React.FC = () => {
         getThread();
     }, [authUser, otherUserId]);
 
-    // Scroll to bottom when messages change
+    // Scroll to bottom when messages change and mark as read
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
+
+        const markAsRead = async () => {
+            if (!threadId || !authUser || messages.length === 0) return;
+
+            // Optimization: check if the last message is already "read"
+            const lastMessage = messages[messages.length - 1];
+            if (lastMessage.sender_id === authUser.id) return; // Don't mark as read if we sent it
+
+            // Update last_read for current user in thread
+            // We use a JSONB merge logic or just fetch and update
+            const { data: thread } = await supabase
+                .from('threads')
+                .select('last_read')
+                .eq('id', threadId)
+                .single();
+
+            const lastRead = thread?.last_read || {};
+            const lastReadTime = lastRead[authUser.id];
+
+            // If last message is newer than our last read, update it
+            if (!lastReadTime || new Date(lastMessage.created_at) > new Date(lastReadTime)) {
+                await supabase
+                    .from('threads')
+                    .update({
+                        last_read: { ...lastRead, [authUser.id]: new Date().toISOString() }
+                    })
+                    .eq('id', threadId);
+            }
+        };
+
+        markAsRead();
+    }, [messages, threadId, authUser]);
 
     const handleSend = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
@@ -115,7 +148,11 @@ const ChatDetail: React.FC = () => {
                 })
                 .eq('id', threadId);
 
-            // 3. If AI user, call AI engine
+            // 3. Manually invalidate queries for immediate feedback
+            queryClient.invalidateQueries({ queryKey: ['messages', threadId] });
+            queryClient.invalidateQueries({ queryKey: ['threads'] });
+
+            // 4. If AI user, call AI engine
             if (otherUser?.user_type === 'AI') {
                 try {
                     await supabase.functions.invoke('ai-engine', {
