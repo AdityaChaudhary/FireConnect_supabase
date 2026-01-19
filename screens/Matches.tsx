@@ -129,7 +129,8 @@ const Matches: React.FC = () => {
                                         <div className="size-12 rounded-2xl relative flex items-center justify-center border border-white/10 bg-surface-dark overflow-hidden">
                                             <CdnImage
                                                 path={request.profile_picture_url}
-                                                placeholder={getDefaultAvatar(request.gender)}
+                                                gender={request.gender}
+                                                seed={request.id}
                                                 className="w-full h-full object-cover"
                                             />
                                         </div>
@@ -175,7 +176,8 @@ const Matches: React.FC = () => {
                                         <div className="w-full h-full rounded-full p-0.5 border-2 border-primary/30 flex items-center justify-center bg-surface-dark overflow-hidden">
                                             <CdnImage
                                                 path={request.profile_picture_url}
-                                                placeholder={getDefaultAvatar(request.gender)}
+                                                gender={request.gender}
+                                                seed={request.id}
                                                 className="w-full h-full rounded-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
                                             />
                                         </div>
@@ -225,7 +227,8 @@ const Matches: React.FC = () => {
                                 >
                                     <CdnImage
                                         path={user.profile_picture_url}
-                                        placeholder={getDefaultAvatar(user.gender)}
+                                        gender={user.gender}
+                                        seed={user.id}
                                         className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
                                     />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-transparent"></div>

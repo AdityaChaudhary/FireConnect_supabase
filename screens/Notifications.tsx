@@ -5,7 +5,6 @@ import Icon from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../hooks/useData';
 import CdnImage from '../components/CdnImage';
-import { getDefaultAvatar } from '../lib/image-utils';
 import { supabase } from '../lib/supabase';
 
 const Notifications: React.FC = () => {
@@ -132,7 +131,8 @@ const Notifications: React.FC = () => {
                                         <div className="size-12 rounded-full overflow-hidden border-2 border-white/10">
                                             <CdnImage
                                                 path={notification.actor?.profile_picture_url}
-                                                placeholder={getDefaultAvatar(notification.actor?.gender)}
+                                                gender={notification.actor?.gender}
+                                                seed={notification.actor_id}
                                                 className="w-full h-full object-cover"
                                             />
                                         </div>

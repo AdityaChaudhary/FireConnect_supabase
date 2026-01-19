@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import Icon from '../components/Icon';
+import { compressImage, getDefaultAvatar } from '../lib/image-utils';
 
 const Onboarding: React.FC = () => {
     const { user, profile, logout } = useAuth();
@@ -18,10 +19,14 @@ const Onboarding: React.FC = () => {
     const [error, setError] = useState('');
     const [locating, setLocating] = useState(false);
     const [isManualLocation, setIsManualLocation] = useState(false);
-    const [locationQuery, setLocationQuery] = useState('');
     const [suggestions, setSuggestions] = useState<any[]>([]);
     const [acceptedTerms, setAcceptedTerms] = useState(false);
     const [showSuggestions, setShowSuggestions] = useState(false);
+
+    // Avatar state
+    const [avatarSeed, setAvatarSeed] = useState(Math.random().toString(36).substring(7));
+    const [avatarFile, setAvatarFile] = useState<File | null>(null);
+    const [avatarPreview, setAvatarPreview] = useState<string>(getDefaultAvatar(null, avatarSeed));
 
     useEffect(() => {
         if (user?.user_metadata?.full_name && !displayName && !profile?.display_name) {
@@ -100,7 +105,6 @@ const Onboarding: React.FC = () => {
 
     const handleLocationInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
-        setLocationQuery(val);
         setLocation(val);
         setShowSuggestions(true);
         fetchCitySuggestions(val);
@@ -113,7 +117,6 @@ const Onboarding: React.FC = () => {
         const formatted = country ? `${city}, ${country}` : city;
 
         setLocation(formatted);
-        setLocationQuery(formatted);
         setLatitude(geometry.coordinates[1]);
         setLongitude(geometry.coordinates[0]);
         setSuggestions([]);
@@ -125,6 +128,21 @@ const Onboarding: React.FC = () => {
         setUsername(val);
         if (!displayName || displayName === username) {
             setDisplayName(val);
+        }
+    };
+
+    const handleRegenerateAvatar = () => {
+        const newSeed = Math.random().toString(36).substring(7);
+        setAvatarSeed(newSeed);
+        setAvatarFile(null);
+        setAvatarPreview(getDefaultAvatar(gender, newSeed));
+    };
+
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setAvatarFile(file);
+            setAvatarPreview(URL.createObjectURL(file));
         }
     };
 
@@ -158,6 +176,46 @@ const Onboarding: React.FC = () => {
         setLoading(true);
 
         try {
+            let profilePictureUrl = '';
+
+            if (avatarFile) {
+                const timestamp = Date.now();
+                const storagePath = `users/${user?.id}/avatars/${timestamp}_${avatarFile.name}`;
+                const compressedBlob = await compressImage(avatarFile, 512, 512, 0.9);
+
+                const { error: uploadError } = await supabase.storage
+                    .from('public-media')
+                    .upload(storagePath, compressedBlob, { contentType: 'image/jpeg' });
+
+                if (uploadError) throw uploadError;
+
+                const { data: publicUrlData } = supabase.storage
+                    .from('public-media')
+                    .getPublicUrl(storagePath);
+                
+                profilePictureUrl = publicUrlData.publicUrl;
+            } else {
+                // Use the multiavatar SVG
+                const timestamp = Date.now();
+                const storagePath = `users/${user?.id}/avatars/${timestamp}_avatar.svg`;
+                
+                // Get the SVG content
+                const svgCode = decodeURIComponent(avatarPreview.split(',')[1]);
+                const blob = new Blob([svgCode], { type: 'image/svg+xml' });
+
+                const { error: uploadError } = await supabase.storage
+                    .from('public-media')
+                    .upload(storagePath, blob, { contentType: 'image/svg+xml' });
+
+                if (uploadError) throw uploadError;
+
+                const { data: publicUrlData } = supabase.storage
+                    .from('public-media')
+                    .getPublicUrl(storagePath);
+                
+                profilePictureUrl = publicUrlData.publicUrl;
+            }
+
             const { error: upsertError } = await supabase
                 .from('users')
                 .upsert({
@@ -165,7 +223,7 @@ const Onboarding: React.FC = () => {
                     username,
                     display_name: displayName,
                     email: user?.email || '',
-                    profile_picture_url: user?.user_metadata?.avatar_url || '',
+                    profile_picture_url: profilePictureUrl,
                     gender,
                     date_of_birth: dateOfBirth,
                     location,
@@ -219,6 +277,41 @@ const Onboarding: React.FC = () => {
                 </div>
 
                 <form onSubmit={handleSubmit} className="bg-surface-dark/50 backdrop-blur-xl border border-white/5 p-8 rounded-3xl shadow-2xl flex flex-col gap-6">
+                    <div className="flex flex-col items-center gap-4 py-2">
+                        <div className="relative group">
+                            <div className="h-28 w-28 rounded-full p-1 bg-gradient-to-tr from-primary to-purple-600 shadow-xl overflow-hidden">
+                                {avatarFile ? (
+                                    <img 
+                                        src={avatarPreview} 
+                                        alt="Avatar Preview" 
+                                        className="h-full w-full rounded-full object-cover border-4 border-background-dark bg-background-dark" 
+                                    />
+                                ) : (
+                                    <div 
+                                        dangerouslySetInnerHTML={{ __html: decodeURIComponent(avatarPreview.split(',')[1]) }} 
+                                        className="h-full w-full rounded-full border-4 border-background-dark bg-background-dark p-2"
+                                    />
+                                )}
+                            </div>
+                            
+                            <div className="absolute -bottom-1 -right-1 flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={handleRegenerateAvatar}
+                                    className="p-2 rounded-full bg-primary text-white shadow-lg hover:bg-primary-hover transition-all active:scale-90"
+                                    title="Regenerate Avatar"
+                                >
+                                    <Icon name="refresh" className="text-[16px]" />
+                                </button>
+                                <label className="p-2 rounded-full bg-surface-dark border border-white/10 text-white shadow-lg hover:bg-surface-dark/80 transition-all active:scale-90 cursor-pointer">
+                                    <Icon name="photo_camera" className="text-[16px]" />
+                                    <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                                </label>
+                            </div>
+                        </div>
+                        <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Choose your look</p>
+                    </div>
+
                     <div className="space-y-4">
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-white/40 uppercase tracking-widest px-1">Username</label>

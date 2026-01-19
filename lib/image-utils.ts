@@ -1,3 +1,10 @@
+import multiavatar from '@multiavatar/multiavatar';
+
+export function getDefaultAvatar(gender?: string | null, seed?: string): string {
+    const svgCode = multiavatar(seed || 'default');
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svgCode)}`;
+}
+
 export async function blurImage(file: File, blurRadius: number = 40, quality: number = 0.8): Promise<Blob> {
     return new Promise((resolve, reject) => {
         const img = new Image();
@@ -73,11 +80,4 @@ export async function compressImage(
         img.onerror = (err) => reject(err);
         img.src = URL.createObjectURL(file);
     });
-}
-
-export function getDefaultAvatar(gender?: string | null): string {
-    const g = (gender || '').toUpperCase();
-    if (g === 'MALE') return 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix';
-    if (g === 'FEMALE') return 'https://api.dicebear.com/7.x/avataaars/svg?seed=Emma';
-    return 'https://api.dicebear.com/7.x/avataaars/svg?seed=neutral';
 }

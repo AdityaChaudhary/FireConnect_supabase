@@ -103,7 +103,7 @@ const ChatList: React.FC = () => {
                                         state: {
                                             user: {
                                                 name: user.display_name,
-                                                avatar: user.profile_picture_url || getDefaultAvatar(user.gender),
+                                                avatar: user.profile_picture_url || getDefaultAvatar(user.gender, user.id),
                                                 userType: user.user_type,
                                                 isTheyMax: user.stripe_role === 'MAX' || user.user_type === 'AI'
                                             }
@@ -116,7 +116,8 @@ const ChatList: React.FC = () => {
                                             <div className="w-full h-full rounded-[20px] overflow-hidden border-2 border-background-dark bg-surface-dark">
                                                 <CdnImage
                                                     path={user.profile_picture_url}
-                                                    placeholder={getDefaultAvatar(user.gender)}
+                                                    gender={user.gender}
+                                                    seed={user.id}
                                                     className="w-full h-full object-cover"
                                                 />
                                             </div>
@@ -169,7 +170,8 @@ const ChatList: React.FC = () => {
                                         <div className="size-14 rounded-2xl overflow-hidden bg-white/5 border border-white/5">
                                             <CdnImage
                                                 path={otherUser.profile_picture_url}
-                                                placeholder={getDefaultAvatar(otherUser.gender)}
+                                                gender={otherUser.gender}
+                                                seed={otherUser.id}
                                                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                                             />
                                         </div>

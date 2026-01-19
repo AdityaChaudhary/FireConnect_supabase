@@ -314,7 +314,7 @@ const Landing: React.FC = () => {
                             const lastSeen = member.user_online_status?.[0]?.last_seen_at;
                             const isOnline = lastSeen ? (Date.now() - new Date(lastSeen).getTime()) < 120000 : false;
                             const age = member.date_of_birth ? new Date().getFullYear() - new Date(member.date_of_birth).getFullYear() : 22;
-                            const profilePic = member.profile_picture_url || getDefaultAvatar(member.gender);
+                            const profilePic = member.profile_picture_url || getDefaultAvatar(member.gender, member.id);
 
                             return (
                                 <div key={`${member.id}-${i}`} className="min-w-[280px] md:min-w-[320px] snap-center group relative cursor-pointer" onClick={() => handleAuth(member.id)}>
@@ -326,7 +326,8 @@ const Landing: React.FC = () => {
                                             </div>
                                             <CdnImage
                                                 path={profilePic}
-                                                placeholder={getDefaultAvatar(member.gender)}
+                                                gender={member.gender}
+                                                seed={member.id}
                                                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                                             />
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60"></div>

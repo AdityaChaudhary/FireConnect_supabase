@@ -12,6 +12,7 @@ interface CdnImageProps {
     onClick?: (e: React.MouseEvent) => void;
     placeholder?: string;
     gender?: string | null;
+    seed?: string;
 }
 
 /**
@@ -28,7 +29,8 @@ const CdnImage: React.FC<CdnImageProps> = ({
     children,
     onClick,
     placeholder,
-    gender
+    gender,
+    seed
 }) => {
     const { url, loading } = useResolvedImage(path);
 
@@ -41,7 +43,7 @@ const CdnImage: React.FC<CdnImageProps> = ({
 
     // If we have a placeholder and no URL yet (including loading state), use it
     // If no path and no placeholder, use Dicebear fallback
-    const fallbackUrl = placeholder || getDefaultAvatar(gender);
+    const fallbackUrl = placeholder || getDefaultAvatar(gender, seed);
     const displayUrl = error ? fallbackUrl : (url || (!loading ? fallbackUrl : undefined));
 
     if (useAsBackground) {

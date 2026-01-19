@@ -249,8 +249,9 @@ const Profile: React.FC = () => {
                         <div className="h-32 w-32 rounded-full p-1 bg-gradient-to-tr from-primary to-purple-600 shadow-xl shadow-primary/20">
                             <CdnImage
                                 key={profile?.profile_picture_url || 'default'}
-                                path={profile?.profile_picture_url || user?.user_metadata?.avatar_url}
+                                path={profile?.profile_picture_url}
                                 gender={profile?.gender}
+                                seed={user?.id}
                                 className="h-full w-full rounded-full object-cover border-4 border-background-dark"
                             />
                         </div>

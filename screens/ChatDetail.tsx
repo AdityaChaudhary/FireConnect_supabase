@@ -7,7 +7,6 @@ import { useAuth } from '../context/AuthContext';
 import { useMessages, useUserDetail, useUserConnection, useSpiedStatus, useHasReceivedMessage } from '../hooks/useData';
 import { supabase } from '../lib/supabase';
 import CdnImage from '../components/CdnImage';
-import { getDefaultAvatar } from '../lib/image-utils';
 import EllipsisMenu from '../components/EllipsisMenu';
 
 const ChatDetail: React.FC = () => {
@@ -381,7 +380,8 @@ const ChatDetail: React.FC = () => {
                             <div className="size-8 rounded-full overflow-hidden cursor-pointer border-2 border-white/10 shadow-sm" onClick={() => navigate(`/profile/${otherUserId}`)}>
                                 <CdnImage
                                     path={otherUser?.profile_picture_url}
-                                    placeholder={getDefaultAvatar(otherUser?.gender)}
+                                    gender={otherUser?.gender}
+                                    seed={otherUserId}
                                     className="w-full h-full object-cover"
                                 />
                             </div>
@@ -485,7 +485,8 @@ const ChatDetail: React.FC = () => {
                             <div className="size-10 rounded-full overflow-hidden border-2 border-primary/20 group-hover/header:border-primary transition-all duration-300 shadow-md shadow-primary/10">
                                 <CdnImage
                                     path={otherUser?.profile_picture_url || initialUser?.avatar}
-                                    placeholder={getDefaultAvatar(otherUser?.gender)}
+                                    gender={otherUser?.gender}
+                                    seed={otherUserId}
                                     className="w-full h-full object-cover"
                                 />
                             </div>
@@ -549,7 +550,8 @@ const ChatDetail: React.FC = () => {
                     <div className="size-16 rounded-full overflow-hidden mb-3 ring-4 ring-primary/10 shadow-xl border-2 border-primary/20">
                         <CdnImage
                             path={otherUser?.profile_picture_url || initialUser?.avatar}
-                            placeholder={getDefaultAvatar(otherUser?.gender)}
+                            gender={otherUser?.gender}
+                            seed={otherUserId}
                             className="w-full h-full object-cover"
                         />
                     </div>

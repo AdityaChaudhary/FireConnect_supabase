@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import Icon from '../components/Icon';
-import { compressImage } from '../lib/image-utils';
+import { compressImage, getDefaultAvatar } from '../lib/image-utils';
 import CdnImage from '../components/CdnImage';
 
 const EditProfile: React.FC = () => {
@@ -18,10 +18,14 @@ const EditProfile: React.FC = () => {
     const [latitude, setLatitude] = useState<number | null>(profile?.latitude || null);
     const [longitude, setLongitude] = useState<number | null>(profile?.longitude || null);
     const [image, setImage] = useState<File | null>(null);
-    const [previewUrl, setPreviewUrl] = useState<string | null>(profile?.profile_picture_url || user?.user_metadata?.avatar_url || null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(profile?.profile_picture_url || null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [locating, setLocating] = useState(false);
+
+    // Avatar Selection state
+    const [isUsingGeneratedAvatar, setIsUsingGeneratedAvatar] = useState(false);
+    const [avatarSeed, setAvatarSeed] = useState('');
 
     const isPro = (stripeRole || 'FREE').toUpperCase() !== 'FREE';
 
@@ -34,7 +38,7 @@ const EditProfile: React.FC = () => {
             setLocation(profile.location || '');
             setLatitude(profile.latitude || null);
             setLongitude(profile.longitude || null);
-            setPreviewUrl(profile.profile_picture_url || user?.user_metadata?.avatar_url || null);
+            setPreviewUrl(profile.profile_picture_url || null);
         }
     }, [profile, user]);
 
@@ -86,7 +90,16 @@ const EditProfile: React.FC = () => {
         if (file) {
             setImage(file);
             setPreviewUrl(URL.createObjectURL(file));
+            setIsUsingGeneratedAvatar(false);
         }
+    };
+
+    const handleRegenerateAvatar = () => {
+        const newSeed = Math.random().toString(36).substring(7);
+        setAvatarSeed(newSeed);
+        setPreviewUrl(getDefaultAvatar(gender, newSeed));
+        setIsUsingGeneratedAvatar(true);
+        setImage(null);
     };
 
     const handleSave = async () => {
@@ -109,6 +122,26 @@ const EditProfile: React.FC = () => {
                 if (uploadError) throw uploadError;
                 
                 // Get public URL and store it directly, matching original Firebase behavior
+                const { data: publicUrlData } = supabase.storage
+                    .from('public-media')
+                    .getPublicUrl(storagePath);
+                
+                profilePictureUrl = publicUrlData.publicUrl;
+            } else if (isUsingGeneratedAvatar && previewUrl && user) {
+                // Upload generated Multiavatar SVG
+                const timestamp = Date.now();
+                const storagePath = `users/${user.id}/avatars/${timestamp}_avatar.svg`;
+                
+                // Extract SVG data from the data URI
+                const svgCode = decodeURIComponent(previewUrl.split(',')[1]);
+                const blob = new Blob([svgCode], { type: 'image/svg+xml' });
+
+                const { error: uploadError } = await supabase.storage
+                    .from('public-media')
+                    .upload(storagePath, blob, { contentType: 'image/svg+xml' });
+
+                if (uploadError) throw uploadError;
+
                 const { data: publicUrlData } = supabase.storage
                     .from('public-media')
                     .getPublicUrl(storagePath);
@@ -161,17 +194,35 @@ const EditProfile: React.FC = () => {
             <main className="flex-1 flex flex-col px-6 pt-8 gap-8 max-w-md mx-auto w-full">
                 <div className="flex flex-col items-center gap-4">
                     <div className="relative group">
-                        <div className="h-32 w-32 rounded-full p-1 bg-gradient-to-tr from-primary to-purple-600 shadow-xl">
-                            <CdnImage
-                                path={previewUrl}
-                                gender={gender}
-                                className="h-full w-full rounded-full object-cover border-4 border-background-dark"
-                            />
+                        <div className="h-32 w-32 rounded-full p-1 bg-gradient-to-tr from-primary to-purple-600 shadow-xl overflow-hidden">
+                            {isUsingGeneratedAvatar && previewUrl ? (
+                                <div 
+                                    dangerouslySetInnerHTML={{ __html: decodeURIComponent(previewUrl.split(',')[1]) }} 
+                                    className="h-full w-full rounded-full border-4 border-background-dark bg-background-dark p-2"
+                                />
+                            ) : (
+                                <CdnImage
+                                    path={previewUrl}
+                                    gender={gender}
+                                    className="h-full w-full rounded-full object-cover border-4 border-background-dark bg-background-dark"
+                                />
+                            )}
                         </div>
-                        <label className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                            <Icon name="photo_camera" className="text-white text-[32px]" />
-                            <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-                        </label>
+                        
+                        <div className="absolute -bottom-1 -right-1 flex gap-2">
+                            <button
+                                type="button"
+                                onClick={handleRegenerateAvatar}
+                                className="p-2.5 rounded-full bg-primary text-white shadow-lg hover:bg-primary-hover transition-all active:scale-90"
+                                title="Regenerate Avatar"
+                            >
+                                <Icon name="refresh" className="text-[18px]" />
+                            </button>
+                            <label className="p-2.5 rounded-full bg-surface-dark border border-white/10 text-white shadow-lg hover:bg-surface-dark/80 transition-all active:scale-90 cursor-pointer">
+                                <Icon name="photo_camera" className="text-[18px]" />
+                                <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                            </label>
+                        </div>
                     </div>
                 </div>
 

@@ -27,8 +27,9 @@ const Discover: React.FC = () => {
                 <div className="flex items-center">
                     <div className="relative group cursor-pointer z-0" onClick={() => window.location.hash = '#/profile'}>
                         <CdnImage
-                            path={profile?.profile_picture_url || authUser?.user_metadata?.avatar_url}
+                            path={profile?.profile_picture_url}
                             gender={profile?.gender}
+                            seed={authUser?.id}
                             className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 ring-2 ring-white/10"
                             useAsBackground
                         />

@@ -214,7 +214,7 @@ const ProfilePreview: React.FC = () => {
     }
 
     const filteredImages = images.filter(img => img.visibility === activeTab);
-    const avatarUrl = user.profile_picture_url || getDefaultAvatar(user.gender);
+    const avatarUrl = user.profile_picture_url || getDefaultAvatar(user.gender, targetUserId);
     const amIMax = (stripeRole || '').toLowerCase() === 'max';
     const amIPro = (stripeRole || '').toLowerCase() === 'pro';
     const isTheyMax = (user.stripe_role || '').toLowerCase() === 'max' || user.user_type === 'AI';
@@ -272,6 +272,7 @@ const ProfilePreview: React.FC = () => {
                             <CdnImage
                                 path={user.profile_picture_url}
                                 gender={user.gender}
+                                seed={targetUserId}
                                 className="h-full w-full rounded-full bg-cover bg-center border-4 border-background-dark"
                                 useAsBackground
                             />
@@ -375,6 +376,7 @@ const ProfilePreview: React.FC = () => {
                                         <CdnImage
                                             path={img.blurred_url || img.url}
                                             gender={user.gender}
+                                            seed={targetUserId}
                                             className="absolute inset-0 bg-cover bg-center blur-2xl scale-110"
                                             useAsBackground
                                         />
