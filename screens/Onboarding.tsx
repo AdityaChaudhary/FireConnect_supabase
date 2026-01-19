@@ -288,7 +288,7 @@ const Onboarding: React.FC = () => {
                                     />
                                 ) : (
                                     <div 
-                                        dangerouslySetInnerHTML={{ __html: decodeURIComponent(avatarPreview.split(',')[1]) }} 
+                                        dangerouslySetInnerHTML={{ __html: avatarPreview.startsWith('data:') ? decodeURIComponent(avatarPreview.split(',')[1]) : '' }} 
                                         className="h-full w-full rounded-full border-4 border-background-dark bg-background-dark p-2"
                                     />
                                 )}

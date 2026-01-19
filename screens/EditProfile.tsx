@@ -25,7 +25,6 @@ const EditProfile: React.FC = () => {
 
     // Avatar Selection state
     const [isUsingGeneratedAvatar, setIsUsingGeneratedAvatar] = useState(false);
-    const [avatarSeed, setAvatarSeed] = useState('');
 
     const isPro = (stripeRole || 'FREE').toUpperCase() !== 'FREE';
 
@@ -39,6 +38,7 @@ const EditProfile: React.FC = () => {
             setLatitude(profile.latitude || null);
             setLongitude(profile.longitude || null);
             setPreviewUrl(profile.profile_picture_url || null);
+            setIsUsingGeneratedAvatar(false);
         }
     }, [profile, user]);
 
@@ -96,7 +96,6 @@ const EditProfile: React.FC = () => {
 
     const handleRegenerateAvatar = () => {
         const newSeed = Math.random().toString(36).substring(7);
-        setAvatarSeed(newSeed);
         setPreviewUrl(getDefaultAvatar(gender, newSeed));
         setIsUsingGeneratedAvatar(true);
         setImage(null);
@@ -195,7 +194,7 @@ const EditProfile: React.FC = () => {
                 <div className="flex flex-col items-center gap-4">
                     <div className="relative group">
                         <div className="h-32 w-32 rounded-full p-1 bg-gradient-to-tr from-primary to-purple-600 shadow-xl overflow-hidden">
-                            {isUsingGeneratedAvatar && previewUrl ? (
+                            {isUsingGeneratedAvatar && previewUrl && previewUrl.startsWith('data:') ? (
                                 <div 
                                     dangerouslySetInnerHTML={{ __html: decodeURIComponent(previewUrl.split(',')[1]) }} 
                                     className="h-full w-full rounded-full border-4 border-background-dark bg-background-dark p-2"
