@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { getStripeProducts } from '../lib/stripe-utils';
+import { getStripeProducts, fetchWithRetry } from '../lib/stripe-utils';
 import { PLAN_THEMES, PLAN_DESCRIPTIONS, PLAN_FEATURES } from '../config/plans';
 import CdnImage from '../components/CdnImage';
 import { getDefaultAvatar } from '../lib/image-utils';
@@ -132,13 +132,13 @@ const Landing: React.FC = () => {
 
         const fetchAIUsers = async () => {
             try {
-                const { data, error } = await supabase
-                    .from('users')
-                    .select('*, user_online_status(*)')
-                    .eq('user_type', 'AI')
-                    .limit(20);
-
-                if (error) throw error;
+                const data = await fetchWithRetry(async () =>
+                    await supabase
+                        .from('users')
+                        .select('*, user_online_status(*)')
+                        .eq('user_type', 'AI')
+                        .limit(20)
+                );
 
                 // Shuffle logic
                 const shuffled = [...(data || [])];

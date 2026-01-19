@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 
-const fetchWithRetry = async <T>(
+export const fetchWithRetry = async <T>(
     operation: () => Promise<{ data: T | null; error: any }>,
     maxRetries = 3,
     delay = 1000
