@@ -35,7 +35,7 @@ const ProfilePreview: React.FC = () => {
     const [isSpied, setIsSpied] = useState(false);
     const [notification, setNotification] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'PUBLIC' | 'PRIVATE'>('PUBLIC');
-    const [previewImage, setPreviewImage] = useState<string | null>(null);
+    const [previewIndex, setPreviewIndex] = useState<number | null>(null);
     const [requesting, setRequesting] = useState(false);
     const [showDisconnectModal, setShowDisconnectModal] = useState(false);
     const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
@@ -54,6 +54,29 @@ const ProfilePreview: React.FC = () => {
             return () => clearTimeout(timer);
         }
     }, [notification]);
+
+    const handleNextImage = (e?: React.MouseEvent) => {
+        e?.stopPropagation();
+        if (previewIndex !== null && previewIndex < images.length - 1) {
+            setPreviewIndex(previewIndex + 1);
+        }
+    };
+
+    const handlePrevImage = (e?: React.MouseEvent) => {
+        e?.stopPropagation();
+        if (previewIndex !== null && previewIndex > 0) {
+            setPreviewIndex(previewIndex - 1);
+        }
+    };
+
+    const handleDragEnd = (_e: any, info: any) => {
+        const swipeThreshold = 50;
+        if (info.offset.x < -swipeThreshold) {
+            handleNextImage();
+        } else if (info.offset.x > swipeThreshold) {
+            handlePrevImage();
+        }
+    };
 
     const handleSendRequest = async () => {
         if (!id || !authUser || requesting) return;
@@ -362,7 +385,10 @@ const ProfilePreview: React.FC = () => {
                                 <div
                                     key={img.id || idx}
                                     className="aspect-[3/4] rounded-lg overflow-hidden bg-surface-dark relative group cursor-pointer"
-                                    onClick={() => !showImgSpyMode && setPreviewImage(img.url)}
+                                    onClick={() => {
+                                        const globalIndex = images.findIndex(i => i.id === img.id);
+                                        if (!showImgSpyMode) setPreviewIndex(globalIndex);
+                                    }}
                                 >
                                     {/* Normal image handling with CdnImage */}
                                     <CdnImage
@@ -541,33 +567,135 @@ const ProfilePreview: React.FC = () => {
                 )}
             </AnimatePresence>
 
-            {/* Image Preview Modal */}
+            {/* Full Screen Image Navigator Modal */}
             <AnimatePresence>
-                {previewImage && (
+                {previewIndex !== null && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.2 }}
-                        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-xl p-4"
-                        onClick={() => setPreviewImage(null)}
+                        className="fixed inset-0 z-[120] flex items-center justify-center bg-black/95 backdrop-blur-2xl"
+                        onClick={() => setPreviewIndex(null)}
                     >
+                        {/* Close Button */}
                         <motion.button
-                            initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.8 }}
-                            transition={{ delay: 0.1 }}
-                            onClick={() => setPreviewImage(null)}
-                            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors z-[110]"
+                            initial={{ opacity: 0, y: -20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            onClick={() => setPreviewIndex(null)}
+                            className="absolute top-6 right-6 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all z-[140] backdrop-blur-md border border-white/10"
                         >
                             <Icon name="close" className="text-[24px]" />
                         </motion.button>
-                        <CdnImage
-                            path={previewImage}
-                            gender={user.gender}
-                            className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-2xl z-100"
-                            onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                        />
+
+                        {/* Navigation Arrows */}
+                        <div className="absolute inset-y-0 left-0 w-16 md:w-24 flex items-center justify-center z-[130]">
+                            {previewIndex > 0 && (
+                                <button
+                                    onClick={handlePrevImage}
+                                    className="p-3 md:p-4 rounded-full bg-white/5 text-white hover:bg-white/10 transition-all border border-white/10 backdrop-blur-sm"
+                                >
+                                    <Icon name="chevron_left" className="text-2xl md:text-3xl" />
+                                </button>
+                            )}
+                        </div>
+                        <div className="absolute inset-y-0 right-0 w-16 md:w-24 flex items-center justify-center z-[130]">
+                            {previewIndex < images.length - 1 && (
+                                <button
+                                    onClick={handleNextImage}
+                                    className="p-3 md:p-4 rounded-full bg-white/5 text-white hover:bg-white/10 transition-all border border-white/10 backdrop-blur-sm"
+                                >
+                                    <Icon name="chevron_right" className="text-2xl md:text-3xl" />
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Swipeable Container */}
+                        <motion.div
+                            drag="x"
+                            dragConstraints={{ left: 0, right: 0 }}
+                            onDragEnd={handleDragEnd}
+                            className="relative w-full h-full flex items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <AnimatePresence mode="wait">
+                                <motion.div
+                                    key={previewIndex}
+                                    initial={{ opacity: 0, x: 100 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: -100 }}
+                                    transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                                    className="relative w-full h-full flex items-center justify-center p-4"
+                                >
+                                    {(() => {
+                                        const img = images[previewIndex];
+                                        const isImgPrivate = img.visibility === 'PRIVATE';
+                                        const showImgSpyMode = isImgPrivate && !isRevealed && !isOwner;
+
+                                        return (
+                                            <div className="relative w-full h-full flex items-center justify-center">
+                                                {/* Main Image */}
+                                                <CdnImage
+                                                    path={img.url}
+                                                    gender={user.gender}
+                                                    seed={targetUserId}
+                                                    className={`max-h-full max-w-full object-contain rounded-xl shadow-2xl transition-opacity duration-300 ${showImgSpyMode ? 'opacity-0' : 'opacity-100'}`}
+                                                />
+
+                                                {/* Blurred Placeholder & Spy Overlay */}
+                                                {showImgSpyMode && (
+                                                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-6">
+                                                        <CdnImage
+                                                            path={img.blurred_url || img.url}
+                                                            gender={user.gender}
+                                                            seed={targetUserId}
+                                                            className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-50"
+                                                            useAsBackground
+                                                        />
+                                                        <div
+                                                            className="z-10 flex flex-col items-center gap-4 p-8 rounded-3xl bg-black/40 backdrop-blur-xl border border-white/10"
+                                                            onClick={handleRevealClick}
+                                                        >
+                                                            <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center border border-primary/30 animate-pulse">
+                                                                <Icon name="visibility_off" className="text-4xl text-primary" />
+                                                            </div>
+                                                            <div className="text-center">
+                                                                <h4 className="text-xl font-bold text-white mb-1">Private Photo</h4>
+                                                                <p className="text-white/60 text-sm">Tap to reveal this media</p>
+                                                            </div>
+                                                            {stripeRole === 'PRO' && (
+                                                                <div className="mt-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 flex items-center gap-2">
+                                                                    <Icon name="stars" className="text-primary text-sm" />
+                                                                    <span className="text-xs font-bold text-primary">{myProfile?.spy_credits || 0} Credits Left</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Visibility Badge */}
+                                                {isImgPrivate && !showImgSpyMode && (
+                                                    <div className="absolute bottom-10 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-primary/20 border border-primary/30 backdrop-blur-md flex items-center gap-2">
+                                                        <Icon name="lock_open" className="text-primary text-base" />
+                                                        <span className="text-xs font-bold text-primary uppercase tracking-widest">Private Revealed</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
+                                </motion.div>
+                            </AnimatePresence>
+                        </motion.div>
+
+                        {/* Pagination Dots */}
+                        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2 z-[140]">
+                            {images.map((_, idx) => (
+                                <div
+                                    key={idx}
+                                    className={`h-1.5 rounded-full transition-all duration-300 ${idx === previewIndex ? 'w-8 bg-primary shadow-[0_0_15px_rgba(255,255,255,0.5)]' : 'w-1.5 bg-white/20'}`}
+                                />
+                            ))}
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>
