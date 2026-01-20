@@ -123,9 +123,10 @@ BEGIN
 
   IF match_id IS NOT NULL THEN
     -- Match found!
-    UPDATE public.random_chat_pool
-    SET status = 'MATCHED', matched_with = match_id, last_ping_at = NOW()
-    WHERE user_id = current_user_id;
+    INSERT INTO public.random_chat_pool (user_id, status, last_ping_at, matched_with)
+    VALUES (current_user_id, 'MATCHED', NOW(), match_id)
+    ON CONFLICT (user_id) DO UPDATE
+    SET status = 'MATCHED', matched_with = match_id, last_ping_at = NOW();
 
     UPDATE public.random_chat_pool
     SET status = 'MATCHED', matched_with = current_user_id, last_ping_at = NOW()
