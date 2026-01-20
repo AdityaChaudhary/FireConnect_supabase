@@ -163,6 +163,32 @@
                 scrollbar-width: none;
             }
 
+            /* Global Premium Scrollbar */
+            ::-webkit-scrollbar {
+                width: 6px;
+                height: 6px;
+            }
+
+            ::-webkit-scrollbar-track {
+                background: transparent;
+            }
+
+            ::-webkit-scrollbar-thumb {
+                background: linear-gradient(to bottom, var(--primary), #ff0055);
+                border-radius: 10px;
+                opacity: 0.5;
+            }
+
+            ::-webkit-scrollbar-thumb:hover {
+                background: linear-gradient(to bottom, var(--primary), #ff0055);
+                opacity: 1;
+            }
+
+            * {
+                scrollbar-width: thin;
+                scrollbar-color: var(--primary) transparent;
+            }
+
             .glass-nav {
                 background: rgba(var(--background-dark-rgb), 0.8);
                 backdrop-filter: blur(12px);

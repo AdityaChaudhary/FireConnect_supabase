@@ -574,7 +574,7 @@ const ChatDetail: React.FC = () => {
             </header>
 
             {/* Chat Area */}
-            <main className="flex-1 overflow-y-auto px-4 py-6 flex flex-col bg-background-dark scrollbar-hide relative">
+            <main className="flex-1 overflow-y-auto px-4 py-6 flex flex-col bg-background-dark relative">
                 <div className="flex flex-col items-center justify-center my-8">
                     <div className="size-16 rounded-full overflow-hidden mb-3 ring-4 ring-primary/10 shadow-xl border-2 border-primary/20">
                         <CdnImage
@@ -653,7 +653,7 @@ const ChatDetail: React.FC = () => {
                             <div className="flex-1 px-2 py-2">
                                 <textarea
                                     ref={textareaRef}
-                                    className="w-full bg-transparent border-0 p-0 text-white placeholder-white/20 focus:ring-0 resize-none text-[15px] leading-6 max-h-[120px] scrollbar-hide font-medium"
+                                    className="w-full bg-transparent border-0 p-0 text-white placeholder-white/20 focus:ring-0 resize-none text-[15px] leading-6 max-h-[120px] font-medium"
                                     placeholder="Write your message..."
                                     rows={1}
                                     value={newMessage}

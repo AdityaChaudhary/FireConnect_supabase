@@ -165,7 +165,7 @@ const ChatList: React.FC = () => {
                 </div>
             </header>
 
-            <main className="flex-1 overflow-y-auto scrollbar-hide px-2">
+            <main className="flex-1 overflow-y-auto px-2">
                 {/* Stories / Online Connections Section */}
                 <motion.section 
                     initial={{ y: 20, opacity: 0 }}
