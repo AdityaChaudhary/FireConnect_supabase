@@ -8,6 +8,7 @@ import { useMessages, useUserDetail, useUserConnection, useSpiedStatus, useHasRe
 import { supabase } from '../lib/supabase';
 import CdnImage from '../components/CdnImage';
 import EllipsisMenu from '../components/EllipsisMenu';
+import EmojiPicker from '../components/EmojiPicker';
 
 const ChatDetail: React.FC = () => {
     const { id: otherUserId } = useParams<{ id: string }>();
@@ -25,6 +26,7 @@ const ChatDetail: React.FC = () => {
     const [currentTime, setCurrentTime] = useState(Date.now());
     const [showDisconnectModal, setShowDisconnectModal] = useState(false);
     const [requesting, setRequesting] = useState(false);
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -345,6 +347,32 @@ const ChatDetail: React.FC = () => {
         }
     };
 
+    const handleEmojiSelect = (emoji: string) => {
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const text = newMessage;
+        const before = text.substring(0, start);
+        const after = text.substring(end);
+
+        const newText = before + emoji + after;
+        setNewMessage(newText);
+        setShowEmojiPicker(false); // Close on selection
+
+        // Update height
+        setTimeout(() => {
+            textarea.style.height = 'auto';
+            textarea.style.height = textarea.scrollHeight + 'px';
+            
+            // Set cursor position after the emoji
+            const newCursorPos = start + emoji.length;
+            textarea.setSelectionRange(newCursorPos, newCursorPos);
+            textarea.focus();
+        }, 0);
+    };
+
     const renderMessage = (msg: any, index: number) => {
         const isMe = msg.sender_id === authUser?.id;
         const showAvatar = !isMe && (index === messages.length - 1 || messages[index + 1]?.sender_id !== msg.sender_id);
@@ -643,10 +671,26 @@ const ChatDetail: React.FC = () => {
                                 ></textarea>
                             </div>
 
-                            <div className="flex items-center">
-                                <button className="flex items-center justify-center w-10 h-10 rounded-full text-white/20 hover:text-yellow-500 hover:bg-yellow-500/5 transition-all cursor-pointer">
+                            <div className="flex items-center relative">
+                                <button 
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                                    className={`flex items-center justify-center w-10 h-10 rounded-full transition-all cursor-pointer ${showEmojiPicker ? 'text-yellow-500 bg-yellow-500/10' : 'text-white/20 hover:text-yellow-500 hover:bg-yellow-500/5'}`}
+                                >
                                     <Icon name="sentiment_satisfied" className="text-[22px]" />
                                 </button>
+                                
+                                <AnimatePresence>
+                                    {showEmojiPicker && (
+                                        <EmojiPicker 
+                                            onEmojiSelect={(emoji) => {
+                                                handleEmojiSelect(emoji);
+                                            }} 
+                                            onClose={() => setShowEmojiPicker(false)} 
+                                        />
+                                    )}
+                                </AnimatePresence>
+
                                 <motion.button
                                     whileTap={{ scale: 0.9 }}
                                     onClick={() => handleSend()}
