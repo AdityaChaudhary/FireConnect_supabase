@@ -4,14 +4,45 @@ import NotificationIcon from '../components/NotificationIcon';
 import UserDiscoveryCard from '../components/UserDiscoveryCard';
 import UpgradeModal from '../components/UpgradeModal';
 import { useAuth } from '../context/AuthContext';
-import { useDiscoveryUsers } from '../hooks/useData';
+import { useDiscoveryUsers, useSpiedUserIds } from '../hooks/useData';
+import { useIntersectionObserver } from '../hooks/useIntersectionObserver';
 import CdnImage from '../components/CdnImage';
 
 const Discover: React.FC = () => {
     const { user: authUser, profile, stripeRole } = useAuth();
-    const { data: users = [], isLoading: loading, isFetching } = useDiscoveryUsers(authUser?.id);
+    const {
+        data,
+        isLoading: loading,
+        isFetching,
+        isFetchingNextPage,
+        fetchNextPage,
+        hasNextPage
+    } = useDiscoveryUsers(authUser?.id);
+
+    const { data: spiedUserIds = [] } = useSpiedUserIds(authUser?.id);
+
     const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState<'UPGRADE' | 'OUT_OF_CREDITS'>('UPGRADE');
+
+    const { targetRef: loadMoreRef, isIntersecting: inView } = useIntersectionObserver({
+        threshold: 0,
+        rootMargin: '200px', // Trigger slightly before reaching the bottom
+        triggerOnce: false,
+    });
+
+    const users = data?.pages.flatMap(page => page) || [];
+
+    React.useEffect(() => {
+        if (isFetchingNextPage) {
+            console.log('🔄 Infinite Scroll: Fetching next page...');
+        }
+    }, [isFetchingNextPage]);
+
+    React.useEffect(() => {
+        if (inView && hasNextPage && !isFetchingNextPage && !isFetching) {
+            fetchNextPage();
+        }
+    }, [inView, hasNextPage, isFetchingNextPage, isFetching, fetchNextPage]);
 
     if (loading && users.length === 0) {
         return (
@@ -62,16 +93,36 @@ const Discover: React.FC = () => {
                         <p>No new users found nearby.</p>
                     </div>
                 ) : (
-                    users.map(user => (
-                        <UserDiscoveryCard
-                            key={user.id}
-                            user={user}
-                            onUpgradeClick={(mode) => {
-                                setModalMode(mode);
-                                setIsUpgradeModalOpen(true);
-                            }}
-                        />
-                    ))
+                    <>
+                        {users.map((user, idx) => (
+                            <UserDiscoveryCard
+                                key={`${user.id}-${idx}`}
+                                user={user}
+                                isSpiedInitially={spiedUserIds.includes(user.id)}
+                                onUpgradeClick={(mode) => {
+                                    setModalMode(mode);
+                                    setIsUpgradeModalOpen(true);
+                                }}
+                            />
+                        ))}
+
+                        {/* Pagination Trigger / Loading Indicator */}
+                        <div ref={loadMoreRef} className="py-12 flex flex-col items-center justify-center gap-4">
+                            {(isFetchingNextPage || (inView && hasNextPage)) ? (
+                                <>
+                                    <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                                    <p className="text-primary text-sm font-medium animate-pulse">Loading more users...</p>
+                                </>
+                            ) : hasNextPage ? (
+                                <div className="h-20"></div> // Taller sentinel
+                            ) : users.length > 0 ? (
+                                <div className="flex flex-col items-center gap-2 py-4">
+                                    <div className="w-12 h-[1px] bg-white/10"></div>
+                                    <p className="text-white/20 text-xs font-medium italic">No more users found nearby</p>
+                                </div>
+                            ) : null}
+                        </div>
+                    </>
                 )}
             </main>
 

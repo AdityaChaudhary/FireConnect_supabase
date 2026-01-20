@@ -1,36 +1,41 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
-interface IntersectionObserverOptions {
-    root?: Element | null;
-    rootMargin?: string;
-    threshold?: number | number[];
+interface IntersectionObserverOptions extends IntersectionObserverInit {
+    triggerOnce?: boolean;
+    onIntersect?: () => void;
 }
 
 export const useIntersectionObserver = (options: IntersectionObserverOptions = {}) => {
+    const { triggerOnce = false, onIntersect, ...observerOptions } = options;
     const [hasBeenInView, setHasBeenInView] = useState(false);
-    const targetRef = useRef<HTMLDivElement>(null);
+    const [isIntersecting, setIsIntersecting] = useState(false);
+    
+    // Store observer in ref to persist across renders
+    const observer = useRef<IntersectionObserver | null>(null);
 
-    useEffect(() => {
-        const observer = new IntersectionObserver(([entry]) => {
-            if (entry.isIntersecting) {
-                setHasBeenInView(true);
-                if (targetRef.current) {
-                    observer.unobserve(targetRef.current);
-                }
-            }
-        }, options);
-
-        const currentTarget = targetRef.current;
-        if (currentTarget) {
-            observer.observe(currentTarget);
+    const targetRef = useCallback((node: HTMLElement | null) => {
+        // Disconnect existing observer if any
+        if (observer.current) {
+            observer.current.disconnect();
         }
 
-        return () => {
-            if (currentTarget) {
-                observer.unobserve(currentTarget);
-            }
-        };
-    }, [options.root, options.rootMargin, options.threshold]);
+        if (node) {
+            observer.current = new IntersectionObserver(([entry]) => {
+                const isViewing = entry.isIntersecting;
+                setIsIntersecting(isViewing);
+                
+                if (isViewing) {
+                    setHasBeenInView(true);
+                    onIntersect?.();
+                    if (triggerOnce) {
+                        observer.current?.unobserve(node);
+                    }
+                }
+            }, observerOptions);
 
-    return { targetRef, hasBeenInView };
+            observer.current.observe(node);
+        }
+    }, [observerOptions.root, observerOptions.rootMargin, observerOptions.threshold, triggerOnce, onIntersect]);
+
+    return { targetRef, hasBeenInView, isIntersecting };
 };

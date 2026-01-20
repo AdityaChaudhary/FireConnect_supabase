@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 
 /**
@@ -7,31 +7,65 @@ import { supabase } from '../lib/supabase';
  * Shuffles them on the client side for variety.
  */
 export const useDiscoveryUsers = (userId?: string) => {
-    return useQuery({
-        queryKey: ['discovery-users'],
-        queryFn: async () => {
+    const PAGE_SIZE = 10;
+
+    return useInfiniteQuery({
+        queryKey: ['discovery-users', userId],
+        queryFn: async ({ pageParam = 0 }) => {
             const { data: users, error } = await supabase
                 .from('users')
                 .select(`
                     *,
-                    user_online_status (last_seen_at)
+                    user_online_status (last_seen_at),
+                    profile_images (*)
                 `)
-                .neq('id', userId);
+                .neq('id', userId)
+                .order('created_at', { ascending: false })
+                .range(pageParam, pageParam + PAGE_SIZE - 1);
 
             if (error) throw error;
             const fetchedUsers = users || [];
 
-            // Shuffle logic (Fisher-Yates)
-            const shuffled = [...fetchedUsers];
-            for (let i = shuffled.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-            }
+            // Sort profile images for each user
+            const usersWithSortedImages = fetchedUsers.map(user => ({
+                ...user,
+                profile_images: (user.profile_images || []).sort((a: any, b: any) => {
+                    if (a.is_profile) return -1;
+                    if (b.is_profile) return 1;
+                    return (a.display_order || 0) - (b.display_order || 0);
+                })
+            }));
 
-            return shuffled;
+            return usersWithSortedImages;
+        },
+        initialPageParam: 0,
+        getNextPageParam: (lastPage, allPages) => {
+            if (lastPage.length < PAGE_SIZE) return undefined;
+            return allPages.length * PAGE_SIZE;
         },
         staleTime: 5 * 60 * 1000,
         enabled: !!userId,
+    });
+};
+
+/**
+ * Hook to fetch all user IDs that the current user has spied on.
+ */
+export const useSpiedUserIds = (userId?: string) => {
+    return useQuery({
+        queryKey: ['spied-user-ids', userId],
+        queryFn: async () => {
+            if (!userId) return [];
+            const { data, error } = await supabase
+                .from('spied_profiles')
+                .select('target_user_id')
+                .eq('user_id', userId);
+
+            if (error) throw error;
+            return (data || []).map(item => item.target_user_id);
+        },
+        enabled: !!userId,
+        staleTime: 5 * 60 * 1000,
     });
 };
 

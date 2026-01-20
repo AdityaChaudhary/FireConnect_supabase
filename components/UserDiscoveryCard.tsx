@@ -9,27 +9,29 @@ import { useIntersectionObserver } from '../hooks/useIntersectionObserver';
 
 interface UserDiscoveryCardProps {
     user: any;
+    isSpiedInitially?: boolean;
     onUpgradeClick?: (mode: 'UPGRADE' | 'OUT_OF_CREDITS') => void;
 }
 
-const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, onUpgradeClick }) => {
+const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInitially, onUpgradeClick }) => {
     const navigate = useNavigate();
     const { stripeRole, profile, refreshProfile, user: authUser } = useAuth();
-    const [images, setImages] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [images, setImages] = useState<any[]>(user.profile_images || []);
+    const [loading, setLoading] = useState(!(user.profile_images && user.profile_images.length > 0));
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [viewableUrls, setViewableUrls] = useState<Record<number, string>>({});
     const [blurredViewableUrls, setBlurredViewableUrls] = useState<Record<number, string>>({});
-    const [isRevealed, setIsRevealed] = useState(false);
-    const [isSpied, setIsSpied] = useState(false);
+    const normalizedRole = (stripeRole || 'free').toUpperCase();
+    const [isRevealed, setIsRevealed] = useState(isSpiedInitially && normalizedRole !== 'FREE');
+    const [isSpied, setIsSpied] = useState(isSpiedInitially || false);
     const [notification, setNotification] = useState<string | null>(null);
     const [currentTime, setCurrentTime] = useState(Date.now());
 
     const { targetRef, hasBeenInView } = useIntersectionObserver({
-        rootMargin: '200px',
+        rootMargin: '1200px', // Fetch images for the next 2-3 profiles in advance
     });
 
-    const normalizedRole = (stripeRole || 'free').toUpperCase();
+
 
     useEffect(() => {
         const intervalId = setInterval(() => {
@@ -39,65 +41,24 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, onUpgradeCl
     }, []);
 
     useEffect(() => {
-        if (!hasBeenInView) return;
-
-        const fetchImages = async () => {
-            try {
-                const { data, error } = await supabase
-                    .from('profile_images')
-                    .select('*')
-                    .eq('user_id', user.id)
-                    .order('is_profile', { ascending: false })
-                    .order('display_order', { ascending: true });
-
-                if (error) throw error;
-
-                if ((!data || data.length === 0) && user.profile_picture_url) {
-                    setImages([{
-                        id: 'profile',
-                        url: user.profile_picture_url,
-                        visibility: 'PUBLIC',
-                        is_profile: true,
-                        blurred_url: null
-                    }]);
-                } else {
-                    setImages(data || []);
-                }
-            } catch (error) {
-                console.error("Error fetching images for user", user.id, error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchImages();
-    }, [user.id, user.profile_picture_url, hasBeenInView]);
+        if (user.profile_images && user.profile_images.length > 0) {
+            setImages(user.profile_images);
+            setLoading(false);
+        } else if (user.profile_picture_url) {
+            setImages([{
+                id: 'profile',
+                url: user.profile_picture_url,
+                visibility: 'PUBLIC',
+                is_profile: true,
+                blurred_url: null
+            }]);
+            setLoading(false);
+        }
+    }, [user.profile_images, user.profile_picture_url]);
 
     useEffect(() => {
-        if (!hasBeenInView || !authUser) return;
-
-        const checkSpied = async () => {
-            if (normalizedRole === 'FREE') return;
-            try {
-                const { data } = await supabase
-                    .from('spied_profiles')
-                    .select('*')
-                    .eq('target_user_id', user.id)
-                    .eq('user_id', authUser.id)
-                    .maybeSingle();
-
-                if (data) {
-                    setIsSpied(true);
-                    if (normalizedRole !== 'MAX') {
-                        setIsRevealed(true);
-                    }
-                }
-            } catch (error) {
-                console.error("Error checking spied status", error);
-            }
-        };
-        checkSpied();
-    }, [user.id, stripeRole, hasBeenInView, authUser]);
+        setIsSpied(isSpiedInitially || false);
+    }, [isSpiedInitially]);
 
     useEffect(() => {
         if (notification) {
