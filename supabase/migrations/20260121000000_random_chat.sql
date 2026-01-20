@@ -7,6 +7,8 @@ CREATE TABLE public.random_chat_pool (
   user_id UUID REFERENCES public.users NOT NULL PRIMARY KEY,
   status TEXT DEFAULT 'SEARCHING' CHECK (status IN ('SEARCHING', 'MATCHED')),
   matched_with UUID REFERENCES public.users,
+  gender_filter TEXT, -- 'MALE', 'FEMALE', or NULL for 'ANY'
+  location_filter TEXT, -- e.g., 'IN' (Country code) or NULL for 'GLOBAL'
   last_ping_at TIMESTAMPTZ DEFAULT NOW(),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -87,13 +89,23 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- Drop the old version first to ensure we don't have overloaded functions with the same name
 DROP FUNCTION IF EXISTS public.match_random_user(UUID);
 
-CREATE OR REPLACE FUNCTION public.match_random_user(current_user_id UUID, exclude_user_id UUID DEFAULT NULL)
+CREATE OR REPLACE FUNCTION public.match_random_user(
+  current_user_id UUID, 
+  exclude_user_id UUID DEFAULT NULL,
+  filters JSON DEFAULT NULL
+)
 RETURNS JSON AS $$
 DECLARE
   match_id UUID;
   old_match_id UUID;
   result JSON;
+  req_gender TEXT;
+  req_location TEXT;
 BEGIN
+  -- Extract filters
+  req_gender := filters->>'gender';
+  req_location := filters->>'location';
+
   -- 0. Handle existing match if any (cleanup the former partner)
   SELECT matched_with INTO old_match_id
   FROM public.random_chat_pool
@@ -108,11 +120,17 @@ BEGIN
   -- 1. Try to find a waiting user
   -- Exclude: ourselves, the specifically excluded user (current session), 
   -- and anyone who has skipped us or we have skipped in the last 10m
-  SELECT user_id INTO match_id
+  -- Filtering logic:
+  -- - Match user's gender if req_gender is set
+  -- - Match user's location if req_location is set
+  SELECT p.user_id INTO match_id
   FROM public.random_chat_pool p
+  JOIN public.users u ON p.user_id = u.id
   WHERE p.status = 'SEARCHING'
     AND p.user_id != current_user_id
     AND (exclude_user_id IS NULL OR p.user_id != exclude_user_id)
+    AND (req_gender IS NULL OR u.gender = req_gender)
+    AND (req_location IS NULL OR u.location = req_location)
     AND NOT EXISTS (
       SELECT 1 FROM public.random_chat_skips s
       WHERE (s.user_id = current_user_id AND s.skipped_user_id = p.user_id)
@@ -123,10 +141,10 @@ BEGIN
 
   IF match_id IS NOT NULL THEN
     -- Match found!
-    INSERT INTO public.random_chat_pool (user_id, status, last_ping_at, matched_with)
-    VALUES (current_user_id, 'MATCHED', NOW(), match_id)
+    INSERT INTO public.random_chat_pool (user_id, status, last_ping_at, matched_with, gender_filter, location_filter)
+    VALUES (current_user_id, 'MATCHED', NOW(), match_id, req_gender, req_location)
     ON CONFLICT (user_id) DO UPDATE
-    SET status = 'MATCHED', matched_with = match_id, last_ping_at = NOW();
+    SET status = 'MATCHED', matched_with = match_id, last_ping_at = NOW(), gender_filter = req_gender, location_filter = req_location;
 
     UPDATE public.random_chat_pool
     SET status = 'MATCHED', matched_with = current_user_id, last_ping_at = NOW()
@@ -135,10 +153,10 @@ BEGIN
     result := json_build_object('status', 'MATCHED', 'matched_with', match_id);
   ELSE
     -- No match found, join pool as searching
-    INSERT INTO public.random_chat_pool (user_id, status, last_ping_at, matched_with)
-    VALUES (current_user_id, 'SEARCHING', NOW(), NULL)
+    INSERT INTO public.random_chat_pool (user_id, status, last_ping_at, matched_with, gender_filter, location_filter)
+    VALUES (current_user_id, 'SEARCHING', NOW(), NULL, req_gender, req_location)
     ON CONFLICT (user_id) DO UPDATE
-    SET status = 'SEARCHING', matched_with = NULL, last_ping_at = NOW();
+    SET status = 'SEARCHING', matched_with = NULL, last_ping_at = NOW(), gender_filter = req_gender, location_filter = req_location;
 
     result := json_build_object('status', 'SEARCHING');
   END IF;

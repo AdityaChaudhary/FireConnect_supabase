@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { action } = await req.json()
+    const { action, filters } = await req.json()
 
     if (action === 'join') {
       // Cleanup previous match if any to avoid hanging peers
@@ -61,6 +61,7 @@ Deno.serve(async (req) => {
 
       const { data, error } = await supabaseAdmin.rpc('match_random_user', {
         current_user_id: user.id,
+        filters: filters || null
       })
       if (error) throw error
       return new Response(JSON.stringify(data), {
@@ -138,6 +139,7 @@ Deno.serve(async (req) => {
       const { data, error } = await supabaseAdmin.rpc('match_random_user', {
         current_user_id: user.id,
         exclude_user_id: poolEntry?.matched_with || null,
+        filters: filters || null
       })
       if (error) throw error
       return new Response(JSON.stringify(data), {

@@ -5,19 +5,28 @@ import Icon from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import CdnImage from '../components/CdnImage';
+import UpgradeModal from '../components/UpgradeModal';
 
 type ChatStatus = 'IDLE' | 'SEARCHING' | 'MATCHED';
 
 const RandomChat: React.FC = () => {
     const navigate = useNavigate();
-    const { user: authUser } = useAuth();
+    const [notification, setNotification] = useState<string | null>(null);
+    const { stripeRole, profile, user: authUser } = useAuth();
+    const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+    
     const [status, setStatus] = useState<ChatStatus>('IDLE');
     const [matchedUserId, setMatchedUserId] = useState<string | null>(null);
     const [matchedUser, setMatchedUser] = useState<any>(null);
     const [messages, setMessages] = useState<any[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
-    const [notification, setNotification] = useState<string | null>(null);
+
+    // Filters
+    const [genderFilter, setGenderFilter] = useState<string | null>(null); // 'MALE', 'FEMALE', null (Any)
+    const [locationFilter, setLocationFilter] = useState<string | null>(profile?.location || 'IN'); // Default to Local
+    
+    const isPremium = stripeRole === 'pro' || stripeRole === 'max';
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -40,7 +49,13 @@ const RandomChat: React.FC = () => {
 
         try {
             const { data, error } = await supabase.functions.invoke('random-chat', {
-                body: { action: 'join' }
+                body: { 
+                    action: 'join',
+                    filters: {
+                        gender: genderFilter,
+                        location: locationFilter
+                    }
+                }
             });
 
             if (error) throw error;
@@ -81,7 +96,13 @@ const RandomChat: React.FC = () => {
 
         try {
             const { data, error } = await supabase.functions.invoke('random-chat', {
-                body: { action: 'skip' }
+                body: { 
+                    action: 'skip',
+                    filters: {
+                        gender: genderFilter,
+                        location: locationFilter
+                    }
+                }
             });
 
             if (error) throw error;
@@ -317,6 +338,75 @@ const RandomChat: React.FC = () => {
                             >
                                 Start Finding
                             </button>
+
+                            {/* Filters UI */}
+                            <div className="w-full max-w-[300px] mt-4 p-4 bg-surface-dark/50 border border-white/5 rounded-3xl flex flex-col gap-4">
+                                <div className="flex flex-col gap-2">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-white/40 text-[10px] font-black uppercase tracking-widest">Filter by Gender</span>
+                                        {!isPremium && <Icon name="lock" className="text-[14px] text-primary" />}
+                                    </div>
+                                    <div className="flex gap-2">
+                                        {[
+                                            { label: 'Any', value: null },
+                                            { label: 'Male', value: 'MALE' },
+                                            { label: 'Female', value: 'FEMALE' }
+                                        ].map((opt) => (
+                                            <button
+                                                key={opt.label}
+                                                onClick={() => {
+                                                    if (!isPremium && opt.value !== null) {
+                                                        setIsUpgradeModalOpen(true);
+                                                        return;
+                                                    }
+                                                    setGenderFilter(opt.value);
+                                                }}
+                                                className={`flex-1 py-2 rounded-xl text-[11px] font-bold transition-all ${
+                                                    genderFilter === opt.value 
+                                                        ? 'bg-primary text-white' 
+                                                        : 'bg-white/5 text-white/40 hover:bg-white/10'
+                                                }`}
+                                            >
+                                                {opt.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col gap-2">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-white/40 text-[10px] font-black uppercase tracking-widest">Filter by Location</span>
+                                        {!isPremium && <Icon name="lock" className="text-[14px] text-primary" />}
+                                    </div>
+                                    <div className="flex gap-2">
+                                        {[
+                                            { label: 'Global', value: null },
+                                            { label: 'Local', value: profile?.location || 'IN' }
+                                        ].map((opt) => (
+                                            <button
+                                                key={opt.label}
+                                                onClick={() => {
+                                                    if (!isPremium && opt.value !== null) {
+                                                        setIsUpgradeModalOpen(true);
+                                                        return;
+                                                    }
+                                                    setLocationFilter(opt.value);
+                                                }}
+                                                className={`flex-1 py-2 rounded-xl text-[11px] font-bold transition-all ${
+                                                    locationFilter === opt.value 
+                                                        ? 'bg-primary text-white' 
+                                                        : 'bg-white/5 text-white/40 hover:bg-white/10'
+                                                }`}
+                                            >
+                                                {opt.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    {locationFilter && (
+                                        <p className="text-[9px] text-white/30 text-center lowercase">matching with users in {locationFilter}</p>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     )}
 
@@ -438,6 +528,11 @@ const RandomChat: React.FC = () => {
                     </div>
                 )}
             </AnimatePresence>
+            {/* Upgrade Modal */}
+            <UpgradeModal 
+                isOpen={isUpgradeModalOpen} 
+                onClose={() => setIsUpgradeModalOpen(false)} 
+            />
         </div>
     );
 };
