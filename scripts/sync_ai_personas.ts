@@ -149,7 +149,9 @@ async function syncMedia(users: Record<string, AIUserRecord>) {
             continue;
         }
 
-        const files = readdirSync(folderPath).filter(f => f.toLowerCase().match(/\.(jpg|jpeg|png)$/));
+        const files = readdirSync(folderPath)
+            .filter(f => f.toLowerCase().match(/\.(jpg|jpeg|png)$/))
+            .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
         
         // Optimize: List existing files in storage once per user per bucket to avoid many list calls
         const listFiles = async (bucket: string, path: string) => {
@@ -165,20 +167,21 @@ async function syncMedia(users: Record<string, AIUserRecord>) {
 
         for (let i = 0; i < files.length; i++) {
             const fileName = files[i];
+            const sanitizedFileName = fileName.replace(/[?#]/g, '');
             const filePath = join(folderPath, fileName);
             const isProfile = i === 0;
             const visibility = isProfile ? 'PUBLIC' : 'PRIVATE';
             const bucket = isProfile || visibility === 'PUBLIC' ? 'public-media' : 'private-media';
             
-            const storagePath = `users/${uid}/shared/${visibility}/${fileName}`;
-            const avatarPath = `users/${uid}/avatars/${fileName}`;
+            const storagePath = `users/${uid}/shared/${visibility}/${sanitizedFileName}`;
+            const avatarPath = `users/${uid}/avatars/${sanitizedFileName}`;
 
             try {
                 const fileBuffer = readFileSync(filePath);
 
                 // 1. Process and Upload Main Image
                 const currentList = visibility === 'PUBLIC' ? existingPublicShared : existingPrivateShared;
-                if (!currentList.includes(fileName)) {
+                if (!currentList.includes(sanitizedFileName)) {
                     const processed = await sharp(fileBuffer)
                         .resize({ width: 1920, height: 1920, fit: 'inside', withoutEnlargement: true })
                         .jpeg({ quality: IMAGE_QUALITY })
@@ -189,7 +192,7 @@ async function syncMedia(users: Record<string, AIUserRecord>) {
 
                 // 2. Blurred version for private
                 if (visibility === 'PRIVATE') {
-                    const blurredFileName = `blurred_${fileName}`;
+                    const blurredFileName = `blurred_${sanitizedFileName}`;
                     const blurredPath = `users/${uid}/shared/PUBLIC/blurred/${blurredFileName}`;
                     
                     if (!existingBlurred.includes(blurredFileName)) {
@@ -203,7 +206,7 @@ async function syncMedia(users: Record<string, AIUserRecord>) {
 
                 // 3. Avatar for first image
                 if (isProfile) {
-                    if (!existingAvatars.includes(fileName)) {
+                    if (!existingAvatars.includes(sanitizedFileName)) {
                         const avatar = await sharp(fileBuffer)
                             .resize({ width: 512, height: 512, fit: 'cover' })
                             .jpeg({ quality: IMAGE_AVATAR_QUALITY })
@@ -257,16 +260,18 @@ async function syncDatabase(users: Record<string, AIUserRecord>) {
             // Upsert Profile Images
             const folderPath = join(REDDIT_FOLDER, record.folderName);
             if (existsSync(folderPath)) {
-                const files = readdirSync(folderPath).filter(f => f.toLowerCase().match(/\.(jpg|jpeg|png)$/));
+                const files = readdirSync(folderPath)
+                    .filter(f => f.toLowerCase().match(/\.(jpg|jpeg|png)$/))
+                    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
                 const imageInserts = files.map((fileName, i) => {
+                    const sanitizedFileName = fileName.replace(/[?#]/g, '');
                     const isProfile = i === 0;
                     const visibility = isProfile ? 'PUBLIC' : 'PRIVATE';
-                    const bucket = isProfile || visibility === 'PUBLIC' ? 'public-media' : 'private-media';
                     const prefix = `users/${record.uid}/`;
                     return {
                         user_id: record.uid,
-                        url: `${bucket}/${prefix}${visibility === 'PUBLIC' ? 'shared/PUBLIC' : 'shared/PRIVATE'}/${fileName}`,
-                        blurred_url: visibility === 'PRIVATE' ? `public-media/${prefix}shared/PUBLIC/blurred/blurred_${fileName}` : null,
+                        url: `${prefix}${visibility === 'PUBLIC' ? 'shared/PUBLIC' : 'shared/PRIVATE'}/${sanitizedFileName}`,
+                        blurred_url: visibility === 'PRIVATE' ? `${prefix}shared/PUBLIC/blurred/blurred_${sanitizedFileName}` : null,
                         is_profile: isProfile,
                         display_order: i,
                         visibility: visibility
