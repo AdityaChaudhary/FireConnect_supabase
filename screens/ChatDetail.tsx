@@ -29,6 +29,7 @@ const ChatDetail: React.FC = () => {
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const chatContainerRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     const { data: otherUser, isLoading: userLoading } = useUserDetail(otherUserId || '');
@@ -115,11 +116,43 @@ const ChatDetail: React.FC = () => {
         ensureThread();
     }, [authUser, otherUserId, threadId, threadLoading, queryClient]);
 
-    // Scroll to bottom when messages change and mark as read
-    // Mark as read when thread is loaded or messages change
+    // Scroll to bottom when messages change
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        if (!messages.length || !chatContainerRef.current) return;
 
+        const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+            if (messagesEndRef.current) {
+                messagesEndRef.current.scrollIntoView({ behavior });
+            } else if (chatContainerRef.current) {
+                chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+            }
+        };
+
+        // Use auto for the very first load to jump immediately
+        const isInitialLoad = !chatContainerRef.current.getAttribute('data-loaded');
+        
+        if (isInitialLoad) {
+            // Immediate jump
+            scrollToBottom('auto');
+            chatContainerRef.current.setAttribute('data-loaded', 'true');
+            
+            // Multiple attempts to handle staggered animations and image loading
+            const timeouts = [100, 300, 600].map(delay => 
+                setTimeout(() => scrollToBottom('auto'), delay)
+            );
+            
+            return () => timeouts.forEach(clearTimeout);
+        } else {
+            // Smooth scroll for new messages with a slight delay for layout stabilization
+            const timeoutId = setTimeout(() => {
+                scrollToBottom('smooth');
+            }, 150);
+            return () => clearTimeout(timeoutId);
+        }
+    }, [messages]);
+
+    // Mark as read effect
+    useEffect(() => {
         const markAsRead = async () => {
             if (!threadId || !authUser) return;
 
@@ -574,7 +607,10 @@ const ChatDetail: React.FC = () => {
             </header>
 
             {/* Chat Area */}
-            <main className="flex-1 overflow-y-auto px-4 py-6 flex flex-col bg-background-dark relative">
+            <main 
+                ref={chatContainerRef}
+                className="flex-1 overflow-y-auto px-4 py-6 flex flex-col bg-background-dark relative"
+            >
                 <div className="flex flex-col items-center justify-center my-8">
                     <div className="size-16 rounded-full overflow-hidden mb-3 ring-4 ring-primary/10 shadow-xl border-2 border-primary/20">
                         <CdnImage
