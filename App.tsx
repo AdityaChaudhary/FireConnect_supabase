@@ -20,6 +20,7 @@ import RandomChat from './screens/RandomChat';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import CreditsWelcome from './screens/CreditsWelcome';
 import SpyList from './screens/SpyList';
+import Policy from './screens/Policy';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -120,6 +121,8 @@ const AppRoutes: React.FC = () => {
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/random-chat" element={<RandomChat />} />
             <Route path="/spy-list" element={<SpyList />} />
+            <Route path="/settings/privacy" element={<Policy />} />
+            <Route path="/settings/terms" element={<Policy />} />
           </Routes>
         </motion.div>
       </AnimatePresence>

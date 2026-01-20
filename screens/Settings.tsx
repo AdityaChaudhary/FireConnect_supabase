@@ -2,10 +2,24 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
+import { redirectToCustomerPortal } from '../lib/stripe-utils';
 
 const Settings: React.FC = () => {
-    const { logout } = useAuth();
+    const { logout, stripeRole } = useAuth();
     const navigate = useNavigate();
+    const [portalLoading, setPortalLoading] = React.useState(false);
+
+    const handleManageSubscription = async () => {
+        setPortalLoading(true);
+        try {
+            await redirectToCustomerPortal();
+        } catch (error) {
+            console.error("Error redirecting to customer portal:", error);
+            alert("Failed to open subscription management. Please try again later.");
+        } finally {
+            setPortalLoading(false);
+        }
+    };
 
     return (
         <div className="flex min-h-screen w-full flex-col bg-background-dark text-white pb-24">
@@ -26,20 +40,52 @@ const Settings: React.FC = () => {
                 <div className="flex flex-col gap-2">
                     <h3 className="text-white/50 text-xs font-bold uppercase tracking-wider px-2">Account</h3>
                     <div className="flex flex-col rounded-2xl bg-surface-dark overflow-hidden border border-white/5">
-                        <button className="flex w-full items-center justify-between p-4 active:bg-white/5 transition-colors text-left group">
+                        <button 
+                            onClick={() => navigate('/settings/privacy')}
+                            className="flex w-full items-center justify-between p-4 active:bg-white/5 transition-colors text-left group"
+                        >
                             <div className="flex items-center gap-3">
                                 <Icon name="lock" className="text-white/60 group-hover:text-primary transition-colors" />
-                                <span className="text-sm font-medium">Privacy</span>
+                                <span className="text-sm font-medium">Privacy Policy</span>
                             </div>
                             <Icon name="chevron_right" className="text-white/40" />
                         </button>
                         <div className="h-px w-full bg-white/5"></div>
-                        <button className="flex w-full items-center justify-between p-4 active:bg-white/5 transition-colors text-left group">
+                        <button 
+                            onClick={() => navigate('/settings/terms')}
+                            className="flex w-full items-center justify-between p-4 active:bg-white/5 transition-colors text-left group"
+                        >
                             <div className="flex items-center gap-3">
-                                <Icon name="notifications" className="text-white/60 group-hover:text-primary transition-colors" />
-                                <span className="text-sm font-medium">Notifications</span>
+                                <Icon name="description" className="text-white/60 group-hover:text-primary transition-colors" />
+                                <span className="text-sm font-medium">Terms & Conditions</span>
                             </div>
                             <Icon name="chevron_right" className="text-white/40" />
+                        </button>
+
+                    </div>
+                </div>
+
+                {/* Subscription Section */}
+                <div className="flex flex-col gap-2">
+                    <h3 className="text-white/50 text-xs font-bold uppercase tracking-wider px-2">Subscription</h3>
+                    <div className="flex flex-col rounded-2xl bg-surface-dark overflow-hidden border border-white/5">
+                        <button
+                            onClick={handleManageSubscription}
+                            disabled={portalLoading}
+                            className="flex w-full items-center justify-between p-4 active:bg-white/5 transition-colors text-left group disabled:opacity-50"
+                        >
+                            <div className="flex items-center gap-3">
+                                <Icon name="credit_card" className="text-white/60 group-hover:text-primary transition-colors" />
+                                <span className="text-sm font-medium">{portalLoading ? 'Opening Portal...' : 'Manage Subscription'}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {stripeRole && stripeRole !== 'FREE' && (
+                                    <span className="text-[10px] font-bold bg-primary/20 text-primary px-2 py-0.5 rounded-full uppercase">
+                                        {stripeRole}
+                                    </span>
+                                )}
+                                <Icon name="chevron_right" className="text-white/40" />
+                            </div>
                         </button>
                     </div>
                 </div>

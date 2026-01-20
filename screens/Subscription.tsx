@@ -32,7 +32,7 @@ interface StripeProduct {
 }
 
 const Subscription: React.FC = () => {
-    const { stripeRole, subscription, refreshProfile } = useAuth();
+    const { stripeRole, refreshProfile } = useAuth();
     const navigate = useNavigate();
     const [updating, setUpdating] = useState(false);
     const [portalLoading, setPortalLoading] = useState(false);
@@ -309,17 +309,17 @@ const Subscription: React.FC = () => {
                     {/* Desktop Arrows */}
                     <button
                         onClick={prevPlan}
-                        className="hidden lg:flex absolute left-[-100px] top-1/2 -translate-y-1/2 w-16 h-16 items-center justify-center rounded-full bg-white/5 border border-white/10 backdrop-blur-xl hover:bg-white/10 transition-all active:scale-90 group z-10"
+                        className="flex absolute left-[-16px] lg:left-[-100px] top-1/2 -translate-y-1/2 w-12 h-12 lg:w-16 lg:h-16 items-center justify-center rounded-full bg-white/5 border border-white/10 backdrop-blur-xl hover:bg-white/10 transition-all active:scale-90 group z-10"
                         aria-label="Previous Plan"
                     >
-                        <Icon name="chevron_left" className="text-4xl text-white/50 group-hover:text-white transition-colors" />
+                        <Icon name="chevron_left" className="text-2xl lg:text-4xl text-white/50 group-hover:text-white transition-colors" />
                     </button>
                     <button
                         onClick={nextPlan}
-                        className="hidden lg:flex absolute right-[-100px] top-1/2 -translate-y-1/2 w-16 h-16 items-center justify-center rounded-full bg-white/5 border border-white/10 backdrop-blur-xl hover:bg-white/10 transition-all active:scale-90 group z-10"
+                        className="flex absolute right-[-16px] lg:right-[-100px] top-1/2 -translate-y-1/2 w-12 h-12 lg:w-16 lg:h-16 items-center justify-center rounded-full bg-white/5 border border-white/10 backdrop-blur-xl hover:bg-white/10 transition-all active:scale-90 group z-10"
                         aria-label="Next Plan"
                     >
-                        <Icon name="chevron_right" className="text-4xl text-white/50 group-hover:text-white transition-colors" />
+                        <Icon name="chevron_right" className="text-2xl lg:text-4xl text-white/50 group-hover:text-white transition-colors" />
                     </button>
 
                     <div
@@ -400,20 +400,7 @@ const Subscription: React.FC = () => {
 
                 {currentSubscriptionLevel !== 'FREE' && (
                     <div className="w-full mt-4 px-4 flex flex-col gap-3">
-                        {subscription && (
-                            <div className="flex flex-col gap-1 px-4 py-3 rounded-2xl bg-white/5 border border-white/5 text-center">
-                                <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
-                                    {subscription.cancel_at_period_end ? 'Subscription Ends' : 'Next Renewal'}
-                                </span>
-                                <span className="text-sm font-bold text-white/80">
-                                    {new Date(subscription.current_period_end).toLocaleDateString('en-US', {
-                                        month: 'long',
-                                        day: 'numeric',
-                                        year: 'numeric'
-                                    })}
-                                </span>
-                            </div>
-                        )}
+
                         <button
                             onClick={handleManageSubscription}
                             disabled={portalLoading}
