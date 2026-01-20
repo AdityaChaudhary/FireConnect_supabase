@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import Icon from './Icon';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
-import { useThreads } from '../hooks/useData';
+import { useUnreadBadge } from '../hooks/useData';
 
 const BottomNav: React.FC = () => {
     const navigate = useNavigate();
@@ -11,26 +11,7 @@ const BottomNav: React.FC = () => {
     const { user: authUser } = useAuth();
 
     const isActive = (path: string) => location.pathname === path;
-    const { data: threads = [] } = useThreads(authUser?.id);
-
-    const hasUnread = React.useMemo(() => {
-        if (!authUser) return false;
-        return threads.some((thread: any) => {
-            // If we are the sender, it's not unread for us
-            if (thread.last_message_sender_id === authUser.id) return false;
-
-            const lastRead = thread.last_read?.[authUser.id];
-            const lastMessageTime = thread.last_message_time;
-
-            if (!lastMessageTime || !thread.last_message) return false;
-            if (!lastRead) return true;
-
-            const lastReadTime = new Date(lastRead).getTime();
-            const lastMsgTime = new Date(lastMessageTime).getTime();
-
-            return lastMsgTime > lastReadTime;
-        });
-    }, [threads, authUser]);
+    const hasUnread = useUnreadBadge(authUser?.id);
 
     return (
         <nav className="fixed bottom-0 left-0 right-0 z-50 glass-nav border-t border-white/5 max-w-md mx-auto">

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 
@@ -316,10 +316,62 @@ export const useHasReceivedMessage = (targetUserId: string, authUserId?: string)
 };
 
 /**
+ * Hook to check if there are any unread messages.
+ * Lightweight query with dynamic backoff.
+ */
+export const useUnreadBadge = (userId?: string) => {
+    const [pollInterval, setPollInterval] = useState(20000);
+
+    const query = useQuery({
+        queryKey: ['unread-badge', userId],
+        queryFn: async () => {
+            if (!userId) return false;
+            const { data: threads, error } = await supabase
+                .from('threads')
+                .select('id, last_message_time, last_read, last_message_sender_id, last_message')
+                .contains('participants', [userId]);
+
+            if (error) throw error;
+
+            const hasUnread = (threads || []).some(thread => {
+                if (thread.last_message_sender_id === userId) return false;
+                if (!thread.last_message || !thread.last_message_time) return false;
+                
+                const lastRead = thread.last_read?.[userId];
+                if (!lastRead) return true;
+
+                const lastReadTime = new Date(lastRead).getTime();
+                const lastMsgTime = new Date(thread.last_message_time).getTime();
+                return lastMsgTime > lastReadTime;
+            });
+
+            return hasUnread;
+        },
+        enabled: !!userId,
+        refetchInterval: pollInterval
+    });
+
+    useEffect(() => {
+        if (query.data === undefined || !userId) return;
+
+        if (query.data) {
+            setPollInterval(20000); // Reset to 20s if unread found
+        } else {
+            setPollInterval(prev => Math.min(prev + 10000, 120000)); // Backoff up to 2m
+        }
+    }, [query.data, userId]);
+
+    return query.data || false;
+};
+
+/**
  * Hook to fetch message threads for a user.
+ * Optimized with bulk user fetching and dynamic backoff.
  */
 export const useThreads = (userId?: string) => {
-    return useQuery({
+    const [pollInterval, setPollInterval] = useState(20000);
+
+    const query = useQuery({
         queryKey: ['threads', userId],
         queryFn: async () => {
             if (!userId) return [];
@@ -332,30 +384,64 @@ export const useThreads = (userId?: string) => {
                 .order('last_message_time', { ascending: false });
 
             if (error) throw error;
+            if (!threads || threads.length === 0) return [];
 
-            // For each thread, find the OTHER participant and get their details
-            const threadsWithDetails = await Promise.all((threads || []).map(async (thread) => {
+            // Optimization: Fetch all OTHER participants in one go
+            const otherUserIds = threads
+                .map(t => t.participants.find((p: string) => p !== userId))
+                .filter((id): id is string => !!id);
+
+            if (otherUserIds.length === 0) return threads.map(t => ({ ...t, otherUser: null }));
+
+            const { data: usersData, error: usersError } = await supabase
+                .from('users')
+                .select('*, user_online_status(*)')
+                .in('id', otherUserIds);
+
+            if (usersError) throw usersError;
+
+            const usersMap = (usersData || []).reduce((acc: any, user: any) => {
+                acc[user.id] = user;
+                return acc;
+            }, {});
+
+            const threadsWithDetails = threads.map((thread) => {
                 const otherParticipantId = thread.participants.find((p: string) => p !== userId);
-
-                if (!otherParticipantId) return { ...thread, otherUser: null };
-
-                const { data: userData } = await supabase
-                    .from('users')
-                    .select('*, user_online_status(*)')
-                    .eq('id', otherParticipantId)
-                    .single();
-
                 return {
                     ...thread,
-                    otherUser: userData
+                    otherUser: otherParticipantId ? usersMap[otherParticipantId] : null
                 };
-            }));
+            });
 
             return threadsWithDetails;
         },
         enabled: !!userId,
-        refetchInterval: 5000, // Poll every 5 seconds for list updates
+        refetchInterval: pollInterval,
     });
+
+    useEffect(() => {
+        if (!query.data || !userId) return;
+
+        const hasUnread = query.data.some((thread: any) => {
+            if (thread.last_message_sender_id === userId) return false;
+            if (!thread.last_message || !thread.last_message_time) return false;
+
+            const lastRead = thread.last_read?.[userId];
+            if (!lastRead) return true;
+
+            const lastReadTime = new Date(lastRead).getTime();
+            const lastMsgTime = new Date(thread.last_message_time).getTime();
+            return lastMsgTime > lastReadTime;
+        });
+
+        if (hasUnread) {
+            setPollInterval(20000); // Reset to 20s if unread found
+        } else {
+            setPollInterval(prev => Math.min(prev + 10000, 120000));
+        }
+    }, [query.data, userId]);
+
+    return query;
 };
 
 /**

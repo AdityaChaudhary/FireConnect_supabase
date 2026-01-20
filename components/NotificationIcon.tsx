@@ -44,12 +44,12 @@ const NotificationIcon: React.FC = () => {
             }
         };
 
-        let currentInterval = 15000;
+        let currentInterval = 30000; // Start at 30s
         let timeoutId: NodeJS.Timeout;
 
         const poll = async () => {
             await checkNotifications();
-            currentInterval = Math.min(currentInterval + 5000, 120000);
+            currentInterval = Math.min(currentInterval + 10000, 300000); // +10s, max 5m
             timeoutId = setTimeout(poll, currentInterval);
         };
 
