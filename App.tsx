@@ -22,6 +22,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import OnlineStatusTracker from './components/OnlineStatusTracker';
+import ScrollToTop from './components/ScrollToTop';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -87,7 +88,9 @@ const AppRoutes: React.FC = () => {
   }
 
   return (
-    <Layout>
+    <>
+      <ScrollToTop />
+      <Layout>
       <AnimatePresence mode="wait">
         <motion.div
           key={location.pathname}
@@ -116,7 +119,8 @@ const AppRoutes: React.FC = () => {
           </Routes>
         </motion.div>
       </AnimatePresence>
-    </Layout>
+      </Layout>
+    </>
   );
 };
 

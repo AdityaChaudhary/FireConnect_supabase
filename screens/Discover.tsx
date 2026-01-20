@@ -44,6 +44,33 @@ const Discover: React.FC = () => {
         }
     }, [inView, hasNextPage, isFetchingNextPage, isFetching, fetchNextPage]);
 
+    // Scroll Position Persistence
+    const scrollKey = `discover_scroll_${authUser?.id}`;
+
+    React.useEffect(() => {
+        const savedScroll = localStorage.getItem(scrollKey);
+        if (savedScroll && users.length > 0) {
+            // Wait for items to be rendered
+            const timer = setTimeout(() => {
+                window.scrollTo({
+                    top: parseInt(savedScroll),
+                    behavior: 'auto'
+                });
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [users.length, scrollKey]);
+
+    React.useEffect(() => {
+        const handleScroll = () => {
+            // Save scroll position
+            localStorage.setItem(scrollKey, window.scrollY.toString());
+        };
+
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, [scrollKey]);
+
     if (loading && users.length === 0) {
         return (
             <div className="min-h-screen w-full bg-background-dark flex items-center justify-center">

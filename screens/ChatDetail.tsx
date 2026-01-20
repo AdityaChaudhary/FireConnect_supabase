@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import Icon from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
-import { useMessages, useUserDetail, useUserConnection, useSpiedStatus, useHasReceivedMessage } from '../hooks/useData';
+import { useMessages, useUserDetail, useUserConnection, useSpiedStatus, useHasReceivedMessage, useThreadId } from '../hooks/useData';
 import { supabase } from '../lib/supabase';
 import CdnImage from '../components/CdnImage';
 import EllipsisMenu from '../components/EllipsisMenu';
@@ -21,7 +21,6 @@ const ChatDetail: React.FC = () => {
 
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
-    const [threadId, setThreadId] = useState<string | null>(null);
     const [notification, setNotification] = useState<string | null>(null);
     const [currentTime, setCurrentTime] = useState(Date.now());
     const [showDisconnectModal, setShowDisconnectModal] = useState(false);
@@ -31,7 +30,8 @@ const ChatDetail: React.FC = () => {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     const { data: otherUser, isLoading: userLoading } = useUserDetail(otherUserId || '');
-    const { data: connData, isLoading: connLoading, refetch: refetchConn } = useUserConnection(otherUserId || '', authUser?.id);
+    const { data: connData, refetch: refetchConn } = useUserConnection(otherUserId || '', authUser?.id);
+    const { data: threadId, isLoading: threadLoading } = useThreadId(authUser?.id, otherUserId);
     const { data: messages = [] } = useMessages(threadId || undefined);
     const { data: isSpied } = useSpiedStatus(otherUserId || '', authUser?.id);
     const { data: hasReceivedMessage } = useHasReceivedMessage(otherUserId || '', authUser?.id);
@@ -85,60 +85,33 @@ const ChatDetail: React.FC = () => {
         }
     }, [notification]);
 
-    // Find or create thread
+    // Ensure thread exists in background if not found by hook
     useEffect(() => {
-        const getThread = async () => {
-            if (!authUser || !otherUserId) return;
+        const ensureThread = async () => {
+            if (!authUser || !otherUserId || threadLoading || threadId) return;
 
-            const { data: thread, error } = await supabase
+            const deterministicId = [authUser.id, otherUserId].sort().join('_');
+            
+            // Create thread if it doesn't exist
+            const { error: createError } = await supabase
                 .from('threads')
-                .select('id')
-                .contains('participants', [authUser.id, otherUserId])
-                .maybeSingle();
+                .upsert({
+                    id: deterministicId,
+                    participants: [authUser.id, otherUserId],
+                    last_message: '',
+                    last_message_time: new Date().toISOString()
+                }, { onConflict: 'id' });
 
-            if (error) {
-                console.error("Error fetching thread:", error);
-                return;
-            }
-
-            if (thread) {
-                setThreadId(thread.id);
+            if (createError) {
+                console.error("Error ensuring thread exists:", createError);
             } else {
-                const deterministicId = [authUser.id, otherUserId].sort().join('_');
-                
-                // Create thread if it doesn't exist
-                const { data: newThread, error: createError } = await supabase
-                    .from('threads')
-                    .insert({
-                        id: deterministicId,
-                        participants: [authUser.id, otherUserId],
-                        last_message: '',
-                        last_message_time: new Date().toISOString()
-                    })
-                    .select('id')
-                    .maybeSingle();
-
-                if (createError) {
-                    // If it's a conflict, it means someone else created it, just fetch it
-                    if (createError.code === '23505') {
-                        setThreadId(deterministicId);
-                    } else {
-                        console.error("Error creating thread:", createError);
-                    }
-                    return;
-                }
-                
-                if (newThread) {
-                    setThreadId(newThread.id);
-                } else {
-                    // If insert worked but didn't return (unlikely with single/maybeSingle), use the ID
-                    setThreadId(deterministicId);
-                }
+                // Invalidate to let the hook pick it up
+                queryClient.invalidateQueries({ queryKey: ['thread-id', authUser.id, otherUserId] });
             }
         };
 
-        getThread();
-    }, [authUser, otherUserId]);
+        ensureThread();
+    }, [authUser, otherUserId, threadId, threadLoading, queryClient]);
 
     // Scroll to bottom when messages change and mark as read
     // Mark as read when thread is loaded or messages change
@@ -380,9 +353,25 @@ const ChatDetail: React.FC = () => {
         return (
             <motion.div
                 key={msg.id || index}
-                initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ type: "spring", damping: 20, stiffness: 300, delay: index * 0.02 }}
+                layout
+                initial={{ 
+                    opacity: 0, 
+                    y: 20, 
+                    scale: 0.8,
+                    originX: isMe ? 1 : 0 
+                }}
+                animate={{ 
+                    opacity: 1, 
+                    y: 0, 
+                    scale: 1 
+                }}
+                transition={{ 
+                    type: "spring", 
+                    damping: 25, 
+                    stiffness: 400, 
+                    delay: Math.min(index * 0.03, 0.5), // Cap the stagger
+                    mass: 0.8
+                }}
                 className={`flex items-end gap-2.5 max-w-[85%] group ${isMe ? 'self-end justify-end ml-auto' : 'self-start mr-auto'}`}
             >
                 {!isMe && (
@@ -454,7 +443,7 @@ const ChatDetail: React.FC = () => {
         (stripeRole === 'pro' && isConnected) || 
         (stripeRole === 'free' && isConnected && isTheyHuman);
 
-    const isInitialLoading = (userLoading || connLoading) && !otherUser;
+    const isInitialLoading = userLoading && !otherUser;
 
     if (isInitialLoading) {
         return (

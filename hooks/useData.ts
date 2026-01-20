@@ -517,3 +517,26 @@ export const useMessages = (threadId?: string) => {
         enabled: !!threadId,
     });
 };
+
+/**
+ * Hook to fetch or create a thread ID between two users.
+ */
+export const useThreadId = (authUserId?: string, targetUserId?: string) => {
+    return useQuery({
+        queryKey: ['thread-id', authUserId, targetUserId],
+        queryFn: async () => {
+            if (!authUserId || !targetUserId) return null;
+
+            const { data, error } = await supabase
+                .from('threads')
+                .select('id')
+                .contains('participants', [authUserId, targetUserId])
+                .maybeSingle();
+
+            if (error) throw error;
+            return data?.id || null;
+        },
+        enabled: !!authUserId && !!targetUserId,
+        staleTime: Infinity, // Thread IDs don't change
+    });
+};
