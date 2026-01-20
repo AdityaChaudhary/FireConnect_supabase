@@ -28,6 +28,11 @@ Deno.serve(async (req) => {
             throw new Error("Missing priceId");
         }
 
+
+        console.log("Supabase URL: ", Deno.env.get('SUPABASE_URL'));
+        console.log("Supabase Anon Key: ", Deno.env.get('SUPABASE_ANON_KEY'));
+        //console.log("Supabase Service Role Key: ", Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'));
+
         // Initialize Supabase Client
         const authHeader = req.headers.get('Authorization');
         const supabaseClient = createClient(
@@ -35,6 +40,7 @@ Deno.serve(async (req) => {
             Deno.env.get('SUPABASE_ANON_KEY') ?? '',
             authHeader ? { global: { headers: { Authorization: authHeader } } } : {}
         );
+
 
         // Get User from Auth Header manually to be robust
         const token = authHeader?.replace('Bearer ', '');

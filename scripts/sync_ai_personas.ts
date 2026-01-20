@@ -257,6 +257,7 @@ async function syncDatabase(users: Record<string, AIUserRecord>) {
                 display_name: record.displayName,
                 email: record.email,
                 bio: record.bio,
+                persona: record.persona,
                 profile_picture_url: record.profilePictureUrl,
                 gender: record.gender,
                 location: record.location,
