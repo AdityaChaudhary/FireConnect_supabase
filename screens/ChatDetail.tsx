@@ -580,7 +580,7 @@ const ChatDetail: React.FC = () => {
     }
 
     return (
-        <div className="bg-background-dark font-display antialiased h-screen flex flex-col overflow-hidden relative w-full">
+        <div className="bg-background-dark font-display antialiased h-[100dvh] flex flex-col overflow-hidden relative w-full">
             {/* Notification */}
             <AnimatePresence>
                 {notification && (
@@ -633,7 +633,7 @@ const ChatDetail: React.FC = () => {
             />
 
             {/* Top App Bar */}
-            <header className="bg-surface-dark/80 backdrop-blur-xl sticky top-0 z-30 border-b border-white/5 shadow-lg shadow-black/5 w-full">
+            <header className="bg-surface-dark/80 backdrop-blur-xl border-b border-white/5 shadow-lg shadow-black/5 w-full shrink-0 z-30">
                 <div className="flex items-center justify-between p-4 max-w-md mx-auto w-full">
                 <div className="flex items-center gap-3">
                     <button
@@ -780,7 +780,7 @@ const ChatDetail: React.FC = () => {
 
             {/* Footer Input */}
             {isMessagingAllowed ? (
-                <footer className="pb-10 pt-2 bg-gradient-to-t from-background-dark via-background-dark to-transparent z-40 w-full">
+                <footer className="pb-6 pt-2 bg-background-dark shrink-0 z-40 w-full border-t border-white/5">
                     <div className="px-4 max-w-md mx-auto w-full">
                         <div className="bg-surface-dark/95 backdrop-blur-xl rounded-[28px] p-2 shadow-2xl shadow-black/20 border border-white/5 transition-all duration-300 focus-within:ring-2 focus-within:ring-primary/30">
                         <div className="flex items-end gap-1">
