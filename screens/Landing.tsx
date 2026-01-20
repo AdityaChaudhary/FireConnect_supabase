@@ -510,19 +510,19 @@ const Landing: React.FC = () => {
                             </div>
                             <p className="text-gray-500 text-sm leading-relaxed">The premium destination for authentic adult connections in a secure, luxury environment.</p>
                         </div>
-                        <div className="flex flex-col gap-4">
+                        {/* <div className="flex flex-col gap-4">
                             <h4 className="text-white font-bold uppercase text-sm tracking-wider">Company</h4>
                             <a className="text-gray-400 hover:text-fire-pink text-sm transition-colors" href="#">About</a>
                             <a className="text-gray-400 hover:text-fire-pink text-sm transition-colors" href="#">Careers</a>
                             <a className="text-gray-400 hover:text-fire-pink text-sm transition-colors" href="#">Press</a>
-                        </div>
+                        </div> */}
                         <div className="flex flex-col gap-4">
                             <h4 className="text-white font-bold uppercase text-sm tracking-wider">Legal</h4>
-                            <a className="text-gray-400 hover:text-fire-pink text-sm transition-colors" href="#">Privacy Policy</a>
-                            <a className="text-gray-400 hover:text-fire-pink text-sm transition-colors" href="#">Terms</a>
-                            <a className="text-gray-400 hover:text-fire-pink text-sm transition-colors" href="#">2257 Exempt</a>
+                            <a className="text-gray-400 hover:text-fire-pink text-sm transition-colors" href="#/privacy">Privacy Policy</a>
+                            <a className="text-gray-400 hover:text-fire-pink text-sm transition-colors" href="#/terms">Terms</a>
+                            {/* <a className="text-gray-400 hover:text-fire-pink text-sm transition-colors" href="#">2257 Exempt</a> */}
                         </div>
-                        <div className="flex flex-col gap-4">
+                        {/* <div className="flex flex-col gap-4">
                             <h4 className="text-white font-bold uppercase text-sm tracking-wider">Social</h4>
                             <div className="flex gap-4">
                                 <a className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-fire-pink transition-colors text-white" href="#">
@@ -532,7 +532,7 @@ const Landing: React.FC = () => {
                                     <span className="text-xs">X</span>
                                 </a>
                             </div>
-                        </div>
+                        </div> */}
                     </div>
                     <div className="text-center pt-8 border-t border-white/5">
                         <p className="text-gray-600 text-xs uppercase tracking-widest">© 2023 FireConnect. All rights reserved. 18+ content.</p>

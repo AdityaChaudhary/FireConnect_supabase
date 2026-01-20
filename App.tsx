@@ -87,15 +87,15 @@ const AppRoutes: React.FC = () => {
     );
   }
 
-  if (!user) {
+  // Allow access to policy pages even if profile is incomplete or user is not logged in
+  const isPolicyPage = location.pathname === '/privacy' || location.pathname === '/terms';
+
+  if (!user && !isPolicyPage) {
     console.log("AppRoutes: No user, showing Landing");
     return <Landing />;
   }
 
-  // Allow access to policy pages even if profile is incomplete
-  const isPolicyPage = location.pathname === '/settings/privacy' || location.pathname === '/settings/terms';
-
-  if ((!profile || !profile.username || !profile.display_name || !profile.gender || !profile.date_of_birth || !profile.location) && !isPolicyPage) {
+  if (user && (!profile || !profile.username || !profile.display_name || !profile.gender || !profile.date_of_birth || !profile.location) && !isPolicyPage) {
     return <Onboarding />;
   }
 
@@ -132,6 +132,8 @@ const AppRoutes: React.FC = () => {
             <Route path="/spy-list" element={<SpyList />} />
             <Route path="/settings/privacy" element={<Policy />} />
             <Route path="/settings/terms" element={<Policy />} />
+            <Route path="/privacy" element={<Policy />} />
+            <Route path="/terms" element={<Policy />} />
           </Routes>
         </motion.div>
       </AnimatePresence>

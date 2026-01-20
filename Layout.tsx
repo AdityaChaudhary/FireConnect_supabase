@@ -11,7 +11,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     const { user } = useAuth();
     const location = useLocation();
     // Hide bottom nav on specific pages
-    const hideOn = ['/welcome', '/credits-welcome', '/notifications', '/settings/privacy', '/settings/terms'];
+    const hideOn = ['/welcome', '/credits-welcome', '/notifications', '/settings/privacy', '/settings/terms', '/privacy', '/terms'];
     const showBottomNav = !location.pathname.startsWith('/chat/') &&
         !location.pathname.startsWith('/profile/') &&
         !hideOn.includes(location.pathname) &&
