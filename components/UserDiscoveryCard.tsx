@@ -294,7 +294,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
                                                     <>
                                                         <Icon name="visibility_off" className="text-white/60 text-3xl" />
                                                         {normalizedRole === 'PRO' && (
-                                                            <div className="absolute -top-1 -right-1 size-6 bg-primary rounded-full flex items-center justify-center border-2 border-[#1a0b14] shadow-lg">
+                                                            <div className="absolute -top-1 -right-1 size-6 bg-primary rounded-full flex items-center justify-center border border-white/20 shadow-lg">
                                                                 <span className="text-[11px] font-black text-white leading-none">{profile?.spy_credits || 0}</span>
                                                             </div>
                                                         )}
@@ -505,7 +505,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
                                 <>
                                     <Icon name={isSpied ? 'visibility' : 'visibility_off'} className="text-2xl" filled />
                                     {!isSpied && normalizedRole === 'PRO' && (
-                                        <div className="absolute -top-1 -right-1 size-5 bg-primary rounded-full flex items-center justify-center border-2 border-surface-dark shadow-lg">
+                                        <div className="absolute -top-1 -right-1 size-5 bg-primary rounded-full flex items-center justify-center border border-white/10 shadow-lg">
                                             <span className="text-[10px] font-black text-white leading-none">{profile?.spy_credits || 0}</span>
                                         </div>
                                     )}
