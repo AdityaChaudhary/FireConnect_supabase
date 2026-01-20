@@ -20,7 +20,7 @@ export const useDiscoveryUsers = (userId?: string) => {
                     profile_images (*)
                 `)
                 .neq('id', userId)
-                .order('created_at', { ascending: false })
+                .order('created_at', { ascending: true })
                 .range(pageParam, pageParam + PAGE_SIZE - 1);
 
             if (error) throw error;
