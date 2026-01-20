@@ -470,7 +470,7 @@ const ProfilePreview: React.FC = () => {
                                     </>
                                 )}
                             </AnimatePresence>
-                            {(amIMax || (amIPro && connectionStatus === 'CONNECTED') || (!amIMax && !amIPro && user?.user_type === 'HUMAN') || hasReceivedMessage) && (
+                            {(amIMax || (amIPro && connectionStatus === 'CONNECTED') || (!amIMax && !amIPro && user?.user_type === 'HUMAN') || user?.user_type === 'AI' || hasReceivedMessage) && (
                                 <button
                                     onClick={() => navigate(`/chat/${user.id}`, {
                                         state: {

@@ -88,9 +88,10 @@ Deno.serve(async (_req) => {
       console.log(`Processing AI User: ${aiUser.display_name} (${aiUser.id})`);
 
       // Update Online Status
-      await supabase
-        .from('user_online_status')
-        .upsert({ user_id: aiUser.id, last_seen_at: new Date().toISOString() });
+      // Note: Now only updating the last seen at time if an action is taken by the user
+      // await supabase
+      //   .from('user_online_status')
+      //   .upsert({ user_id: aiUser.id, last_seen_at: new Date().toISOString() });
 
       // 2. Scan for unread messages
       const { data: threads, error: threadsError } = await supabase
@@ -192,6 +193,13 @@ Deno.serve(async (_req) => {
       }
 
       console.log(`AI decided ${actions.length} actions for ${aiUser.display_name}`);
+
+      if (actions.length > 0) {
+        // Update Online Status
+        await supabase
+          .from('user_online_status')
+          .upsert({ user_id: aiUser.id, last_seen_at: new Date().toISOString() });
+      }
 
       // 6. Execute Actions
       for (const action of actions) {

@@ -558,7 +558,7 @@ const ChatDetail: React.FC = () => {
                     <p className="text-[11px] text-white/30 bg-white/5 border border-white/5 px-4 py-1.5 rounded-full uppercase tracking-widest font-bold backdrop-blur-sm">
                         Conversation started
                     </p>
-                    {!isConnected && !isTheyAI && (
+                    {!isConnected && (
                         <motion.button
                             whileTap={{ scale: 0.95 }}
                             onClick={() => {
