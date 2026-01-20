@@ -10,7 +10,7 @@ CREATE EXTENSION IF NOT EXISTS pg_net;
 
 SELECT cron.schedule(
     'ai-engine-heartbeat',
-    '* * * * *',
+    '*/2 * * * *',
     $$
     SELECT net.http_post(
         url := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url') || '/functions/v1/ai-engine',
