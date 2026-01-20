@@ -173,7 +173,8 @@ const RandomChat: React.FC = () => {
 
                     // stranger skipped us or entry was reset to searching
                     if (newStatus === 'SEARCHING' && status === 'MATCHED') {
-                        setNotification("Stranger skipped the chat.");
+                        const strangerName = matchedUser?.display_name || 'Stranger';
+                        setNotification(`${strangerName} skipped the chat.`);
                         setStatus('SEARCHING');
                         setMatchedUserId(null);
                         setMatchedUser(null);
@@ -182,7 +183,8 @@ const RandomChat: React.FC = () => {
                 } else if (payload.eventType === 'DELETE') {
                     // Our entry was deleted (e.g., timed out or other end stopped)
                     if (status === 'MATCHED') {
-                        setNotification("Stranger left the chat.");
+                        const strangerName = matchedUser?.display_name || 'Stranger';
+                        setNotification(`${strangerName} left the chat.`);
                     } else if (status === 'SEARCHING') {
                         setNotification("Session expired or ended.");
                     }
