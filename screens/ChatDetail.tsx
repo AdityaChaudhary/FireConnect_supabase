@@ -42,21 +42,32 @@ const ChatDetail: React.FC = () => {
     const stripeRole = (profile?.stripe_role || 'FREE').toLowerCase();
     const isTheyAI = otherUser?.user_type === 'AI';
     
-    const isOnline = (lastSeenAt?: string) => {
+    const isOnline = (status?: any) => {
+        if (!status) return false;
+        // Handle if status is just the timestamp string
+        if (typeof status === 'string') {
+            const lastSeen = new Date(status).getTime();
+            return (currentTime - lastSeen) < 300000;
+        }
+        // Handle if status is the object or array from the query
+        const lastSeenAt = Array.isArray(status) ? status[0]?.last_seen_at : status?.last_seen_at;
         if (!lastSeenAt) return false;
         const lastSeen = new Date(lastSeenAt).getTime();
-        return (currentTime - lastSeen) < 120000; // 2 minute threshold
+        return (currentTime - lastSeen) < 300000; // 5 minute threshold
     };
 
-    const formatLastSeen = (lastSeenAt?: string) => {
-        if (!lastSeenAt) return 'Never';
+    const formatLastSeen = (status?: any) => {
+        const lastSeenAt = Array.isArray(status) ? status[0]?.last_seen_at : status?.last_seen_at;
+        if (!lastSeenAt) return '';
         const lastSeen = new Date(lastSeenAt).getTime();
         const diff = Math.floor((currentTime - lastSeen) / 1000); 
-
-        if (diff < 60) return 'Just now';
-        if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-        if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-        return `${Math.floor(diff / 86400)}d ago`;
+        
+        const lastSeenMsg = 'Last seen ';
+        
+        if (diff < 120) return lastSeenMsg + 'Just now';
+        if (diff < 3600) return lastSeenMsg + `${Math.floor(diff / 60)}m ago`;
+        if (diff < 86400) return lastSeenMsg + `${Math.floor(diff / 3600)}h ago`;
+        return lastSeenMsg + `${Math.floor(diff / 86400)}d ago`;
     };
 
     useEffect(() => {
@@ -436,11 +447,12 @@ const ChatDetail: React.FC = () => {
     
     // Messaging Restrictions
     const isTheyHuman = otherUser?.user_type === 'HUMAN';
-    const isMessagingAllowed = stripeRole === 'max' || 
-                             (stripeRole === 'pro' && isConnected) || 
-                             (stripeRole === 'free' && isTheyHuman) || 
-                             hasReceivedMessage ||
-                             otherUser?.user_type === 'AI';
+    
+    const isMessagingAllowed = 
+        hasReceivedMessage || // Always allow replying
+        stripeRole === 'max' || 
+        (stripeRole === 'pro' && isConnected) || 
+        (stripeRole === 'free' && isConnected && isTheyHuman);
 
     const isInitialLoading = (userLoading || connLoading) && !otherUser;
 
@@ -490,7 +502,7 @@ const ChatDetail: React.FC = () => {
                                     className="w-full h-full object-cover"
                                 />
                             </div>
-                            {(isConnected || isTheyAI) && isOnline(otherUser?.user_online_status?.[0]?.last_seen_at || (otherUser?.user_online_status as any)?.last_seen_at) && (
+                            {(isConnected || isTheyAI) && isOnline(otherUser?.user_online_status) && (
                                 <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-background-dark rounded-full shadow-sm animate-pulse"></div>
                             )}
                         </div>
@@ -499,10 +511,10 @@ const ChatDetail: React.FC = () => {
                                 {displayName}
                             </h2>
                             {(isConnected || isTheyAI) && (
-                                isOnline(otherUser?.user_online_status?.[0]?.last_seen_at || (otherUser?.user_online_status as any)?.last_seen_at) ? (
+                                isOnline(otherUser?.user_online_status) ? (
                                     <p className="text-[10px] text-green-500 font-black tracking-wide">ONLINE NOW</p>
                                 ) : (
-                                    <p className="text-[10px] text-white/30 font-medium tracking-wide uppercase">Last seen {formatLastSeen(otherUser?.user_online_status?.[0]?.last_seen_at || (otherUser?.user_online_status as any)?.last_seen_at)}</p>
+                                    <p className="text-[10px] text-white/30 font-medium tracking-wide uppercase">{formatLastSeen(otherUser?.user_online_status)}</p>
                                 )
                             )}
                         </div>
@@ -665,10 +677,10 @@ const ChatDetail: React.FC = () => {
                         <Icon name="lock" className="text-primary text-xl" />
                     </div>
                     <h3 className="text-white font-bold text-sm tracking-tight">
-                        {stripeRole === 'pro' && !isConnected ? 'Connection Required' : 'Initiation Locked'}
+                        {(!isConnected && (stripeRole === 'pro' || stripeRole === 'free')) ? 'Connection Required' : 'Initiation Locked'}
                     </h3>
                     <p className="text-white/40 text-[11px] max-w-[280px] leading-relaxed">
-                        {stripeRole === 'pro' && !isConnected ? (
+                        {(!isConnected && (stripeRole === 'pro' || stripeRole === 'free')) ? (
                             <>Connect with <span className="text-primary font-bold">{displayName}</span> to start messaging.</>
                         ) : (
                             <>Only <span className="text-primary font-bold">MAX</span> users can initiate conversations with anyone.</>
@@ -681,7 +693,7 @@ const ChatDetail: React.FC = () => {
                         onClick={() => navigate('/subscription')}
                         className="mt-3 px-8 py-2.5 bg-primary text-white text-[11px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-primary/20 transition-all cursor-pointer"
                     >
-                        {stripeRole === 'pro' && !isConnected ? 'View Subscription' : 'Upgrade to Max'}
+                        {(!isConnected && (stripeRole === 'pro' || stripeRole === 'free')) ? 'View Subscription' : 'Upgrade to Max'}
                     </motion.button>
                 </footer>
             )}

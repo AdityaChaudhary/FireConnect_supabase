@@ -8,12 +8,55 @@ import CdnImage from '../components/CdnImage';
 import { getDefaultAvatar } from '../lib/image-utils';
 import { supabase } from '../lib/supabase';
 import ConfirmDialog from '../components/ConfirmDialog';
+import { useQueryClient } from '@tanstack/react-query';
 
 const Matches: React.FC = () => {
     const { user: authUser } = useAuth();
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const [searchQuery, setSearchQuery] = useState('');
+    const [currentTime, setCurrentTime] = useState(Date.now());
     const { data, isLoading: loading, refetch: fetchMatches } = useConnections(authUser?.id);
+
+    // Real-time subscription to online status changes
+    React.useEffect(() => {
+        if (!authUser?.id) return;
+
+        const channel = supabase
+            .channel('matches-online-status')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'user_online_status'
+                },
+                () => {
+                    // Invalidate connections query to refresh the online_status join
+                    queryClient.invalidateQueries({ queryKey: ['connections', authUser.id] });
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [authUser?.id, queryClient]);
+
+    React.useEffect(() => {
+        const intervalId = setInterval(() => {
+            setCurrentTime(Date.now());
+        }, 10000); // Update every 10 seconds
+        return () => clearInterval(intervalId);
+    }, []);
+
+    const isOnline = (user: any) => {
+        const status = user.user_online_status;
+        const lastSeen = Array.isArray(status) ? status[0]?.last_seen_at : status?.last_seen_at;
+        if (!lastSeen) return false;
+        const diff = currentTime - new Date(lastSeen).getTime();
+        return diff < 300000; // Online if seen in last 5 minutes
+    };
 
     const rawConnections = data?.connections || [];
     const rawSentRequests = data?.sentRequests || [];
@@ -133,6 +176,9 @@ const Matches: React.FC = () => {
                                                 seed={request.id}
                                                 className="w-full h-full object-cover"
                                             />
+                                            {isOnline(request) && (
+                                                <div className="absolute bottom-1 right-1 size-2.5 bg-green-500 border-2 border-surface-dark rounded-full shadow-sm animate-pulse"></div>
+                                            )}
                                         </div>
                                         <div>
                                             <p className="text-sm font-bold text-white leading-tight">{request.display_name || request.username}</p>
@@ -180,6 +226,9 @@ const Matches: React.FC = () => {
                                                 seed={request.id}
                                                 className="w-full h-full rounded-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
                                             />
+                                            {isOnline(request) && (
+                                                <div className="absolute bottom-0 right-0 size-3 bg-green-500 border-2 border-background-dark rounded-full shadow-sm animate-pulse"></div>
+                                            )}
                                         </div>
                                         <button
                                             onClick={(e) => { e.stopPropagation(); openConfirm(request.id, 'CANCEL'); }}
@@ -231,6 +280,12 @@ const Matches: React.FC = () => {
                                         seed={user.id}
                                         className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
                                     />
+                                    {isOnline(user) && (
+                                        <div className="absolute top-4 left-4 z-10 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green-500/20 backdrop-blur-md border border-green-500/30">
+                                            <div className="size-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                                            <span className="text-green-500 text-[8px] font-black uppercase tracking-wider">Online</span>
+                                        </div>
+                                    )}
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-transparent"></div>
 
                                     {/* Action Button - Top Right */}

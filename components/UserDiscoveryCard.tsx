@@ -203,7 +203,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
         const diffInSeconds = Math.floor((currentTime - seenDate) / 1000);
         const diffInMinutes = Math.floor(diffInSeconds / 60);
 
-        if (diffInSeconds < 120) { // 2 minute threshold
+        if (diffInSeconds < 300) { // 5 minute threshold
             return { label: 'Online', color: 'bg-green-500' };
         } else if (diffInMinutes < 24 * 60) {
             const hrs = Math.floor(diffInMinutes / 60);

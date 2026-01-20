@@ -1,6 +1,6 @@
 import multiavatar from '@multiavatar/multiavatar';
 
-export function getDefaultAvatar(gender?: string | null, seed?: string): string {
+export function getDefaultAvatar(_gender?: string | null, seed?: string): string {
     const svgCode = multiavatar(seed || 'default');
     return `data:image/svg+xml;utf8,${encodeURIComponent(svgCode)}`;
 }

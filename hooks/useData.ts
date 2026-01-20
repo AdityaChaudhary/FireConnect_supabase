@@ -80,8 +80,8 @@ export const useConnections = (userId?: string) => {
                 .from('connections')
                 .select(`
                     *,
-                    requester:users!connections_requester_id_fkey(*),
-                    recipient:users!connections_recipient_id_fkey(*)
+                    requester:users!connections_requester_id_fkey(*, user_online_status(last_seen_at)),
+                    recipient:users!connections_recipient_id_fkey(*, user_online_status(last_seen_at))
                 `)
                 .or(`requester_id.eq.${userId},recipient_id.eq.${userId}`);
 
@@ -204,6 +204,32 @@ export const useStripeProducts = () => {
  * Hook to fetch a user's details including online status.
  */
 export const useUserDetail = (userId: string) => {
+    const queryClient = useQueryClient();
+
+    useEffect(() => {
+        if (!userId) return;
+
+        const channel = supabase
+            .channel(`user-status-${userId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'user_online_status',
+                    filter: `user_id=eq.${userId}`,
+                },
+                () => {
+                    queryClient.invalidateQueries({ queryKey: ['user-detail', userId] });
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [userId, queryClient]);
+
     return useQuery({
         queryKey: ['user-detail', userId],
         queryFn: async () => {
@@ -222,7 +248,6 @@ export const useUserDetail = (userId: string) => {
         },
         enabled: !!userId,
         staleTime: 5000,
-        refetchInterval: 5000, // Poll every 5 seconds for status updates
     });
 };
 

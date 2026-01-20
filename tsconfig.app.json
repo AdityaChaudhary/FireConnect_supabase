@@ -39,5 +39,11 @@
     "**/*.ts",
     "**/*.tsx",
     "**/*.d.ts"
+  ],
+  "exclude": [
+    "supabase",
+    "scripts",
+    "reddit",
+    "node_modules"
   ]
 }

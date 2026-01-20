@@ -1,6 +1,6 @@
 export const STORAGE_PATHS = {
     avatars: (userId: string, timestamp: number) => `users/${userId}/avatars/${timestamp}`,
-    sharedMedia: (userId: string, visibility: string, timestamp: number, fileName?: string) =>
+    sharedMedia: (userId: string, visibility: string, timestamp: number, _fileName?: string) =>
         `users/${userId}/shared/${visibility}/${timestamp}`
 };
 
