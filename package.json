@@ -4,12 +4,14 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "env-cmd -f .env.local vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "generate-personas": "tsx scripts/generate_ai_personas.ts",
-    "sync-personas": "tsx scripts/sync_ai_personas.ts"
+    "sync-personas": "env-cmd -f .env.local tsx scripts/sync_ai_personas.ts",
+    "sync-personas:prod": "env-cmd -f .env tsx scripts/sync_ai_personas.ts",
+    "vault:prod": "env-cmd -f .env tsx scripts/set_prod_vault_secrets.ts"
   },
   "dependencies": {
     "@multiavatar/multiavatar": "^1.0.7",
@@ -36,7 +38,9 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
     "cli-progress": "^3.12.0",
+    "cross-env": "^10.1.0",
     "dotenv": "^17.2.3",
+    "env-cmd": "^11.0.0",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",

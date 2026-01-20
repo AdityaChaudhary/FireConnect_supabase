@@ -333,6 +333,7 @@ async function resetMetadata(users: Record<string, AIUserRecord>) {
 
 async function main() {
     console.log("\n🚀 AI Persona Sync Tool");
+    console.log(`\nSupabase URL: ${process.env.SUPABASE_URL}`);
     const users = loadAIUsers();
 
     if (Object.keys(users).length === 0) {
