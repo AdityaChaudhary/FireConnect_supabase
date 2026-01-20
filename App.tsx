@@ -16,6 +16,7 @@ import Notifications from './screens/Notifications';
 import Landing from './screens/Landing';
 import PurchaseCredits from './screens/PurchaseCredits';
 import ProfilePreview from './screens/ProfilePreview';
+import RandomChat from './screens/RandomChat';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import CreditsWelcome from './screens/CreditsWelcome';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -116,6 +117,7 @@ const AppRoutes: React.FC = () => {
             <Route path="/profile/:id" element={<ProfilePreview />} />
             <Route path="/purchase-credits" element={<PurchaseCredits />} />
             <Route path="/notifications" element={<Notifications />} />
+            <Route path="/random-chat" element={<RandomChat />} />
           </Routes>
         </motion.div>
       </AnimatePresence>

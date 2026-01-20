@@ -36,8 +36,11 @@ const BottomNav: React.FC = () => {
                     <span className="text-[10px] font-medium">Explore</span>
                 </button>
 
-                <button className="flex items-center justify-center -mt-8 size-14 rounded-full bg-primary text-white shadow-lg shadow-primary/40 hover:scale-105 active:scale-95 transition-all">
-                    <Icon name="add" className="text-[32px]" />
+                <button 
+                    onClick={() => navigate('/random-chat')}
+                    className={`flex items-center justify-center -mt-8 size-14 rounded-full shadow-lg transition-all hover:scale-105 active:scale-95 ${isActive('/random-chat') ? 'bg-white text-primary' : 'bg-primary text-white shadow-primary/40'}`}
+                >
+                    <Icon name="shuffle" className="text-[32px]" />
                 </button>
 
                 <button
