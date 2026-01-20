@@ -60,6 +60,14 @@ function saveAIUsers(users: Record<string, AIUserRecord>) {
     writeFileSync(JSON_DB_PATH, JSON.stringify(users, null, 2));
 }
 
+function sanitizeMediaFileName(fileName: string): string {
+    return fileName
+        .replace(/[?#]/g, '') // Keep existing basic sanitization
+        .replace(/[^\x00-\x7F]/g, '') // Remove non-ASCII characters (like ellipsis, smart quotes)
+        .replace(/\s+/g, '_') // Replace spaces with underscores
+        .replace(/[^a-zA-Z0-9.-]/g, '_'); // Replace any other unsafe characters with underscores
+}
+
 async function askQuestion(query: string): Promise<string> {
     const readline = await import('readline');
     const rl = readline.createInterface({
@@ -167,7 +175,7 @@ async function syncMedia(users: Record<string, AIUserRecord>) {
 
         for (let i = 0; i < files.length; i++) {
             const fileName = files[i];
-            const sanitizedFileName = fileName.replace(/[?#]/g, '');
+            const sanitizedFileName = sanitizeMediaFileName(fileName);
             const filePath = join(folderPath, fileName);
             const isProfile = i === 0;
             const visibility = isProfile ? 'PUBLIC' : 'PRIVATE';
@@ -187,7 +195,8 @@ async function syncMedia(users: Record<string, AIUserRecord>) {
                         .jpeg({ quality: IMAGE_QUALITY })
                         .toBuffer();
                     
-                    await supabase.storage.from(bucket).upload(storagePath, processed, { contentType: 'image/jpeg', upsert: true });
+                    const { error: uploadError } = await supabase.storage.from(bucket).upload(storagePath, processed, { contentType: 'image/jpeg', upsert: true });
+                    if (uploadError) throw new Error(`Upload failed for ${storagePath}: ${uploadError.message}`);
                 }
 
                 // 2. Blurred version for private
@@ -200,7 +209,8 @@ async function syncMedia(users: Record<string, AIUserRecord>) {
                             .blur(50)
                             .jpeg({ quality: IMAGE_BLURRED_QUALITY })
                             .toBuffer();
-                        await supabase.storage.from('public-media').upload(blurredPath, blurred, { contentType: 'image/jpeg', upsert: true });
+                        const { error: uploadError } = await supabase.storage.from('public-media').upload(blurredPath, blurred, { contentType: 'image/jpeg', upsert: true });
+                        if (uploadError) throw new Error(`Blurred upload failed for ${blurredPath}: ${uploadError.message}`);
                     }
                 }
 
@@ -211,12 +221,15 @@ async function syncMedia(users: Record<string, AIUserRecord>) {
                             .resize({ width: 512, height: 512, fit: 'cover' })
                             .jpeg({ quality: IMAGE_AVATAR_QUALITY })
                             .toBuffer();
-                        await supabase.storage.from('public-media').upload(avatarPath, avatar, { contentType: 'image/jpeg', upsert: true });
+                        const { error: uploadError } = await supabase.storage.from('public-media').upload(avatarPath, avatar, { contentType: 'image/jpeg', upsert: true });
+                        if (uploadError) throw new Error(`Avatar upload failed for ${avatarPath}: ${uploadError.message}`);
                     }
                     record.profilePictureUrl = avatarPath;
                 }
             } catch (e: any) {
                 console.error(`\nError processing ${fileName} for ${record.username}: ${e.message}`);
+                // Re-throw to stop the sync if it's a storage failure
+                throw e;
             }
         }
         progressBar.increment(1, { user: record.username, status: 'Media Done' });
@@ -264,7 +277,7 @@ async function syncDatabase(users: Record<string, AIUserRecord>) {
                     .filter(f => f.toLowerCase().match(/\.(jpg|jpeg|png)$/))
                     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
                 const imageInserts = files.map((fileName, i) => {
-                    const sanitizedFileName = fileName.replace(/[?#]/g, '');
+                    const sanitizedFileName = sanitizeMediaFileName(fileName);
                     const isProfile = i === 0;
                     const visibility = isProfile ? 'PUBLIC' : 'PRIVATE';
                     const prefix = `users/${record.uid}/`;
