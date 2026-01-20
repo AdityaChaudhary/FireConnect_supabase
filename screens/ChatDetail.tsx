@@ -4,7 +4,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import Icon from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
-import { useMessages, useUserDetail, useUserConnection, useSpiedStatus, useHasReceivedMessage, useThreadId } from '../hooks/useData';
+import { compressImage } from '../lib/image-utils';
+import { useMessages, useUserDetail, useUserConnection, useHasReceivedMessage, useThreadId } from '../hooks/useData';
 import { supabase } from '../lib/supabase';
 import CdnImage from '../components/CdnImage';
 import EllipsisMenu from '../components/EllipsisMenu';
@@ -15,7 +16,7 @@ const ChatDetail: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const queryClient = useQueryClient();
-    const { user: authUser, profile, refreshProfile } = useAuth();
+    const { user: authUser, profile } = useAuth();
 
     // Initial user data from navigation state if available
     const initialUser = location.state?.user;
@@ -27,16 +28,19 @@ const ChatDetail: React.FC = () => {
     const [showDisconnectModal, setShowDisconnectModal] = useState(false);
     const [requesting, setRequesting] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    const [revealedMessages, setRevealedMessages] = useState<Set<string>>(new Set());
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const chatContainerRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const { data: otherUser, isLoading: userLoading } = useUserDetail(otherUserId || '');
     const { data: connData, refetch: refetchConn } = useUserConnection(otherUserId || '', authUser?.id);
     const { data: threadId, isLoading: threadLoading } = useThreadId(authUser?.id, otherUserId);
     const { data: messages = [] } = useMessages(threadId || undefined);
-    const { data: isSpied } = useSpiedStatus(otherUserId || '', authUser?.id);
+    // const { data: isSpied } = useSpiedStatus(otherUserId || '', authUser?.id);
     const { data: hasReceivedMessage } = useHasReceivedMessage(otherUserId || '', authUser?.id);
 
     // Derived states
@@ -273,51 +277,92 @@ const ChatDetail: React.FC = () => {
         }
     };
 
-    const handleRevealClick = async (e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (!otherUserId || !authUser) return;
+    const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !threadId || !authUser) return;
 
-        if (stripeRole === 'max') {
-            // Already handled by RLS if Max
-            return;
-        }
+        try {
+            setIsSending(true);
 
-        if (stripeRole === 'pro') {
-            if (isSpied) return;
+            
+            // Compress Image (same settings as profile)
+            const compressed = await compressImage(file, 1080, 1080, 0.8);
+            
+            // Upload path: chats/{threadId}/{timestamp}_{clean_filename}
+            const cleanName = file.name.replace(/[^a-zA-Z0-9.]/g, '');
+            const fileName = `${Date.now()}_${cleanName}`;
+            const path = `chats/${threadId}/${fileName}`;
+            
+            const { error: uploadError } = await supabase.storage
+                .from('private-media')
+                .upload(path, compressed);
+                
+            if (uploadError) throw uploadError;
+            
+            // Insert Message
+            const mediaUrl = `private-media/${path}`;
+            const { error: msgError } = await supabase
+                .from('messages')
+                .insert({
+                    thread_id: threadId,
+                    sender_id: authUser.id,
+                    text: 'Sent an image', 
+                    media_url: mediaUrl,
+                    type: 'image' 
+                });
+                
+            if (msgError) throw msgError;
 
-            const currentCredits = Number(profile?.spy_credits || 0);
-            if (currentCredits > 0) {
-                try {
-                    // Start a transaction-like update
-                    const { error: spyError } = await supabase
-                        .from('spied_profiles')
-                        .insert({
-                            user_id: authUser.id,
-                            target_user_id: otherUserId
-                        });
-                    
-                    if (spyError) throw spyError;
+            // Update Thread
+            await supabase
+                .from('threads')
+                .update({
+                    last_message: 'Sent an image',
+                    last_message_time: new Date().toISOString(),
+                    last_message_sender_id: authUser.id
+                })
+                .eq('id', threadId);
 
-                    const { error: creditError } = await supabase
-                        .from('users')
-                        .update({ spy_credits: currentCredits - 1 })
-                        .eq('id', authUser.id);
-                    
-                    if (creditError) throw creditError;
+            // Invalidate queries
+            queryClient.invalidateQueries({ queryKey: ['messages', threadId] });
+            queryClient.invalidateQueries({ queryKey: ['threads'] });
 
-                    await refreshProfile();
-                    queryClient.invalidateQueries({ queryKey: ['spied-status', otherUserId] });
-                    setNotification(`Reveal successful! ${currentCredits - 1} credits remaining.`);
-                } catch (error) {
-                    console.error("Error revealing profile:", error);
-                    setNotification("Failed to reveal. Please try again.");
+            // Trigger AI if needed
+            if (isTheyAI && otherUserId) {
+                 try {
+                    await supabase.functions.invoke('ai-engine', {
+                        body: {
+                            threadId: threadId,
+                            text: "[Image Sent]", 
+                            userId: authUser.id,
+                            targetUserId: otherUserId
+                        }
+                    });
+                } catch (aiError) {
+                    console.error("AI Engine error:", aiError);
                 }
-            } else {
-                setNotification("Not enough credits to reveal. Buy more credits!");
             }
-        } else {
-            setNotification("Upgrade to Pro to reveal private photos.");
+
+        } catch (error: any) {
+            console.error('Error sending image:', error);
+            setNotification(error.message || 'Failed to send image');
+        } finally {
+            setIsSending(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
         }
+    };
+
+    const handleRevealClick = (e: React.MouseEvent, msgId: string) => {
+        e.stopPropagation();
+        setRevealedMessages(prev => {
+            const newSet = new Set(prev);
+            newSet.add(msgId);
+            return newSet;
+        });
+    };
+
+    const handleImageClick = (url: string) => {
+        setPreviewImage(url);
     };
 
     const handleSend = async (e?: React.FormEvent) => {
@@ -409,7 +454,11 @@ const ChatDetail: React.FC = () => {
     const renderMessage = (msg: any, index: number) => {
         const isMe = msg.sender_id === authUser?.id;
         const showAvatar = !isMe && (index === messages.length - 1 || messages[index + 1]?.sender_id !== msg.sender_id);
-        const isBlurred = msg.type === 'image' && msg.is_private && !isMe && !isSpied && stripeRole !== 'max';
+        const isImage = msg.type === 'image';
+        
+        // Blur by default until clicked (stored in local session state)
+        const isRevealed = revealedMessages.has(msg.id);
+        const isBlurred = isImage && !isRevealed;
 
         return (
             <motion.div
@@ -451,25 +500,32 @@ const ChatDetail: React.FC = () => {
                 )}
 
                 <div className={`flex flex-col gap-0.5 ${isMe ? 'items-end' : 'items-start'}`}>
-                    <div className={`relative px-4 py-2.5 shadow-md transition-all duration-300 ${isMe
-                        ? 'rounded-[20px] rounded-br-[4px] bg-gradient-to-tr from-primary to-pink-500 text-white shadow-primary/20'
-                        : 'rounded-[20px] rounded-bl-[4px] bg-surface-dark text-white border border-white/5'
-                        }`}>
+                    <div className={`relative shadow-md transition-all duration-300 overflow-hidden ${
+                        isImage ? 'p-0 bg-transparent' : 'px-4 py-2.5'
+                    } ${isMe
+                        ? `rounded-[20px] rounded-br-[4px] ${isImage ? '' : 'bg-gradient-to-tr from-primary to-pink-500 text-white shadow-primary/20'}`
+                        : `rounded-[20px] rounded-bl-[4px] ${isImage ? '' : 'bg-surface-dark text-white border border-white/5'}`
+                    }`}>
 
                         {msg.type === 'text' && (
                             <p className="text-[15px] font-medium leading-relaxed tracking-tight">{msg.text}</p>
                         )}
 
                         {msg.type === 'image' && msg.media_url && (
-                            <div className="relative w-full min-w-[200px] max-w-[280px] aspect-[4/5] rounded-xl overflow-hidden mb-2 group/media cursor-pointer ring-1 ring-white/10">
+                            <div className={`relative w-full min-w-[200px] max-w-[280px] aspect-[4/5] object-cover rounded-xl overflow-hidden group/media cursor-pointer ring-1 ring-white/10 ${isMe ? 'rounded-br-none' : 'rounded-bl-none'}`}>
                                 <CdnImage
                                     path={msg.media_url}
-                                    className={`absolute inset-0 w-full h-full object-cover transition-all duration-500 scale-105 ${isBlurred ? 'filter blur-md' : ''}`}
+                                    className={`absolute inset-0 w-full h-full object-cover transition-all duration-500 scale-105 ${isBlurred ? 'filter blur-xl scale-110' : ''}`}
+                                    onClick={() => !isBlurred && handleImageClick(msg.media_url)}
                                 />
                                 {isBlurred && (
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px] transition-all duration-500 active:bg-black/20" onClick={handleRevealClick}>
-                                        <div className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-full text-[11px] font-bold text-white flex items-center gap-2 border border-white/20 active:scale-95 transition-all">
-                                            <Icon name="visibility" className="text-[16px]" /> REVEAL PHOTO
+                                    <div 
+                                        className="absolute inset-0 flex flex-col items-center justify-center bg-black/20 backdrop-blur-[2px] transition-all duration-500 active:bg-black/10 z-10" 
+                                        onClick={(e) => handleRevealClick(e, msg.id)}
+                                    >
+                                        <div className="bg-black/40 backdrop-blur-md px-4 py-2 rounded-full text-[11px] font-bold text-white flex items-center gap-2 border border-white/20 hover:scale-105 active:scale-95 transition-all shadow-lg">
+                                            <Icon name="visibility" className="text-[16px]" /> 
+                                            CLICK TO VIEW
                                         </div>
                                     </div>
                                 )}
@@ -515,7 +571,7 @@ const ChatDetail: React.FC = () => {
     }
 
     return (
-        <div className="bg-background-dark font-display antialiased h-screen flex flex-col overflow-hidden relative max-w-md mx-auto">
+        <div className="bg-background-dark font-display antialiased h-screen flex flex-col overflow-hidden relative w-full">
             {/* Notification */}
             <AnimatePresence>
                 {notification && (
@@ -530,8 +586,40 @@ const ChatDetail: React.FC = () => {
                 )}
             </AnimatePresence>
 
+             {/* Image Preview Modal */}
+             <AnimatePresence>
+                {previewImage && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="fixed inset-0 z-[120] flex items-center justify-center bg-black/95 backdrop-blur-xl p-4"
+                        onClick={() => setPreviewImage(null)}
+                    >
+                        <motion.button
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.8 }}
+                            transition={{ delay: 0.1 }}
+                            onClick={() => setPreviewImage(null)}
+                            className="absolute top-4 right-4 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors z-[130]"
+                        >
+                            <Icon name="close" className="text-[24px]" />
+                        </motion.button>
+                        <div onClick={(e) => e.stopPropagation()} className="relative max-h-[90vh] max-w-[90vw] overflow-hidden rounded-lg shadow-2xl">
+                             <CdnImage
+                                path={previewImage}
+                                className="w-full h-full object-contain max-h-[90vh]"
+                            />
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Top App Bar */}
-            <header className="flex items-center justify-between p-4 bg-surface-dark/80 backdrop-blur-xl sticky top-0 z-30 border-b border-white/5 shadow-lg shadow-black/5">
+            <header className="bg-surface-dark/80 backdrop-blur-xl sticky top-0 z-30 border-b border-white/5 shadow-lg shadow-black/5 w-full">
+                <div className="flex items-center justify-between p-4 max-w-md mx-auto w-full">
                 <div className="flex items-center gap-3">
                     <button
                         onClick={() => navigate(-1)}
@@ -603,14 +691,16 @@ const ChatDetail: React.FC = () => {
                             ])
                         ]}
                     />
+                    </div>
                 </div>
             </header>
 
             {/* Chat Area */}
             <main 
                 ref={chatContainerRef}
-                className="flex-1 overflow-y-auto px-4 py-6 flex flex-col bg-background-dark relative"
+                className="flex-1 overflow-y-auto flex flex-col bg-background-dark relative w-full"
             >
+                <div className="flex-1 flex flex-col px-4 py-6 max-w-md mx-auto w-full">
                 <div className="flex flex-col items-center justify-center my-8">
                     <div className="size-16 rounded-full overflow-hidden mb-3 ring-4 ring-primary/10 shadow-xl border-2 border-primary/20">
                         <CdnImage
@@ -670,20 +760,30 @@ const ChatDetail: React.FC = () => {
                 )}
 
                 <div ref={messagesEndRef} className="h-4" />
+                </div>
             </main>
 
             {/* Footer Input */}
             {isMessagingAllowed ? (
-                <footer className="px-4 pb-10 pt-2 bg-gradient-to-t from-background-dark via-background-dark to-transparent z-40">
-                    <div className="max-w-4xl mx-auto bg-surface-dark/95 backdrop-blur-xl rounded-[28px] p-2 shadow-2xl shadow-black/20 border border-white/5 transition-all duration-300 focus-within:ring-2 focus-within:ring-primary/30">
+                <footer className="pb-10 pt-2 bg-gradient-to-t from-background-dark via-background-dark to-transparent z-40 w-full">
+                    <div className="px-4 max-w-md mx-auto w-full">
+                        <div className="bg-surface-dark/95 backdrop-blur-xl rounded-[28px] p-2 shadow-2xl shadow-black/20 border border-white/5 transition-all duration-300 focus-within:ring-2 focus-within:ring-primary/30">
                         <div className="flex items-end gap-1">
                             <div className="flex items-center">
-                                <button className="flex items-center justify-center w-10 h-10 rounded-full text-white/20 hover:text-primary hover:bg-primary/5 transition-all cursor-pointer">
-                                    <Icon name="add_circle" className="text-[24px]" />
-                                </button>
-                                <button className="flex items-center justify-center w-10 h-10 rounded-full text-white/20 hover:text-primary hover:bg-primary/5 transition-all cursor-pointer">
+
+                                <button
+                                    onClick={() => fileInputRef.current?.click()} 
+                                    className="flex items-center justify-center w-10 h-10 rounded-full text-white/20 hover:text-primary hover:bg-primary/5 transition-all cursor-pointer"
+                                >
                                     <Icon name="photo_camera" className="text-[22px]" />
                                 </button>
+                                <input 
+                                    type="file" 
+                                    ref={fileInputRef} 
+                                    className="hidden" 
+                                    accept="image/*"
+                                    onChange={handleImageSelect}
+                                />
                             </div>
 
                             <div className="flex-1 px-2 py-2">
@@ -737,6 +837,7 @@ const ChatDetail: React.FC = () => {
                                     <Icon name="send" className={`text-[20px] transition-all ${newMessage.trim() ? 'ml-0.5 rotate-0' : 'rotate-[-45deg]'}`} />
                                 </motion.button>
                             </div>
+                        </div>
                         </div>
                     </div>
                 </footer>

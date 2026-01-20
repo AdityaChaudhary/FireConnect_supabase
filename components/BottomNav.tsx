@@ -15,7 +15,7 @@ const BottomNav: React.FC = () => {
 
     return (
         <nav className="fixed bottom-0 left-0 right-0 z-50 glass-nav border-t border-white/5 max-w-md mx-auto">
-            <div className="flex justify-around items-center h-[80px] px-2 pb-2">
+            <div className="flex justify-around items-center h-[80px] px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
                 <button
                     onClick={() => navigate('/')}
                     className={`flex flex-col items-center justify-center w-full gap-1 p-2 transition-colors group ${isActive('/') ? 'text-primary' : 'text-white/50 hover:text-white'}`}

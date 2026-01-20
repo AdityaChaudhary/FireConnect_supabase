@@ -19,7 +19,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
     return (
         <div className="bg-background-dark min-h-screen font-display">
-            <div className={`${location.pathname === '/landing' || !user ? '' : 'max-w-md mx-auto'} min-h-screen relative bg-background-dark`}>
+            <div className={`${location.pathname === '/landing' || location.pathname.startsWith('/chat/') || !user ? '' : 'max-w-md mx-auto'} min-h-[100dvh] relative bg-background-dark overflow-x-hidden`}>
                 {children}
             </div>
             {showBottomNav && <BottomNav />}
