@@ -430,7 +430,7 @@ const Onboarding: React.FC = () => {
                                 </div>
                             </div>
                             <span className="text-xs text-white/50 select-none">
-                                I accept the <a href="#" onClick={(e) => e.preventDefault()} className="text-primary hover:underline font-medium">Terms and Conditions</a>
+                                I accept the <a href="#/settings/terms" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">Terms and Conditions</a>
                             </span>
                         </label>
                     </div>

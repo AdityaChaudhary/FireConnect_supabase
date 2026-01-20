@@ -25,8 +25,8 @@ const JSON_DB_PATH = join(process.cwd(), 'scripts', 'ai-users.json');
 const REDDIT_FOLDER = join(process.cwd(), 'reddit', 'output_folder');
 const PROCESSED_IMAGES_DIR = join(process.cwd(), 'scripts', 'processed_images');
 
-const IMAGE_AVATAR_QUALITY = 50;
-const IMAGE_QUALITY = 65;
+const IMAGE_AVATAR_QUALITY = 45;
+const IMAGE_QUALITY = 55;
 const IMAGE_BLURRED_QUALITY = 30;
 
 // Types

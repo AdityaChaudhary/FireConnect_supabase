@@ -74,9 +74,15 @@ const AppRoutes: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen w-full bg-background-dark flex flex-col items-center justify-center gap-4">
-        <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
-        <p className="text-white/30 text-xs font-bold tracking-widest uppercase animate-pulse">Initializing Session</p>
+      <div className="min-h-screen w-full bg-background-dark flex flex-col items-center justify-center gap-6 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none"></div>
+        <div className="flex items-center justify-center size-16 bg-gradient-to-tr from-fire-pink to-neon-purple rounded-2xl shadow-[0_0_30px_rgba(255,0,85,0.4)] animate-pulse">
+          <span className="material-symbols-outlined text-4xl text-white">local_fire_department</span>
+        </div>
+        <div className="flex flex-col items-center gap-2">
+            <h1 className="text-2xl font-black tracking-tighter text-white uppercase"><span className="text-transparent bg-clip-text bg-gradient-to-r from-fire-pink to-neon-purple">Fire</span>Connect</h1>
+            <p className="text-white/30 text-xs font-bold tracking-[0.3em] uppercase animate-pulse">Initializing Session</p>
+        </div>
       </div>
     );
   }
@@ -86,7 +92,10 @@ const AppRoutes: React.FC = () => {
     return <Landing />;
   }
 
-  if (!profile || !profile.username || !profile.display_name || !profile.gender || !profile.date_of_birth || !profile.location) {
+  // Allow access to policy pages even if profile is incomplete
+  const isPolicyPage = location.pathname === '/settings/privacy' || location.pathname === '/settings/terms';
+
+  if ((!profile || !profile.username || !profile.display_name || !profile.gender || !profile.date_of_birth || !profile.location) && !isPolicyPage) {
     return <Onboarding />;
   }
 

@@ -149,7 +149,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         initializeAuth();
 
         // Listen for auth changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
             console.log("AuthContext: onAuthStateChange event:", event, currentSession ? "Session active" : "No session");
 
             if (!isMounted) return;
@@ -158,15 +158,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUser(currentSession?.user ?? null);
 
             if (currentSession?.user) {
-                // Don't await here either; let the app react to user presence first
+                // Don't await here; let the app react to user presence first.
+                // initializeAuth handles the initial "blocking" load.
                 refreshProfile(currentSession.user);
             } else {
                 setProfile(null);
                 setStripeRole(null);
                 setSubscription(null);
             }
-
-            setLoading(false);
+            
+            // We do NOT set loading(false) here anymore.
+            // initializeAuth is responsible for the initial loading state.
+            // This prevents race conditions where this fires before the profile is ready.
         });
 
         return () => {
