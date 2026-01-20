@@ -26,6 +26,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
     const [isSpied, setIsSpied] = useState(isSpiedInitially || false);
     const [notification, setNotification] = useState<string | null>(null);
     const [currentTime, setCurrentTime] = useState(Date.now());
+    const [isSpying, setIsSpying] = useState(false);
 
     const { targetRef, hasBeenInView } = useIntersectionObserver({
         rootMargin: '1200px', // Fetch images for the next 2-3 profiles in advance
@@ -146,6 +147,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
 
             const currentCredits = Number(profile?.spy_credits || 0);
             if (currentCredits > 0) {
+                setIsSpying(true);
                 try {
                     const { error: spyError } = await supabase
                         .from('spied_profiles')
@@ -172,6 +174,8 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
                 } catch (error) {
                     console.error("Error revealing profile", error);
                     setNotification("Failed to spy. Please try again.");
+                } finally {
+                    setIsSpying(false);
                 }
             } else {
                 onUpgradeClick?.('OUT_OF_CREDITS');
@@ -283,17 +287,35 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
                                         onClick={handleSpyClick}
                                     >
                                         <div className="text-center p-6">
-                                            <div className="size-16 rounded-full bg-white/10 flex items-center justify-center mx-auto mb-4 border border-white/20 transition-transform active:scale-90">
-                                                <Icon name="visibility_off" className="text-white/60 text-3xl" />
+                                            <div className="size-16 rounded-full bg-white/10 flex items-center justify-center mx-auto mb-4 border border-white/20 transition-transform active:scale-90 relative">
+                                                {isSpying ? (
+                                                    <div className="size-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                                                ) : (
+                                                    <>
+                                                        <Icon name="visibility_off" className="text-white/60 text-3xl" />
+                                                        {normalizedRole === 'PRO' && (
+                                                            <div className="absolute -top-1 -right-1 size-6 bg-primary rounded-full flex items-center justify-center border-2 border-[#1a0b14] shadow-lg">
+                                                                <span className="text-[11px] font-black text-white leading-none">{profile?.spy_credits || 0}</span>
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                )}
                                             </div>
-                                            <p className="text-white font-bold">Private Media</p>
-                                            <p className="text-white/50 text-xs">Touch to Spy</p>
+                                            <p className="text-white font-bold">{isSpying ? 'Unlocking...' : 'Private Media'}</p>
+                                            <p className="text-white/50 text-xs">{isSpying ? 'Please wait' : 'Touch to Spy'}</p>
                                         </div>
                                     </div>
                                 )}
-                                {loading && currentImageIndex === idx && !viewUrl && (
+                                {((loading || isSpying) || (isSpied && !viewUrl && isImgPrivate)) && currentImageIndex === idx && (
                                     <div className="absolute inset-0 flex items-center justify-center z-20 bg-black/20 backdrop-blur-sm">
-                                        <div className="size-12 border-4 border-white/20 border-t-white rounded-full animate-spin -mt-16"></div>
+                                        <div className="flex flex-col items-center gap-4 -mt-24">
+                                            <div className="size-12 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
+                                            {(isSpying || (isSpied && isImgPrivate)) && (
+                                                <p className="text-white/60 text-[10px] font-black uppercase tracking-[0.2em] animate-pulse">
+                                                    Unlocking...
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -471,12 +493,24 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
                     </button>
 
                     {/* Spy Button - Theme Highlighted */}
-                    {!isSpied && images.some(img => img.visibility === 'PRIVATE') && (
+                    {images.some(img => img.visibility === 'PRIVATE') && (
                         <button
                             onClick={handleSpyClick}
-                            className="size-14 shrink-0 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all active:scale-90"
+                            disabled={isSpying}
+                            className={`size-14 shrink-0 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center transition-all active:scale-90 disabled:opacity-50 relative ${isSpied ? 'text-primary border-primary/20 bg-primary/5' : 'text-white/40 hover:text-white hover:bg-white/10'}`}
                         >
-                            <Icon name="visibility_off" className="text-2xl" filled />
+                            {isSpying ? (
+                                <div className="size-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                            ) : (
+                                <>
+                                    <Icon name={isSpied ? 'visibility' : 'visibility_off'} className="text-2xl" filled />
+                                    {!isSpied && normalizedRole === 'PRO' && (
+                                        <div className="absolute -top-1 -right-1 size-5 bg-primary rounded-full flex items-center justify-center border-2 border-surface-dark shadow-lg">
+                                            <span className="text-[10px] font-black text-white leading-none">{profile?.spy_credits || 0}</span>
+                                        </div>
+                                    )}
+                                </>
+                            )}
                         </button>
                     )}
 
