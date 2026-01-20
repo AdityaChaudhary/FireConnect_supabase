@@ -22,9 +22,25 @@ const Profile: React.FC = () => {
     const [isAddInterestOpen, setIsAddInterestOpen] = useState(false);
     const [interestToRemove, setInterestToRemove] = useState<string | null>(null);
     const [updatingInterests, setUpdatingInterests] = useState(false);
+    const [spyCount, setSpyCount] = useState<number>(0);
 
     const subscriptionLevel = (stripeRole || 'FREE').toUpperCase() as 'FREE' | 'PRO' | 'MAX';
     const displayName = profile?.display_name || user?.user_metadata?.full_name || 'User';
+
+    const fetchSpyCount = async () => {
+        if (!user?.id) return;
+        try {
+            const { count, error } = await supabase
+                .from('spied_profiles')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', user.id);
+
+            if (error) throw error;
+            setSpyCount(count || 0);
+        } catch (error) {
+            console.error("Error fetching spy count:", error);
+        }
+    };
 
     const fetchImages = async () => {
         if (!user?.id) return;
@@ -44,6 +60,7 @@ const Profile: React.FC = () => {
 
     useEffect(() => {
         fetchImages();
+        fetchSpyCount();
     }, [user?.id]);
 
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -293,18 +310,17 @@ const Profile: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="flex w-full justify-between gap-3">
-                    <div className="flex flex-1 flex-col items-center justify-center gap-1 rounded-xl bg-surface-dark border border-white/5 p-3 active:scale-95 transition-transform cursor-pointer">
-                        <p className="text-white text-xl font-bold">{filteredImages.length}</p>
-                        <p className="text-white/50 text-xs font-medium uppercase tracking-wide">Shared</p>
-                    </div>
-                    <div className="flex flex-1 flex-col items-center justify-center gap-1 rounded-xl bg-surface-dark border border-white/5 p-3 active:scale-95 transition-transform cursor-pointer">
-                        <p className="text-white text-xl font-bold">--</p>
-                        <p className="text-white/50 text-xs font-medium uppercase tracking-wide">Views</p>
+                <div className="flex w-full justify-center gap-3">
+                    <div
+                        onClick={() => navigate('/spy-list')}
+                        className="flex w-[140px] flex-col items-center justify-center gap-1 rounded-xl bg-surface-dark border border-white/5 p-3 active:scale-95 transition-transform cursor-pointer"
+                    >
+                        <p className="text-white text-xl font-bold">{spyCount}</p>
+                        <p className="text-white/50 text-xs font-medium uppercase tracking-wide">Spy List</p>
                     </div>
                     <div
                         onClick={() => navigate('/purchase-credits')}
-                        className="flex flex-1 flex-col items-center justify-center gap-1 rounded-xl bg-gradient-to-br from-primary/20 to-purple-600/20 border border-primary/30 p-3 active:scale-95 transition-transform cursor-pointer group"
+                        className="flex w-[140px] flex-col items-center justify-center gap-1 rounded-xl bg-gradient-to-br from-primary/20 to-purple-600/20 border border-primary/30 p-3 active:scale-95 transition-transform cursor-pointer group"
                     >
                         <Icon name="visibility" className="text-primary group-hover:animate-pulse" />
                         <p className="text-white text-base font-bold">
