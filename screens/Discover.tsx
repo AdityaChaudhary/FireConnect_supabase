@@ -111,7 +111,7 @@ const Discover: React.FC = () => {
                             {(isFetchingNextPage || (inView && hasNextPage)) ? (
                                 <>
                                     <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
-                                    <p className="text-primary text-sm font-medium animate-pulse">Loading more users...</p>
+                                    <p className="text-primary text-sm font-medium animate-pulse">Loading more profiles...</p>
                                 </>
                             ) : hasNextPage ? (
                                 <div className="h-20"></div> // Taller sentinel
