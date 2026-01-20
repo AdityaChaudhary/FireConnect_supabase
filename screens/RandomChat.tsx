@@ -174,7 +174,7 @@ const RandomChat: React.FC = () => {
                     // stranger skipped us or entry was reset to searching
                     if (newStatus === 'SEARCHING' && status === 'MATCHED') {
                         const strangerName = matchedUser?.display_name || 'Stranger';
-                        setNotification(`${strangerName} skipped the chat.`);
+                        setNotification(`${strangerName} skipped the chat!`);
                         setStatus('SEARCHING');
                         setMatchedUserId(null);
                         setMatchedUser(null);
@@ -184,7 +184,7 @@ const RandomChat: React.FC = () => {
                     // Our entry was deleted (e.g., timed out or other end stopped)
                     if (status === 'MATCHED') {
                         const strangerName = matchedUser?.display_name || 'Stranger';
-                        setNotification(`${strangerName} left the chat.`);
+                        setNotification(`${strangerName} left the chat!`);
                     } else if (status === 'SEARCHING') {
                         setNotification("Session expired or ended.");
                     }
@@ -426,14 +426,16 @@ const RandomChat: React.FC = () => {
             {/* Notification Toast */}
             <AnimatePresence>
                 {notification && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 20 }}
-                        className="fixed bottom-32 left-1/2 -translate-x-1/2 z-[100] bg-black/80 backdrop-blur-md border border-white/10 px-6 py-3 rounded-full shadow-2xl"
-                    >
-                        <p className="text-white text-xs font-bold">{notification}</p>
-                    </motion.div>
+                    <div className="fixed top-20 left-0 right-0 z-[100] flex justify-center pointer-events-none">
+                        <motion.div
+                            initial={{ opacity: 0, y: -20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="bg-black/80 backdrop-blur-md border border-white/10 px-6 py-3 rounded-full shadow-2xl pointer-events-auto"
+                        >
+                            <p className="text-white text-xs font-bold">{notification}</p>
+                        </motion.div>
+                    </div>
                 )}
             </AnimatePresence>
         </div>
