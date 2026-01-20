@@ -10,6 +10,7 @@ import { supabase } from '../lib/supabase';
 import CdnImage from '../components/CdnImage';
 import EllipsisMenu from '../components/EllipsisMenu';
 import EmojiPicker from '../components/EmojiPicker';
+import UpgradeModal from '../components/UpgradeModal';
 
 const ChatDetail: React.FC = () => {
     const { id: otherUserId } = useParams<{ id: string }>();
@@ -30,6 +31,7 @@ const ChatDetail: React.FC = () => {
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [revealedMessages, setRevealedMessages] = useState<Set<string>>(new Set());
     const [previewImage, setPreviewImage] = useState<string | null>(null);
+    const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -521,7 +523,14 @@ const ChatDetail: React.FC = () => {
                                 {isBlurred && (
                                     <div 
                                         className="absolute inset-0 flex flex-col items-center justify-center bg-black/20 backdrop-blur-[2px] transition-all duration-500 active:bg-black/10 z-10" 
-                                        onClick={(e) => handleRevealClick(e, msg.id)}
+                                        onClick={(e) => {
+                                             if (stripeRole === 'free') {
+                                                e.stopPropagation();
+                                                setShowUpgradeModal(true);
+                                            } else {
+                                                handleRevealClick(e, msg.id);
+                                            }
+                                        }}
                                     >
                                         <div className="bg-black/40 backdrop-blur-md px-4 py-2 rounded-full text-[11px] font-bold text-white flex items-center gap-2 border border-white/20 hover:scale-105 active:scale-95 transition-all shadow-lg">
                                             <Icon name="visibility" className="text-[16px]" /> 
@@ -616,6 +625,12 @@ const ChatDetail: React.FC = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Upgrade Modal */}
+            <UpgradeModal 
+                isOpen={showUpgradeModal} 
+                onClose={() => setShowUpgradeModal(false)} 
+            />
 
             {/* Top App Bar */}
             <header className="bg-surface-dark/80 backdrop-blur-xl sticky top-0 z-30 border-b border-white/5 shadow-lg shadow-black/5 w-full">
@@ -772,7 +787,13 @@ const ChatDetail: React.FC = () => {
                             <div className="flex items-center">
 
                                 <button
-                                    onClick={() => fileInputRef.current?.click()} 
+                                    onClick={() => {
+                                        if (stripeRole === 'free') {
+                                            setShowUpgradeModal(true);
+                                        } else {
+                                            fileInputRef.current?.click();
+                                        }
+                                    }} 
                                     className="flex items-center justify-center w-10 h-10 rounded-full text-white/20 hover:text-primary hover:bg-primary/5 transition-all cursor-pointer"
                                 >
                                     <Icon name="photo_camera" className="text-[22px]" />
