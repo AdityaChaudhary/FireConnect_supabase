@@ -38,5 +38,6 @@ scripts/bucket_local/
 .env
 .env.local
 .env.prod
+.env.network
 
 supabase/.temp/

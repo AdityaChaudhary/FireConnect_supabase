@@ -197,6 +197,21 @@ const ChatDetail: React.FC = () => {
         markAsRead();
     }, [messages, threadId, authUser, queryClient]);
 
+    // Prevent body bounce/scroll on mobile when chat is open
+    useEffect(() => {
+        document.body.style.overflow = 'hidden';
+        document.body.style.position = 'fixed';
+        document.body.style.width = '100%';
+        document.body.style.height = '100%';
+        
+        return () => {
+            document.body.style.overflow = '';
+            document.body.style.position = '';
+            document.body.style.width = '';
+            document.body.style.height = '';
+        };
+    }, []);
+
     const handleSendRequest = async () => {
         if (!otherUserId || !authUser || requesting) return;
         setRequesting(true);
@@ -580,7 +595,7 @@ const ChatDetail: React.FC = () => {
     }
 
     return (
-        <div className="bg-background-dark font-display antialiased h-[100dvh] flex flex-col overflow-hidden relative w-full">
+        <div className="bg-background-dark font-display antialiased fixed inset-0 flex flex-col overflow-hidden w-full">
             {/* Notification */}
             <AnimatePresence>
                 {notification && (
@@ -780,7 +795,7 @@ const ChatDetail: React.FC = () => {
 
             {/* Footer Input */}
             {isMessagingAllowed ? (
-                <footer className="pb-6 pt-2 bg-background-dark shrink-0 z-40 w-full border-t border-white/5">
+                <footer className="pb-2 pt-2 bg-background-dark shrink-0 z-40 w-full border-t border-white/5 pb-[env(safe-area-inset-bottom,0.5rem)]">
                     <div className="px-4 max-w-md mx-auto w-full">
                         <div className="bg-surface-dark/95 backdrop-blur-xl rounded-[28px] p-2 shadow-2xl shadow-black/20 border border-white/5 transition-all duration-300 focus-within:ring-2 focus-within:ring-primary/30">
                         <div className="flex items-end gap-1">

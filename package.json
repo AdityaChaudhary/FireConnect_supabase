@@ -4,7 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "env-cmd -f .env.local vite",
+    "dev": "env-cmd -f .env.local vite --host 0.0.0.0",
+    "dev:network": "env-cmd -f .env.network vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
