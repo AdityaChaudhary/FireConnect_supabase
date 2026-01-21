@@ -249,8 +249,20 @@ function AppContent() {
     loading 
   });
 
+  const isAuthPage = location.pathname === '/landing' || location.pathname === '/auth';
+  const isPolicyPage = location.pathname === '/privacy' || location.pathname === '/terms' || location.pathname.startsWith('/settings/');
+  const isProfileComplete = !!(profile && 
+    profile.username && 
+    profile.display_name && 
+    profile.gender && 
+    profile.date_of_birth && 
+    profile.location);
+
   useEffect(() => {
-    if (user && profile && profile.username && profile.display_name && profile.gender && profile.date_of_birth && profile.location) {
+    if (loading) return;
+
+    // Handle session intent and redirection for authenticated users
+    if (user && isProfileComplete) {
       const intent = localStorage.getItem('auth_intent');
       if (intent) {
         try {
@@ -258,25 +270,37 @@ function AppContent() {
           if (type === 'profile' && id) {
             localStorage.removeItem('auth_intent');
             navigate(`/profile/${id}`);
+            return;
           } else if (type === 'subscription') {
             localStorage.removeItem('auth_intent');
             navigate('/subscription');
+            return;
           }
         } catch (e) {
           console.error("Error parsing auth_intent", e);
           localStorage.removeItem('auth_intent');
         }
-      } else {
-        const justOnboarded = localStorage.getItem('just_onboarded');
-        if (justOnboarded === 'true') {
-          localStorage.removeItem('just_onboarded');
-          navigate('/profile');
-        } else if (location.pathname === '/landing' || location.pathname === '/auth') {
-          navigate('/');
-        }
+      }
+
+      const justOnboarded = localStorage.getItem('just_onboarded');
+      if (justOnboarded === 'true') {
+        localStorage.removeItem('just_onboarded');
+        navigate('/profile');
+        return;
+      }
+
+      if (isAuthPage) {
+        navigate('/');
+        return;
       }
     }
-  }, [user, profile, navigate, location.pathname]);
+
+    // Handle unauthenticated user redirection
+    if (!user && !isPolicyPage && !isAuthPage && location.pathname !== '/landing') {
+      console.log("AppContent: No user, redirecting to /landing via useEffect");
+      navigate('/landing', { replace: true });
+    }
+  }, [user, profile, loading, navigate, location.pathname, isProfileComplete, isPolicyPage, isAuthPage]);
 
   if (loading) {
     return (
@@ -293,28 +317,7 @@ function AppContent() {
     );
   }
 
-  const isAuthPage = location.pathname === '/landing' || location.pathname === '/auth';
-  const isPolicyPage = location.pathname === '/privacy' || location.pathname === '/terms' || location.pathname.startsWith('/settings/');
-
-  // If loading, the initialization screen is shown above.
-  
-  // If not logged in and not on an allowed page, redirect to Landing
-  if (!loading && !user && !isPolicyPage && !isAuthPage && location.pathname !== '/landing') {
-    console.log("AppContent: No user, redirecting to /landing");
-    navigate('/landing', { replace: true });
-    return null;
-  }
-
-  console.log("AppContent: Rendering MainLayout with Outlet", { path: location.pathname });
-
-  // Onboarding Logic
-  const isProfileComplete = profile && 
-    profile.username && 
-    profile.display_name && 
-    profile.gender && 
-    profile.date_of_birth && 
-    profile.location;
-
+  // Onboarding Logic (Conditional render is safe)
   if (user && !isProfileComplete && !isPolicyPage && !isAuthPage) {
     console.log("AppContent: Profile incomplete, showing Onboarding");
     return <Onboarding />;
