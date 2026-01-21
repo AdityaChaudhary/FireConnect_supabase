@@ -276,22 +276,52 @@ export const useUserConnection = (targetUserId: string, authUserId?: string) => 
         queryKey: ['user-connection', targetUserId, authUserId],
         queryFn: async () => {
             if (!targetUserId || !authUserId) return null;
+            
+            // Fetch ALL matching connections (could be 0, 1, or 2)
             const { data, error } = await supabase
                 .from('connections')
                 .select('*')
-                .or(`and(requester_id.eq.${authUserId},recipient_id.eq.${targetUserId}),and(requester_id.eq.${targetUserId},recipient_id.eq.${authUserId})`)
-                .maybeSingle();
+                .or(`and(requester_id.eq.${authUserId},recipient_id.eq.${targetUserId}),and(requester_id.eq.${targetUserId},recipient_id.eq.${authUserId})`);
 
             if (error) throw error;
-            if (!data) return null;
+            if (!data || data.length === 0) return null;
 
-            const isRequester = data.requester_id === authUserId;
-            return {
-                ...data,
-                status: data.status,
-                incomingStatus: isRequester ? null : data.status,
-                outgoingStatus: isRequester ? data.status : null
-            };
+            // Logic to determine the "effective" connection status
+            // 1. If any is CONNECTED, that wins.
+            const connected = data.find(c => c.status === 'CONNECTED');
+            if (connected) {
+                const isRequester = connected.requester_id === authUserId;
+                return {
+                    ...connected,
+                    status: 'CONNECTED',
+                    incomingStatus: isRequester ? null : 'CONNECTED', // effectively connected
+                    outgoingStatus: isRequester ? 'CONNECTED' : null
+                };
+            }
+
+            // 2. If there is an INCOMING request (requester is THEM), that wins (so we can Accept)
+            const incoming = data.find(c => c.requester_id === targetUserId && c.status === 'PENDING');
+            if (incoming) {
+                return {
+                    ...incoming,
+                    status: incoming.status,
+                    incomingStatus: incoming.status,
+                    outgoingStatus: null
+                };
+            }
+
+            // 3. Otherwise, check for OUTGOING (requester is ME)
+            const outgoing = data.find(c => c.requester_id === authUserId && c.status === 'PENDING');
+            if (outgoing) {
+                return {
+                    ...outgoing,
+                    status: outgoing.status,
+                    incomingStatus: null,
+                    outgoingStatus: outgoing.status
+                };
+            }
+
+            return null;
         },
         enabled: !!targetUserId && !!authUserId,
         staleTime: 30 * 1000,
