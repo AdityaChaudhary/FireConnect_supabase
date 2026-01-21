@@ -1,5 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
+import type { MetaFunction } from 'react-router';
 import { useAuth } from '../context/AuthContext';
+
+export const meta: MetaFunction = () => {
+    return [
+        { title: "FireConnect - Ignite Intimate Connections" },
+        { name: "description", content: "The most exclusive network for verified adults. Experience luxury, privacy, and uninhibited connection." },
+        { property: "og:title", content: "FireConnect - Ignite Intimate Connections" },
+        { property: "og:description", content: "The most exclusive network for verified adults. Join FireConnect today." },
+        { property: "og:type", content: "website" },
+    ];
+};
 import { supabase } from '../lib/supabase';
 import { getStripeProducts, fetchWithRetry } from '../lib/stripe-utils';
 import { PLAN_THEMES, PLAN_DESCRIPTIONS, PLAN_FEATURES } from '../config/plans';

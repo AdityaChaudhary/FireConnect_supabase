@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router';
+import type { MetaFunction, LoaderFunctionArgs } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import Icon from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
@@ -9,6 +10,27 @@ import { useUserDetail, useUserConnection, useProfileImages, useSpiedStatus, use
 import { getDefaultAvatar } from '../lib/image-utils';
 import CdnImage from '../components/CdnImage';
 import { supabase } from '../lib/supabase';
+
+export const loader = async ({ params }: LoaderFunctionArgs) => {
+    const { id } = params;
+    const { data: user } = await supabase
+        .from('users')
+        .select('id, display_name, bio, gender')
+        .eq('id', id)
+        .single();
+    return { user };
+};
+
+export const meta: MetaFunction<typeof loader> = ({ data }) => {
+    const user = data?.user;
+    const displayName = user?.display_name || 'User';
+    return [
+        { title: `Chat with ${displayName} on FireConnect` },
+        { name: "description", content: `Connect with ${displayName} on FireConnect. ${user?.bio || 'The most exclusive network for verified adults.'}` },
+        { property: "og:title", content: `FireConnect - ${displayName}` },
+        { property: "og:description", content: `Connect with ${displayName} on FireConnect.` },
+    ];
+};
 
 const ProfilePreview: React.FC = () => {
     const { id } = useParams<{ id: string }>();

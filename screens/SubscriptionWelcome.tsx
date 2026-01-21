@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router';
 import Icon from '../components/Icon';
 import { PLAN_THEMES, PLAN_FEATURES, PLAN_DESCRIPTIONS } from '../config/plans';
 import confetti from 'canvas-confetti';

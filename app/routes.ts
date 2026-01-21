@@ -1,0 +1,26 @@
+import { type RouteConfig, index, route } from "@react-router/dev/routes";
+
+export default [
+  index("../screens/Discover.tsx"),
+  route("landing", "../screens/Landing.tsx"),
+  route("auth", "../screens/Auth.tsx"),
+  route("matches", "../screens/Matches.tsx"),
+  route("chat", "../screens/ChatList.tsx"),
+  route("chat/:id", "../screens/ChatDetail.tsx"),
+  route("profile", "../screens/Profile.tsx"),
+  route("profile/edit", "../screens/EditProfile.tsx"),
+  route("settings", "../screens/Settings.tsx"),
+  route("subscription", "../screens/Subscription.tsx"),
+  route("welcome", "../screens/SubscriptionWelcome.tsx"),
+  route("credits-welcome", "../screens/CreditsWelcome.tsx"),
+  route("profile/:id", "../screens/ProfilePreview.tsx"),
+  route("purchase-credits", "../screens/PurchaseCredits.tsx"),
+  route("notifications", "../screens/Notifications.tsx"),
+  route("random-chat", "../screens/RandomChat.tsx"),
+  route("spy-list", "../screens/SpyList.tsx"),
+  route("settings/privacy", "../screens/Policy.tsx", { id: "settings-privacy" }),
+  route("settings/terms", "../screens/Policy.tsx", { id: "settings-terms" }),
+  route("privacy", "../screens/Policy.tsx", { id: "privacy-policy" }),
+  route("terms", "../screens/Policy.tsx", { id: "terms-conditions" }),
+  route("*", "../screens/NotFound.tsx"),
+] satisfies RouteConfig;

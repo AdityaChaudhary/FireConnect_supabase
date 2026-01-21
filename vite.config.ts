@@ -1,6 +1,6 @@
 import path from 'node:path';
+import { reactRouter } from "@react-router/dev/vite";
 import { defineConfig, loadEnv } from 'vite';
-import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => {
       port: process.env.PORT ? parseInt(process.env.PORT) : 3000,
       host: '0.0.0.0',
     },
-    plugins: [react()],
+    plugins: [reactRouter()],
     define: {
       'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
@@ -20,16 +20,6 @@ export default defineConfig(({ mode }) => {
       }
     },
     build: {
-      rollupOptions: {
-        output: {
-          manualChunks: {
-            'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-            'vendor-supabase': ['@supabase/supabase-js'],
-            'vendor-ui': ['lucide-react', 'framer-motion', 'canvas-confetti'],
-            'vendor-query': ['@tanstack/react-query'],
-          },
-        },
-      },
       chunkSizeWarningLimit: 1000,
     },
   };

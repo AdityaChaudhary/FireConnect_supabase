@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router';
 import BottomNav from './components/BottomNav';
 import { useAuth } from './context/AuthContext';
 

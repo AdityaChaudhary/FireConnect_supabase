@@ -1,0 +1,489 @@
+{
+  "buildManifest": {
+    "serverBundles": {
+      "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0": {
+        "id": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+        "file": "build/server/nodejs_eyJydW50aW1lIjoibm9kZWpzIn0/index.js",
+        "config": {
+          "runtime": "nodejs"
+        }
+      }
+    },
+    "routeIdToServerBundleId": {
+      "../screens/Discover": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "../screens/Landing": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "../screens/Auth": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "../screens/Matches": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "../screens/ChatList": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "../screens/ChatDetail": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "../screens/Profile": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "../screens/EditProfile": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "../screens/Settings": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "../screens/Subscription": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "../screens/SubscriptionWelcome": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "../screens/CreditsWelcome": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "../screens/ProfilePreview": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "../screens/PurchaseCredits": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "../screens/Notifications": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "../screens/RandomChat": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "../screens/SpyList": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "settings-privacy": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "settings-terms": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "privacy-policy": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "terms-conditions": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0"
+    },
+    "routes": {
+      "root": {
+        "id": "root",
+        "file": "app/root.tsx",
+        "path": "",
+        "config": {}
+      },
+      "../screens/Discover": {
+        "id": "../screens/Discover",
+        "parentId": "root",
+        "file": "screens/Discover.tsx",
+        "index": true,
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "../screens/Landing": {
+        "id": "../screens/Landing",
+        "parentId": "root",
+        "file": "screens/Landing.tsx",
+        "path": "landing",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "../screens/Auth": {
+        "id": "../screens/Auth",
+        "parentId": "root",
+        "file": "screens/Auth.tsx",
+        "path": "auth",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "../screens/Matches": {
+        "id": "../screens/Matches",
+        "parentId": "root",
+        "file": "screens/Matches.tsx",
+        "path": "matches",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "../screens/ChatList": {
+        "id": "../screens/ChatList",
+        "parentId": "root",
+        "file": "screens/ChatList.tsx",
+        "path": "chat",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "../screens/ChatDetail": {
+        "id": "../screens/ChatDetail",
+        "parentId": "root",
+        "file": "screens/ChatDetail.tsx",
+        "path": "chat/:id",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "../screens/Profile": {
+        "id": "../screens/Profile",
+        "parentId": "root",
+        "file": "screens/Profile.tsx",
+        "path": "profile",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "../screens/EditProfile": {
+        "id": "../screens/EditProfile",
+        "parentId": "root",
+        "file": "screens/EditProfile.tsx",
+        "path": "profile/edit",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "../screens/Settings": {
+        "id": "../screens/Settings",
+        "parentId": "root",
+        "file": "screens/Settings.tsx",
+        "path": "settings",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "../screens/Subscription": {
+        "id": "../screens/Subscription",
+        "parentId": "root",
+        "file": "screens/Subscription.tsx",
+        "path": "subscription",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "../screens/SubscriptionWelcome": {
+        "id": "../screens/SubscriptionWelcome",
+        "parentId": "root",
+        "file": "screens/SubscriptionWelcome.tsx",
+        "path": "welcome",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "../screens/CreditsWelcome": {
+        "id": "../screens/CreditsWelcome",
+        "parentId": "root",
+        "file": "screens/CreditsWelcome.tsx",
+        "path": "credits-welcome",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "../screens/ProfilePreview": {
+        "id": "../screens/ProfilePreview",
+        "parentId": "root",
+        "file": "screens/ProfilePreview.tsx",
+        "path": "profile/:id",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "../screens/PurchaseCredits": {
+        "id": "../screens/PurchaseCredits",
+        "parentId": "root",
+        "file": "screens/PurchaseCredits.tsx",
+        "path": "purchase-credits",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "../screens/Notifications": {
+        "id": "../screens/Notifications",
+        "parentId": "root",
+        "file": "screens/Notifications.tsx",
+        "path": "notifications",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "../screens/RandomChat": {
+        "id": "../screens/RandomChat",
+        "parentId": "root",
+        "file": "screens/RandomChat.tsx",
+        "path": "random-chat",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "../screens/SpyList": {
+        "id": "../screens/SpyList",
+        "parentId": "root",
+        "file": "screens/SpyList.tsx",
+        "path": "spy-list",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "settings-privacy": {
+        "id": "settings-privacy",
+        "parentId": "root",
+        "file": "screens/Policy.tsx",
+        "path": "settings/privacy",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "settings-terms": {
+        "id": "settings-terms",
+        "parentId": "root",
+        "file": "screens/Policy.tsx",
+        "path": "settings/terms",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "privacy-policy": {
+        "id": "privacy-policy",
+        "parentId": "root",
+        "file": "screens/Policy.tsx",
+        "path": "privacy",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "terms-conditions": {
+        "id": "terms-conditions",
+        "parentId": "root",
+        "file": "screens/Policy.tsx",
+        "path": "terms",
+        "config": {
+          "runtime": "nodejs"
+        }
+      }
+    }
+  },
+  "reactRouterConfig": {
+    "appDirectory": "/Users/aditya/Work/Dev/FireConnect_supabase/app",
+    "basename": "/",
+    "buildDirectory": "/Users/aditya/Work/Dev/FireConnect_supabase/build",
+    "future": {
+      "unstable_optimizeDeps": false,
+      "unstable_subResourceIntegrity": false,
+      "unstable_trailingSlashAwareDataRequests": false,
+      "v8_middleware": false,
+      "v8_splitRouteModules": false,
+      "v8_viteEnvironmentApi": false
+    },
+    "routes": {
+      "root": {
+        "id": "root",
+        "file": "root.tsx",
+        "path": ""
+      },
+      "../screens/Discover": {
+        "id": "../screens/Discover",
+        "parentId": "root",
+        "file": "../screens/Discover.tsx",
+        "index": true
+      },
+      "../screens/Landing": {
+        "id": "../screens/Landing",
+        "parentId": "root",
+        "file": "../screens/Landing.tsx",
+        "path": "landing"
+      },
+      "../screens/Auth": {
+        "id": "../screens/Auth",
+        "parentId": "root",
+        "file": "../screens/Auth.tsx",
+        "path": "auth"
+      },
+      "../screens/Matches": {
+        "id": "../screens/Matches",
+        "parentId": "root",
+        "file": "../screens/Matches.tsx",
+        "path": "matches"
+      },
+      "../screens/ChatList": {
+        "id": "../screens/ChatList",
+        "parentId": "root",
+        "file": "../screens/ChatList.tsx",
+        "path": "chat"
+      },
+      "../screens/ChatDetail": {
+        "id": "../screens/ChatDetail",
+        "parentId": "root",
+        "file": "../screens/ChatDetail.tsx",
+        "path": "chat/:id"
+      },
+      "../screens/Profile": {
+        "id": "../screens/Profile",
+        "parentId": "root",
+        "file": "../screens/Profile.tsx",
+        "path": "profile"
+      },
+      "../screens/EditProfile": {
+        "id": "../screens/EditProfile",
+        "parentId": "root",
+        "file": "../screens/EditProfile.tsx",
+        "path": "profile/edit"
+      },
+      "../screens/Settings": {
+        "id": "../screens/Settings",
+        "parentId": "root",
+        "file": "../screens/Settings.tsx",
+        "path": "settings"
+      },
+      "../screens/Subscription": {
+        "id": "../screens/Subscription",
+        "parentId": "root",
+        "file": "../screens/Subscription.tsx",
+        "path": "subscription"
+      },
+      "../screens/SubscriptionWelcome": {
+        "id": "../screens/SubscriptionWelcome",
+        "parentId": "root",
+        "file": "../screens/SubscriptionWelcome.tsx",
+        "path": "welcome"
+      },
+      "../screens/CreditsWelcome": {
+        "id": "../screens/CreditsWelcome",
+        "parentId": "root",
+        "file": "../screens/CreditsWelcome.tsx",
+        "path": "credits-welcome"
+      },
+      "../screens/ProfilePreview": {
+        "id": "../screens/ProfilePreview",
+        "parentId": "root",
+        "file": "../screens/ProfilePreview.tsx",
+        "path": "profile/:id"
+      },
+      "../screens/PurchaseCredits": {
+        "id": "../screens/PurchaseCredits",
+        "parentId": "root",
+        "file": "../screens/PurchaseCredits.tsx",
+        "path": "purchase-credits"
+      },
+      "../screens/Notifications": {
+        "id": "../screens/Notifications",
+        "parentId": "root",
+        "file": "../screens/Notifications.tsx",
+        "path": "notifications"
+      },
+      "../screens/RandomChat": {
+        "id": "../screens/RandomChat",
+        "parentId": "root",
+        "file": "../screens/RandomChat.tsx",
+        "path": "random-chat"
+      },
+      "../screens/SpyList": {
+        "id": "../screens/SpyList",
+        "parentId": "root",
+        "file": "../screens/SpyList.tsx",
+        "path": "spy-list"
+      },
+      "settings-privacy": {
+        "id": "settings-privacy",
+        "parentId": "root",
+        "file": "../screens/Policy.tsx",
+        "path": "settings/privacy"
+      },
+      "settings-terms": {
+        "id": "settings-terms",
+        "parentId": "root",
+        "file": "../screens/Policy.tsx",
+        "path": "settings/terms"
+      },
+      "privacy-policy": {
+        "id": "privacy-policy",
+        "parentId": "root",
+        "file": "../screens/Policy.tsx",
+        "path": "privacy"
+      },
+      "terms-conditions": {
+        "id": "terms-conditions",
+        "parentId": "root",
+        "file": "../screens/Policy.tsx",
+        "path": "terms"
+      }
+    },
+    "routeDiscovery": {
+      "mode": "lazy",
+      "manifestPath": "/__manifest"
+    },
+    "serverBuildFile": "index.js",
+    "serverModuleFormat": "esm",
+    "ssr": true,
+    "allowedActionOrigins": false,
+    "unstable_routeConfig": [
+      {
+        "id": "root",
+        "path": "",
+        "file": "root.tsx",
+        "children": [
+          {
+            "file": "../screens/Discover.tsx",
+            "index": true
+          },
+          {
+            "file": "../screens/Landing.tsx",
+            "path": "landing"
+          },
+          {
+            "file": "../screens/Auth.tsx",
+            "path": "auth"
+          },
+          {
+            "file": "../screens/Matches.tsx",
+            "path": "matches"
+          },
+          {
+            "file": "../screens/ChatList.tsx",
+            "path": "chat"
+          },
+          {
+            "file": "../screens/ChatDetail.tsx",
+            "path": "chat/:id"
+          },
+          {
+            "file": "../screens/Profile.tsx",
+            "path": "profile"
+          },
+          {
+            "file": "../screens/EditProfile.tsx",
+            "path": "profile/edit"
+          },
+          {
+            "file": "../screens/Settings.tsx",
+            "path": "settings"
+          },
+          {
+            "file": "../screens/Subscription.tsx",
+            "path": "subscription"
+          },
+          {
+            "file": "../screens/SubscriptionWelcome.tsx",
+            "path": "welcome"
+          },
+          {
+            "file": "../screens/CreditsWelcome.tsx",
+            "path": "credits-welcome"
+          },
+          {
+            "file": "../screens/ProfilePreview.tsx",
+            "path": "profile/:id"
+          },
+          {
+            "file": "../screens/PurchaseCredits.tsx",
+            "path": "purchase-credits"
+          },
+          {
+            "file": "../screens/Notifications.tsx",
+            "path": "notifications"
+          },
+          {
+            "file": "../screens/RandomChat.tsx",
+            "path": "random-chat"
+          },
+          {
+            "file": "../screens/SpyList.tsx",
+            "path": "spy-list"
+          },
+          {
+            "file": "../screens/Policy.tsx",
+            "path": "settings/privacy",
+            "id": "settings-privacy"
+          },
+          {
+            "file": "../screens/Policy.tsx",
+            "path": "settings/terms",
+            "id": "settings-terms"
+          },
+          {
+            "file": "../screens/Policy.tsx",
+            "path": "privacy",
+            "id": "privacy-policy"
+          },
+          {
+            "file": "../screens/Policy.tsx",
+            "path": "terms",
+            "id": "terms-conditions"
+          }
+        ]
+      }
+    ]
+  },
+  "viteConfig": {
+    "build": {
+      "assetsDir": "assets"
+    }
+  }
+}

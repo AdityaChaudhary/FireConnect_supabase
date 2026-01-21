@@ -23,8 +23,12 @@ export const useDiscoveryUsers = (userId?: string) => {
                 .order('created_at', { ascending: true })
                 .range(pageParam, pageParam + PAGE_SIZE - 1);
 
-            if (error) throw error;
+            if (error) {
+                console.error("useDiscoveryUsers: Supabase error:", error);
+                throw error;
+            }
             const fetchedUsers = users || [];
+            console.log("useDiscoveryUsers: Fetched", fetchedUsers.length, "users");
 
             // Sort profile images for each user
             const usersWithSortedImages = fetchedUsers.map(user => ({

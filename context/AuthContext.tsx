@@ -134,14 +134,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     setSession(initialSession);
                     setUser(initialSession.user);
                     // Await profile refresh on first load to prevent flash of "FREE" status
+                    console.log("AuthContext: Initial session found, refreshing profile...");
                     await refreshProfile(initialSession.user);
+                    console.log("AuthContext: Profile refreshed.");
+                } else {
+                    console.log("AuthContext: No initial session found.");
                 }
             } catch (err) {
                 console.error("AuthContext: Error during initialization:", err);
             } finally {
                 if (isMounted) {
+                    console.log("AuthContext: Setting loading to false.");
                     setLoading(false);
-                    console.log("AuthContext: Initial load complete, loading=false");
                 }
             }
         };
