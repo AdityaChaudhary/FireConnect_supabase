@@ -21,7 +21,7 @@ const BottomNav: React.FC = () => {
                     className={`flex flex-col items-center justify-center w-full gap-1 p-2 transition-colors group ${isActive('/') ? 'text-primary' : 'text-white/50 hover:text-white'}`}
                 >
                     <div className={`p-1 rounded-2xl transition-colors ${isActive('/') ? 'bg-primary/10' : 'group-hover:bg-white/5'}`}>
-                        <Icon name="grid_view" className="text-[28px]" filled={isActive('/')} />
+                        <Icon type="lucide" name="LayoutGrid" size={24} className="transition-transform group-hover:scale-110" />
                     </div>
                     <span className="text-[10px] font-medium">Discover</span>
                 </button>
@@ -31,7 +31,7 @@ const BottomNav: React.FC = () => {
                     className={`flex flex-col items-center justify-center w-full gap-1 p-2 transition-colors group ${isActive('/matches') ? 'text-primary' : 'text-white/50 hover:text-white'}`}
                 >
                     <div className={`p-1 rounded-2xl transition-colors ${isActive('/matches') ? 'bg-primary/10' : 'group-hover:bg-white/5'}`}>
-                        <Icon name="explore" className="text-[28px]" filled={isActive('/matches')} />
+                        <Icon type="lucide" name="Compass" size={24} className="transition-transform group-hover:scale-110" />
                     </div>
                     <span className="text-[10px] font-medium">Explore</span>
                 </button>
@@ -40,7 +40,7 @@ const BottomNav: React.FC = () => {
                     onClick={() => navigate('/random-chat')}
                     className={`flex items-center justify-center -mt-8 size-14 rounded-full shadow-lg transition-all hover:scale-105 active:scale-95 ${isActive('/random-chat') ? 'bg-white text-primary' : 'bg-primary text-white shadow-primary/40'}`}
                 >
-                    <Icon name="shuffle" className="text-[32px]" />
+                    <Icon type="lucide" name="Shuffle" size={28} />
                 </button>
 
                 <button
@@ -58,7 +58,7 @@ const BottomNav: React.FC = () => {
                         } : { y: 0 }}
                         className={`p-1 rounded-2xl transition-colors relative ${isActive('/chat') ? 'bg-primary/10' : 'group-hover:bg-white/5'}`}
                     >
-                        <Icon name="chat" className="text-[28px]" filled={isActive('/chat')} />
+                        <Icon type="lucide" name="MessageCircle" size={24} className="transition-transform group-hover:scale-110" />
                         <AnimatePresence>
                             {hasUnread && (
                                 <motion.span
@@ -78,7 +78,7 @@ const BottomNav: React.FC = () => {
                     className={`flex flex-col items-center justify-center w-full gap-1 p-2 transition-colors group ${isActive('/profile') ? 'text-primary' : 'text-white/50 hover:text-white'}`}
                 >
                     <div className={`p-1 rounded-2xl transition-colors ${isActive('/profile') ? 'bg-primary/10' : 'group-hover:bg-white/5'}`}>
-                        <Icon name="person" className="text-[28px]" filled={isActive('/profile')} />
+                        <Icon type="lucide" name="User" size={24} className="transition-transform group-hover:scale-110" />
                     </div>
                     <span className="text-[10px] font-medium">Profile</span>
                 </button>
