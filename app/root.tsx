@@ -16,6 +16,7 @@ import ScrollToTop from "../components/ScrollToTop";
 import MainLayout from "../Layout";
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router";
+import Onboarding from "../screens/Onboarding";
 
 export async function loader({ request }: Route.LoaderArgs) {
   const { supabase, responseHeaders } = createSupabaseServerClient(request);
@@ -245,6 +246,19 @@ function AppContent() {
   }
 
   console.log("AppContent: Rendering MainLayout with Outlet", { path: location.pathname });
+
+  // Onboarding Logic
+  const isProfileComplete = profile && 
+    profile.username && 
+    profile.display_name && 
+    profile.gender && 
+    profile.date_of_birth && 
+    profile.location;
+
+  if (user && !isProfileComplete && !isPolicyPage && !isAuthPage) {
+    console.log("AppContent: Profile incomplete, showing Onboarding");
+    return <Onboarding />;
+  }
 
   return (
     <MainLayout>
