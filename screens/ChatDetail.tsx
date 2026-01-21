@@ -6,7 +6,7 @@ import Icon from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
 import { compressImage } from '../lib/image-utils';
 import { useMessages, useUserDetail, useUserConnection, useHasReceivedMessage, useThreadId } from '../hooks/useData';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase.client';
 import CdnImage from '../components/CdnImage';
 import EllipsisMenu from '../components/EllipsisMenu';
 import EmojiPicker from '../components/EmojiPicker';

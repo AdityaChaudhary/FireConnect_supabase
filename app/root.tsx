@@ -19,19 +19,32 @@ import { useNavigate, useLocation } from "react-router";
 
 export async function loader({ request }: Route.LoaderArgs) {
   const { supabase, responseHeaders } = createSupabaseServerClient(request);
-  const { data: { session } } = await supabase.auth.getSession();
+  
+  // Get both user and session for robust hydration
+  const [
+    { data: { user: authUser } },
+    { data: { session: authSession } }
+  ] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.auth.getSession()
+  ]);
   
   let profile = null;
-  if (session?.user) {
+  if (authUser) {
     const { data } = await supabase
       .from("users")
       .select("*")
-      .eq("id", session.user.id)
-      .single();
+      .eq("id", authUser.id)
+      .maybeSingle();
     profile = data;
   }
 
-  return data({ session, profile }, { headers: responseHeaders });
+  // Ensure values are null if not found (for consistent serialization)
+  return data({ 
+    session: authSession || null, 
+    user: authUser || null, 
+    profile: profile || null 
+  }, { headers: responseHeaders });
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -241,7 +254,7 @@ function AppContent() {
 }
 
 export default function App({ loaderData }: Route.ComponentProps) {
-  const { session, profile } = loaderData;
+  const { session, user, profile } = loaderData;
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
       queries: {
@@ -253,7 +266,7 @@ export default function App({ loaderData }: Route.ComponentProps) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider initialSession={session} initialProfile={profile}>
+      <AuthProvider initialSession={session} initialUser={user} initialProfile={profile}>
         <OnlineStatusTracker />
         <ScrollToTop />
         <AppContent />

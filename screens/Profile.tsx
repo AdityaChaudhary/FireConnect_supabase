@@ -4,7 +4,7 @@ import Icon from '../components/Icon';
 import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase.client';
 import { AVAILABLE_INTERESTS } from '../lib/config';
 import { blurImage, compressImage } from '../lib/image-utils';
 import CdnImage from '../components/CdnImage';

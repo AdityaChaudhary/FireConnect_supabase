@@ -9,7 +9,7 @@ import CdnImage from '../components/CdnImage';
 import { getDefaultAvatar } from '../lib/image-utils';
 import MatchAvatar from '../components/MatchAvatar';
 import { useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase.client';
 
 const ChatList: React.FC = () => {
     const { user: authUser } = useAuth();

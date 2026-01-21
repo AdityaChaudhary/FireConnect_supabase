@@ -28,6 +28,7 @@ const PROCESSED_IMAGES_DIR = join(process.cwd(), 'scripts', 'processed_images');
 const IMAGE_AVATAR_QUALITY = 45;
 const IMAGE_QUALITY = 55;
 const IMAGE_BLURRED_QUALITY = 30;
+const IMAGE_BLUR = 65;
 
 // Types
 interface AIUserRecord {
@@ -206,7 +207,7 @@ async function syncMedia(users: Record<string, AIUserRecord>) {
                     
                     if (!existingBlurred.includes(blurredFileName)) {
                         const blurred = await sharp(fileBuffer)
-                            .blur(50)
+                            .blur(IMAGE_BLUR)
                             .jpeg({ quality: IMAGE_BLURRED_QUALITY })
                             .toBuffer();
                         const { error: uploadError } = await supabase.storage.from('public-media').upload(blurredPath, blurred, { contentType: 'image/jpeg', upsert: true });

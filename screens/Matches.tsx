@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useConnections } from '../hooks/useData';
 import CdnImage from '../components/CdnImage';
 import { getDefaultAvatar } from '../lib/image-utils';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase.client';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useQueryClient } from '@tanstack/react-query';
 

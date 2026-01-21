@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import Icon from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase.client';
 import CdnImage from '../components/CdnImage';
 import UpgradeModal from '../components/UpgradeModal';
 
@@ -148,17 +148,26 @@ const RandomChat: React.FC = () => {
             // Navigator.sendBeacon is better for this but we'll try a sync call or just rely on heartbeat
             if (authUser) {
                 // Background task
-                supabase.auth.getSession().then(({ data }) => {
-                    const token = data.session?.access_token;
-                    if (token) {
-                        fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/random-chat`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${token}`,
-                            },
-                            body: JSON.stringify({ action: 'leave' }),
-                            keepalive: true,
+                supabase.auth.getUser().then(({ data: { user } }) => {
+                    if (user) {
+                        // We still need the access token for the fetch. 
+                        // getUser() doesn't return the session/token directly in a convenient way for fetch here,
+                        // but we can get it from getSession() just for the token if needed, or use the user id.
+                        // Actually, for Edge Functions, the SDK handles auth if we use invoke.
+                        // But here it's a manual fetch.
+                        supabase.auth.getSession().then(({ data: { session } }) => {
+                            const token = session?.access_token;
+                            if (token) {
+                                fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/random-chat`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': `Bearer ${token}`,
+                                    },
+                                    body: JSON.stringify({ action: 'leave' }),
+                                    keepalive: true,
+                                });
+                            }
                         });
                     }
                 });

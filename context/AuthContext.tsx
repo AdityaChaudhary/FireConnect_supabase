@@ -40,23 +40,24 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 interface AuthProviderProps {
     children: React.ReactNode;
     initialSession?: Session | null;
+    initialUser?: User | null;
     initialProfile?: Profile | null;
 }
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children, initialSession, initialProfile }) => {
-    const [user, setUser] = useState<User | null>(initialSession?.user ?? null);
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children, initialSession, initialUser, initialProfile }) => {
+    const [user, setUser] = useState<User | null>(initialUser ?? initialSession?.user ?? null);
     const [session, setSession] = useState<Session | null>(initialSession ?? null);
     const [profile, setProfile] = useState<Profile | null>(initialProfile ?? null);
     const [stripeRole, setStripeRole] = useState<string | null>(initialProfile?.stripe_role?.toLowerCase() ?? null);
     const [subscription, setSubscription] = useState<any | null>(null);
-    const [loading, setLoading] = useState(!initialSession);
+    const [loading, setLoading] = useState(!(initialUser || initialSession));
 
-    const refreshProfile = async (specificUser?: User) => {
-        let currentUser = specificUser;
+    const refreshProfile = async (specificUser?: User | null) => {
+        let currentUser = specificUser || null;
 
         if (!currentUser) {
-            const { data } = await supabase.auth.getSession();
-            currentUser = data.session?.user;
+            const { data } = await supabase.auth.getUser();
+            currentUser = data.user;
         }
 
         if (currentUser) {
@@ -66,7 +67,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, initialSes
                     .from('users')
                     .select('*')
                     .eq('id', currentUser.id)
-                    .single();
+                    .maybeSingle();
 
                 if (error) {
                     console.warn("AuthContext: Profile fetch result:", error.code, error.message);
@@ -130,16 +131,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, initialSes
 
         const initializeAuth = async () => {
             try {
-                console.log("AuthContext: Fetching initial session...");
+                console.log("AuthContext: Fetching session from cookie/storage...");
+                // Fetch session first (quickest, often local/cookie only)
                 const { data: { session: initialSession } } = await supabase.auth.getSession();
-                console.log("AuthContext: Initial session fetch result:", initialSession ? "Session found" : "No session");
-
+                
                 if (!isMounted) return;
 
                 if (initialSession) {
                     setSession(initialSession);
                     setUser(initialSession.user);
-                    // Await profile refresh on first load to prevent flash of "FREE" status
+                    
+                    // Now verify user with server (might 403 if token is invalid or local only)
+                    try {
+                        const { data: { user: verifiedUser }, error: userError } = await supabase.auth.getUser();
+                        if (!userError && verifiedUser) {
+                            setUser(verifiedUser);
+                        }
+                    } catch (e) {
+                        console.warn("AuthContext: getUser failed during initialization, sticking with session user", e);
+                    }
+
                     console.log("AuthContext: Initial session found, refreshing profile...");
                     await refreshProfile(initialSession.user);
                     console.log("AuthContext: Profile refreshed.");
@@ -156,38 +167,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, initialSes
             }
         };
 
-        if (!initialSession) {
+        if (!(initialUser || initialSession)) {
             initializeAuth();
         } else {
-            console.log("AuthContext: Hydrated from initial session.");
+            console.log("AuthContext: Hydrated from initial user/session.");
             // Even if hydrated, we should still fetch subscription info in background if profile exists
-            if (initialProfile && user) {
-                refreshProfile(user); 
+            if (initialProfile && (initialUser || initialSession?.user)) {
+                refreshProfile(initialUser || initialSession?.user); 
             }
+            // CRITICAL: If we are hydrated, we MUST ensure loading is false
+            setLoading(false);
         }
 
         // Listen for auth changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
             console.log("AuthContext: onAuthStateChange event:", event, currentSession ? "Session active" : "No session");
 
             if (!isMounted) return;
 
             setSession(currentSession);
-            setUser(currentSession?.user ?? null);
-
+            // Validation step for security: double check user if event is SIGNED_IN or INITIAL_SESSION
             if (currentSession?.user) {
-                // Don't await here; let the app react to user presence first.
-                // initializeAuth handles the initial "blocking" load.
-                refreshProfile(currentSession.user);
+                const { data: { user: verifiedUser } } = await supabase.auth.getUser();
+                setUser(verifiedUser ?? currentSession.user);
+                refreshProfile(verifiedUser ?? currentSession.user);
             } else {
+                setUser(null);
                 setProfile(null);
                 setStripeRole(null);
                 setSubscription(null);
             }
-            
-            // We do NOT set loading(false) here anymore.
-            // initializeAuth is responsible for the initial loading state.
-            // This prevents race conditions where this fires before the profile is ready.
         });
 
         return () => {
@@ -195,29 +204,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, initialSes
             subscription.unsubscribe();
         };
     }, []);
-
-    // Heartbeat for online status
-    useEffect(() => {
-        if (!user) return;
-
-        const heartbeat = async () => {
-            try {
-                await supabase
-                    .from('user_online_status')
-                    .upsert({ 
-                        user_id: user.id, 
-                        last_seen_at: new Date().toISOString() 
-                    });
-            } catch (err) {
-                console.error("AuthContext: Heartbeat error:", err);
-            }
-        };
-
-        heartbeat(); // Run immediately
-        const interval = setInterval(heartbeat, 30000); // Every 30 seconds
-
-        return () => clearInterval(interval);
-    }, [user]);
 
     const signInWithGoogle = async () => {
         const { error } = await supabase.auth.signInWithOAuth({

@@ -9,15 +9,17 @@ import UpgradeModal from '../components/UpgradeModal';
 import { useUserDetail, useUserConnection, useProfileImages, useSpiedStatus, useHasReceivedMessage } from '../hooks/useData';
 import { getDefaultAvatar } from '../lib/image-utils';
 import CdnImage from '../components/CdnImage';
-import { supabase } from '../lib/supabase';
+import { supabase as browserSupabase } from '../lib/supabase.client';
+import { createSupabaseServerClient } from '../lib/supabase.server';
 
-export const loader = async ({ params }: LoaderFunctionArgs) => {
+export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     const { id } = params;
+    const { supabase } = createSupabaseServerClient(request);
     const { data: user } = await supabase
         .from('users')
         .select('id, display_name, bio, gender')
         .eq('id', id)
-        .single();
+        .maybeSingle();
     return { user };
 };
 
@@ -104,7 +106,7 @@ const ProfilePreview: React.FC = () => {
         if (!id || !authUser || requesting) return;
         setRequesting(true);
         try {
-            const { error } = await supabase
+            const { error } = await browserSupabase
                 .from('connections')
                 .insert({
                     requester_id: authUser.id,
@@ -126,7 +128,7 @@ const ProfilePreview: React.FC = () => {
         if (!id || !authUser || requesting) return;
         setRequesting(true);
         try {
-            const { error } = await supabase
+            const { error } = await browserSupabase
                 .from('connections')
                 .update({ status: 'CONNECTED' })
                 .eq('requester_id', id)
@@ -146,7 +148,7 @@ const ProfilePreview: React.FC = () => {
         if (!id || !authUser || requesting) return;
         setRequesting(true);
         try {
-            const { error } = await supabase
+            const { error } = await browserSupabase
                 .from('connections')
                 .delete()
                 .eq('requester_id', authUser.id)
@@ -165,7 +167,7 @@ const ProfilePreview: React.FC = () => {
         if (!id || !authUser || requesting) return;
         setRequesting(true);
         try {
-            const { error } = await supabase
+            const { error } = await browserSupabase
                 .from('connections')
                 .delete()
                 .or(`and(requester_id.eq.${authUser.id},recipient_id.eq.${id}),and(requester_id.eq.${id},recipient_id.eq.${authUser.id})`);
@@ -203,7 +205,7 @@ const ProfilePreview: React.FC = () => {
             const currentCredits = Number(myProfile?.spy_credits || 0);
             if (currentCredits > 0) {
                 try {
-                    const { error: spiedError } = await supabase
+                    const { error: spiedError } = await browserSupabase
                         .from('spied_profiles')
                         .insert({
                             user_id: authUser.id,
@@ -211,7 +213,7 @@ const ProfilePreview: React.FC = () => {
                         });
                     if (spiedError) throw spiedError;
 
-                    const { error: creditsError } = await supabase
+                    const { error: creditsError } = await browserSupabase
                         .from('users')
                         .update({ spy_credits: currentCredits - 1 })
                         .eq('id', authUser.id);

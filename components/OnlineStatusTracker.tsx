@@ -1,17 +1,26 @@
 import React, { useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase.client';
 
 const OnlineStatusTracker: React.FC = () => {
     const { user } = useAuth();
 
     useEffect(() => {
-        if (!user) return;
+        if (!user) {
+            console.log("OnlineStatusTracker: No user, stopping tracker.");
+            return;
+        }
 
         const updateStatus = async () => {
-            await supabase
-                .from('user_online_status')
-                .upsert({ user_id: user.id, last_seen_at: new Error().stack ? new Date().toISOString() : new Date().toISOString() });
+            if (!user) return; // Guard for async execution after logout
+            try {
+                await supabase
+                    .from('user_online_status')
+                    .upsert({ user_id: user.id, last_seen_at: new Date().toISOString() });
+            } catch (e) {
+                // Silently fail background status updates to avoid console noise
+                console.warn("OnlineStatusTracker: Failed to update status", e);
+            }
         };
 
         updateStatus();

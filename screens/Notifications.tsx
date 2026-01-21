@@ -5,7 +5,7 @@ import Icon from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../hooks/useData';
 import CdnImage from '../components/CdnImage';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase.client';
 
 const Notifications: React.FC = () => {
     const { user: authUser } = useAuth();

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import Icon from './Icon';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase.client';
 import { useAuth } from '../context/AuthContext';
 import { resolveImageUrl } from '../lib/image-resolver';
 import { useIntersectionObserver } from '../hooks/useIntersectionObserver';

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import Icon from './Icon';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase.client';
 import { useAuth } from '../context/AuthContext';
 
 const NotificationIcon: React.FC = () => {
@@ -11,9 +11,13 @@ const NotificationIcon: React.FC = () => {
     const [hasNew, setHasNew] = useState(false);
 
     useEffect(() => {
-        if (!user) return;
+        if (!user) {
+            console.log("NotificationIcon: No user, stopping poller.");
+            return;
+        }
 
         const checkNotifications = async () => {
+            if (!user) return; // Guard for async execution after logout
             try {
                 const [notifRes, checkRes] = await Promise.all([
                     supabase
@@ -48,6 +52,7 @@ const NotificationIcon: React.FC = () => {
         let timeoutId: NodeJS.Timeout;
 
         const poll = async () => {
+            if (!user) return; // Stop polling loop if user logged out
             await checkNotifications();
             currentInterval = Math.min(currentInterval + 10000, 300000); // +10s, max 5m
             timeoutId = setTimeout(poll, currentInterval);

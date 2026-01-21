@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import Icon from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase.client';
 import CdnImage from '../components/CdnImage';
 
 const SpyList: React.FC = () => {

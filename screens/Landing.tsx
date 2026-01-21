@@ -11,7 +11,7 @@ export const meta: MetaFunction = () => {
         { property: "og:type", content: "website" },
     ];
 };
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase.client';
 import { getStripeProducts, fetchWithRetry } from '../lib/stripe-utils';
 import { PLAN_THEMES, PLAN_DESCRIPTIONS, PLAN_FEATURES } from '../config/plans';
 import CdnImage from '../components/CdnImage';

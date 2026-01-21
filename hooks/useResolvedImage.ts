@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { resolveImageUrl } from '../lib/image-resolver';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase.client';
 
 /**
  * A hook that resolves a storage path to a URL.
