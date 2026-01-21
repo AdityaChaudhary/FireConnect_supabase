@@ -232,6 +232,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, initialSes
     const logout = async () => {
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
+        // Perform a hard redirect to ensure the session is cleared across SSR/Client
+        window.location.href = '/landing';
     };
 
     return (
