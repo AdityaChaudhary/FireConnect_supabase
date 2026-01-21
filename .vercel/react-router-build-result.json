@@ -30,7 +30,8 @@
       "settings-privacy": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
       "settings-terms": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
       "privacy-policy": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
-      "terms-conditions": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0"
+      "terms-conditions": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "../screens/NotFound": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0"
     },
     "routes": {
       "root": {
@@ -227,6 +228,15 @@
         "config": {
           "runtime": "nodejs"
         }
+      },
+      "../screens/NotFound": {
+        "id": "../screens/NotFound",
+        "parentId": "root",
+        "file": "screens/NotFound.tsx",
+        "path": "*",
+        "config": {
+          "runtime": "nodejs"
+        }
       }
     }
   },
@@ -373,6 +383,12 @@
         "parentId": "root",
         "file": "../screens/Policy.tsx",
         "path": "terms"
+      },
+      "../screens/NotFound": {
+        "id": "../screens/NotFound",
+        "parentId": "root",
+        "file": "../screens/NotFound.tsx",
+        "path": "*"
       }
     },
     "routeDiscovery": {
@@ -476,6 +492,10 @@
             "file": "../screens/Policy.tsx",
             "path": "terms",
             "id": "terms-conditions"
+          },
+          {
+            "file": "../screens/NotFound.tsx",
+            "path": "*"
           }
         ]
       }

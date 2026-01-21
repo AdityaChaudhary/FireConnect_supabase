@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase.client';
 import type { User, Session } from '@supabase/supabase-js';
 
 export interface Profile {
@@ -37,13 +37,19 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [user, setUser] = useState<User | null>(null);
-    const [session, setSession] = useState<Session | null>(null);
-    const [profile, setProfile] = useState<Profile | null>(null);
-    const [stripeRole, setStripeRole] = useState<string | null>(null);
+interface AuthProviderProps {
+    children: React.ReactNode;
+    initialSession?: Session | null;
+    initialProfile?: Profile | null;
+}
+
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children, initialSession, initialProfile }) => {
+    const [user, setUser] = useState<User | null>(initialSession?.user ?? null);
+    const [session, setSession] = useState<Session | null>(initialSession ?? null);
+    const [profile, setProfile] = useState<Profile | null>(initialProfile ?? null);
+    const [stripeRole, setStripeRole] = useState<string | null>(initialProfile?.stripe_role?.toLowerCase() ?? null);
     const [subscription, setSubscription] = useState<any | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(!initialSession);
 
     const refreshProfile = async (specificUser?: User) => {
         let currentUser = specificUser;
@@ -150,7 +156,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
         };
 
-        initializeAuth();
+        if (!initialSession) {
+            initializeAuth();
+        } else {
+            console.log("AuthContext: Hydrated from initial session.");
+            // Even if hydrated, we should still fetch subscription info in background if profile exists
+            if (initialProfile && user) {
+                refreshProfile(user); 
+            }
+        }
 
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {

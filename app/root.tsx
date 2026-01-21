@@ -4,8 +4,11 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  data,
   isRouteErrorResponse,
 } from "react-router";
+import type { Route } from "./+types/root";
+import { createSupabaseServerClient } from "../lib/supabase.server";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import OnlineStatusTracker from "../components/OnlineStatusTracker";
@@ -13,6 +16,23 @@ import ScrollToTop from "../components/ScrollToTop";
 import MainLayout from "../Layout";
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router";
+
+export async function loader({ request }: Route.LoaderArgs) {
+  const { supabase, responseHeaders } = createSupabaseServerClient(request);
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  let profile = null;
+  if (session?.user) {
+    const { data } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", session.user.id)
+      .single();
+    profile = data;
+  }
+
+  return data({ session, profile }, { headers: responseHeaders });
+}
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -220,7 +240,8 @@ function AppContent() {
   );
 }
 
-export default function App() {
+export default function App({ loaderData }: Route.ComponentProps) {
+  const { session, profile } = loaderData;
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
       queries: {
@@ -232,7 +253,7 @@ export default function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
+      <AuthProvider initialSession={session} initialProfile={profile}>
         <OnlineStatusTracker />
         <ScrollToTop />
         <AppContent />

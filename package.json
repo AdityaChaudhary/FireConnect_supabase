@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@multiavatar/multiavatar": "^1.0.7",
+    "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.90.1",
     "@tanstack/react-query": "^5.90.18",
     "@tanstack/react-query-devtools": "^5.91.2",
