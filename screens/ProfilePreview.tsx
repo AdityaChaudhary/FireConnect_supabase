@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router';
 import type { MetaFunction, LoaderFunctionArgs } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -37,6 +38,7 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => {
 const ProfilePreview: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const { user: authUser, profile: myProfile, refreshProfile } = useAuth();
     const stripeRole = myProfile?.stripe_role || 'FREE';
 
@@ -221,6 +223,19 @@ const ProfilePreview: React.FC = () => {
 
                     await refreshProfile();
                     setIsSpied(true);
+
+                    // Update local cache for spied user IDs
+                    if (authUser?.id) {
+                        const queryKey = ['spied-user-ids', authUser.id];
+                        const previousIds = queryClient.getQueryData<string[]>(queryKey) || [];
+                        if (!previousIds.includes(user.id)) {
+                            queryClient.setQueryData<string[]>(queryKey, [...previousIds, user.id]);
+                        }
+
+                        // Also update spied-status for this specific user
+                        queryClient.setQueryData(['spied-status', user.id, authUser.id], true);
+                    }
+
                     setIsRevealed(true);
                     setNotification(`Reveal successful! ${currentCredits - 1} credits remaining.`);
                 } catch (error) {

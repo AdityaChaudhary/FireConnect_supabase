@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import Icon from './Icon';
@@ -15,6 +16,7 @@ interface UserDiscoveryCardProps {
 
 const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInitially, onUpgradeClick }) => {
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const { stripeRole, profile, refreshProfile, user: authUser } = useAuth();
     const [images, setImages] = useState<any[]>(user.profile_images || []);
     const [loading, setLoading] = useState(!(user.profile_images && user.profile_images.length > 0));
@@ -164,6 +166,16 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
 
                     await refreshProfile();
                     setIsSpied(true);
+
+                    // Update local cache for spied user IDs
+                    if (authUser?.id) {
+                        const queryKey = ['spied-user-ids', authUser.id];
+                        const previousIds = queryClient.getQueryData<string[]>(queryKey) || [];
+                        if (!previousIds.includes(user.id)) {
+                            queryClient.setQueryData<string[]>(queryKey, [...previousIds, user.id]);
+                        }
+                    }
+
                     setIsRevealed(true);
                     setNotification(`Spying: Private photos unlocked!`);
 
