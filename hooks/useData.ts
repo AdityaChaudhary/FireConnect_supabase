@@ -77,9 +77,12 @@ export const useSpiedUserIds = (userId?: string) => {
  * Hook to fetch all user connections (Connected, Pending Sent, Pending Received).
  */
 export const useConnections = (userId?: string) => {
-    return useQuery({
+    const [pollInterval, setPollInterval] = useState(60000); // Start at 60s
+
+    const query = useQuery({
         queryKey: ['connections', userId],
         queryFn: async () => {
+            console.log(`useConnections: Polling for ${userId} at ${new Date().toLocaleTimeString()}...`);
             const { data, error } = await supabase
                 .from('connections')
                 .select(`
@@ -107,7 +110,29 @@ export const useConnections = (userId?: string) => {
         },
         staleTime: 30 * 1000,
         enabled: !!userId,
+        refetchInterval: pollInterval,
     });
+
+    // Handle dynamic polling backoff
+    useEffect(() => {
+        if (!query.dataUpdatedAt || !userId) return;
+        
+        // Increase interval by 30s after each poll, up to 5 minutes
+        setPollInterval(prev => Math.min(prev + 30000, 300000));
+    }, [query.dataUpdatedAt, userId]);
+
+    // Listen for reset events (e.g. from useThreads)
+    useEffect(() => {
+        if (!userId) return;
+        const handleReset = () => {
+            console.log("useConnections: Resetting poll interval due to activity");
+            setPollInterval(60000);
+        };
+        window.addEventListener('reset-online-status-poll', handleReset);
+        return () => window.removeEventListener('reset-online-status-poll', handleReset);
+    }, [userId]);
+
+    return query;
 };
 
 /**
@@ -208,32 +233,6 @@ export const useStripeProducts = () => {
  * Hook to fetch a user's details including online status.
  */
 export const useUserDetail = (userId: string) => {
-    const queryClient = useQueryClient();
-
-    useEffect(() => {
-        if (!userId) return;
-
-        const channel = supabase
-            .channel(`user-status-${userId}`)
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'user_online_status',
-                    filter: `user_id=eq.${userId}`,
-                },
-                () => {
-                    queryClient.invalidateQueries({ queryKey: ['user-detail', userId] });
-                }
-            )
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [userId, queryClient]);
-
     return useQuery({
         queryKey: ['user-detail', userId],
         queryFn: async () => {
@@ -251,7 +250,8 @@ export const useUserDetail = (userId: string) => {
             return data;
         },
         enabled: !!userId,
-        staleTime: 5000,
+        staleTime: 30000,
+        refetchInterval: 60000, // Poll user details every 60s
     });
 };
 
@@ -397,8 +397,40 @@ export const useUnreadBadge = (userId?: string) => {
  * Hook to fetch message threads for a user.
  * Optimized with bulk user fetching and dynamic backoff.
  */
-export const useThreads = (userId?: string) => {
+export const useThreads = (userId?: string, initialData?: any[]) => {
+    const queryClient = useQueryClient();
     const [pollInterval, setPollInterval] = useState(20000);
+
+    useEffect(() => {
+        if (!userId) return;
+
+        console.log("useThreads: Subscribing to messages for trigger", userId);
+        const channel = supabase
+            .channel(`message-triggers-${userId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'messages',
+                },
+                (payload) => {
+                    console.log("useThreads: New message detected, refreshing data", payload);
+                    // Refresh threads
+                    queryClient.invalidateQueries({ queryKey: ['threads', userId] });
+                    // Refresh online matches instantly
+                    queryClient.invalidateQueries({ queryKey: ['connections', userId] });
+                    // Reset polling backoff
+                    window.dispatchEvent(new CustomEvent('reset-online-status-poll'));
+                }
+            )
+            .subscribe();
+
+        return () => {
+            console.log("useThreads: Unsubscribing from message triggers for", userId);
+            supabase.removeChannel(channel);
+        };
+    }, [userId, queryClient]);
 
     const query = useQuery({
         queryKey: ['threads', userId],
@@ -446,6 +478,7 @@ export const useThreads = (userId?: string) => {
         },
         enabled: !!userId,
         refetchInterval: pollInterval,
+        initialData: initialData,
     });
 
     useEffect(() => {

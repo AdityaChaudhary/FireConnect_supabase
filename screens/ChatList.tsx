@@ -8,53 +8,25 @@ import { useConnections, useThreads } from '../hooks/useData';
 import CdnImage from '../components/CdnImage';
 import { getDefaultAvatar } from '../lib/image-utils';
 import MatchAvatar from '../components/MatchAvatar';
-import { useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase.client';
 
 const ChatList: React.FC = () => {
-    const { user: authUser } = useAuth();
+    const { user: authUser, initialThreads } = useAuth();
     const navigate = useNavigate();
-    const queryClient = useQueryClient();
     const [searchQuery, setSearchQuery] = useState('');
     const [currentTime, setCurrentTime] = useState(Date.now());
 
     const { data: connectionsData, isLoading: connectionsLoading } = useConnections(authUser?.id);
-    const { data: threads = [], isLoading: threadsLoading } = useThreads(authUser?.id);
+    const { data: threads = [], isLoading: threadsLoading } = useThreads(authUser?.id, initialThreads ?? undefined);
 
     const connections = connectionsData?.connections || [];
 
-    // Periodic time update to re-evaluate "Online" status
+    // Periodic time update to re-evaluate "Online" status (lastSeen calculation)
     useEffect(() => {
         const intervalId = setInterval(() => {
             setCurrentTime(Date.now());
         }, 10000); // 10s
         return () => clearInterval(intervalId);
     }, []);
-
-    // Real-time subscription to online status changes
-    useEffect(() => {
-        if (!authUser?.id) return;
-
-        const channel = supabase
-            .channel('chatlist-online-status')
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'user_online_status'
-                },
-                () => {
-                    // Invalidate connections query to refresh the online_status join
-                    queryClient.invalidateQueries({ queryKey: ['connections', authUser.id] });
-                }
-            )
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [authUser?.id, queryClient]);
     
     const onlineConnections = useMemo(() => {
         return connections

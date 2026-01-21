@@ -33,6 +33,7 @@ interface AuthContextType {
     logout: () => Promise<void>;
     refreshProfile: () => Promise<void>;
     subscription: any | null;
+    initialThreads: any[] | null;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -42,9 +43,10 @@ interface AuthProviderProps {
     initialSession?: Session | null;
     initialUser?: User | null;
     initialProfile?: Profile | null;
+    initialThreads?: any[] | null;
 }
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children, initialSession, initialUser, initialProfile }) => {
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children, initialSession, initialUser, initialProfile, initialThreads }) => {
     const [user, setUser] = useState<User | null>(initialUser ?? initialSession?.user ?? null);
     const [session, setSession] = useState<Session | null>(initialSession ?? null);
     const [profile, setProfile] = useState<Profile | null>(initialProfile ?? null);
@@ -230,6 +232,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, initialSes
             stripeRole,
             subscription,
             loading,
+            initialThreads: initialThreads ?? null,
             signInWithGoogle,
             logout,
             refreshProfile

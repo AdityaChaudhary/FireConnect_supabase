@@ -31,20 +31,59 @@ export async function loader({ request }: Route.LoaderArgs) {
   ]);
   
   let profile = null;
+  let threads = null;
+
   if (authUser) {
-    const { data } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", authUser.id)
-      .maybeSingle();
-    profile = data;
+    const [profileRes, threadsRes] = await Promise.all([
+      supabase
+        .from("users")
+        .select("*")
+        .eq("id", authUser.id)
+        .maybeSingle(),
+      supabase
+        .from("threads")
+        .select("*")
+        .contains("participants", [authUser.id])
+        .order("last_message_time", { ascending: false })
+    ]);
+
+    profile = profileRes.data;
+
+    // Optional: Fetch other users for threads directly in loader for full SSR
+    if (threadsRes.data && threadsRes.data.length > 0) {
+        const otherUserIds = threadsRes.data
+            .map((t: any) => t.participants.find((p: string) => p !== authUser.id))
+            .filter((id): id is string => !!id);
+
+        if (otherUserIds.length > 0) {
+            const { data: usersData } = await supabase
+                .from("users")
+                .select("*, user_online_status(*)")
+                .in("id", otherUserIds);
+
+            const usersMap = (usersData || []).reduce((acc: any, user: any) => {
+                acc[user.id] = user;
+                return acc;
+            }, {});
+
+            threads = threadsRes.data.map((thread: any) => ({
+                ...thread,
+                otherUser: usersMap[thread.participants.find((p: string) => p !== authUser.id)] || null
+            }));
+        } else {
+            threads = threadsRes.data.map((t: any) => ({ ...t, otherUser: null }));
+        }
+    } else {
+        threads = [];
+    }
   }
 
   // Ensure values are null if not found (for consistent serialization)
   return data({ 
     session: authSession || null, 
     user: authUser || null, 
-    profile: profile || null 
+    profile: profile || null,
+    initialThreads: threads || null
   }, { headers: responseHeaders });
 }
 
@@ -301,7 +340,12 @@ export default function App({ loaderData }: Route.ComponentProps) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider initialSession={session} initialUser={user} initialProfile={profile}>
+      <AuthProvider 
+        initialSession={session} 
+        initialUser={user} 
+        initialProfile={profile}
+        initialThreads={loaderData.initialThreads}
+      >
         <OnlineStatusTracker />
         <ScrollToTop />
         <AppContent />
