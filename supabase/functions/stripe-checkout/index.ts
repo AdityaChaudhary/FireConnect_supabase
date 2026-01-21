@@ -16,6 +16,17 @@ const corsHeaders = {
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+async function createCheckoutSession(sessionConfig: any) {
+    try {
+        const session = await stripe.checkout.sessions.create(sessionConfig);    
+        return session;
+    }catch (error: any) {
+        //console.error(`Error creating checkout session with customerId: ${customerId}`, error.message);
+        throw new Error("Error creating checkout session", error);
+    }
+}    
+
+
 Deno.serve(async (req) => {
     if (req.method === "OPTIONS") {
         return new Response("ok", { headers: corsHeaders });
@@ -69,8 +80,14 @@ Deno.serve(async (req) => {
                 .eq('id', user.id)
                 .single();
 
+            if (profileError) {
+                console.error("Error fetching user profile:", profileError);
+                throw new Error("Error fetching user profile", profileError);
+            }
+
             if (userProfile?.stripe_customer_id) {
                 customerId = userProfile.stripe_customer_id;
+                console.log(`Stripe Customer ID found for user: ${user.id} StripeID: ${customerId}`);
             }
         }
 
@@ -94,13 +111,31 @@ Deno.serve(async (req) => {
             } : undefined,
         };
 
+
+        
+
+        // first try with customerId in sessionConfig, otherwise try with customer_email
+        let session = null;
+
         if (customerId) {
             sessionConfig.customer = customerId;
-        } else {
-            sessionConfig.customer_email = user?.email;
+            try {
+                session = await createCheckoutSession(sessionConfig);
+            } catch (error: any) {
+                console.error("Error creating checkout session:", error.message, error);
+                //throw new Error("Error creating checkout session", error);
+            }
         }
 
-        const session = await stripe.checkout.sessions.create(sessionConfig);
+        if(!session) {
+            console.log(`Trying with customer_email: ${user?.email}`);
+            //unset customer
+            sessionConfig.customer = undefined;
+            sessionConfig.customer_email = user?.email;
+            
+            session = await createCheckoutSession(sessionConfig);
+        }
+        
 
         return new Response(
             JSON.stringify({ url: session.url }),
@@ -110,7 +145,7 @@ Deno.serve(async (req) => {
             }
         );
     } catch (error: any) {
-        console.error("Error creating checkout session:", error.message);
+        console.error("Error creating checkout session:", error.message, error);
         return new Response(
             JSON.stringify({ error: error.message }),
             {
