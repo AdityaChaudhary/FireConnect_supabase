@@ -142,14 +142,19 @@ export const useNotifications = (userId?: string) => {
     return useQuery({
         queryKey: ['notifications', userId],
         queryFn: async () => {
-            // Notifications logic usually involves requests where user is recipient
-            // or spiedBy records, etc.
-            const [requestsRes, spiedRes] = await Promise.all([
+            const [incomingRes, outgoingRes, spiedRes] = await Promise.all([
                 supabase
                     .from('connections')
                     .select('*, requester:users!connections_requester_id_fkey(*)')
                     .eq('recipient_id', userId)
+                    .eq('status', 'PENDING')
                     .order('created_at', { ascending: false }),
+                supabase
+                    .from('connections')
+                    .select('*, actor:users!connections_recipient_id_fkey(*)')
+                    .eq('requester_id', userId)
+                    .eq('status', 'CONNECTED')
+                    .order('updated_at', { ascending: false }),
                 supabase
                     .from('spied_profiles')
                     .select('*, user:users!spied_profiles_user_id_fkey(*)')
@@ -157,12 +162,20 @@ export const useNotifications = (userId?: string) => {
                     .order('created_at', { ascending: false })
             ]);
 
-            const received = (requestsRes.data || []).map((n: any) => ({
+            const received = (incomingRes.data || []).map((n: any) => ({
                 ...n,
                 type: 'CONNECTION_REQUEST',
                 actor: n.requester,
                 actor_id: n.requester_id,
                 time: new Date(n.created_at).getTime()
+            }));
+
+            const accepted = (outgoingRes.data || []).map((n: any) => ({
+                ...n,
+                type: 'CONNECTION_ACCEPTED',
+                actor: n.actor,
+                actor_id: n.recipient_id,
+                time: new Date(n.updated_at || n.created_at).getTime()
             }));
 
             const spied = (spiedRes.data || []).map((n: any) => ({
@@ -173,7 +186,7 @@ export const useNotifications = (userId?: string) => {
                 time: new Date(n.created_at).getTime()
             }));
 
-            return [...received, ...spied].sort((a, b) => b.time - a.time);
+            return [...received, ...accepted, ...spied].sort((a, b) => b.time - a.time);
         },
         staleTime: 10 * 1000,
         enabled: !!userId,

@@ -240,7 +240,10 @@ const ChatDetail: React.FC = () => {
         try {
             const { error } = await supabase
                 .from('connections')
-                .update({ status: 'CONNECTED' })
+                .update({ 
+                    status: 'CONNECTED',
+                    updated_at: new Date().toISOString()
+                })
                 .eq('requester_id', otherUserId)
                 .eq('recipient_id', authUser.id);
             if (error) throw error;

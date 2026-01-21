@@ -132,7 +132,10 @@ const ProfilePreview: React.FC = () => {
         try {
             const { error } = await browserSupabase
                 .from('connections')
-                .update({ status: 'CONNECTED' })
+                .update({ 
+                    status: 'CONNECTED',
+                    updated_at: new Date().toISOString()
+                })
                 .eq('requester_id', id)
                 .eq('recipient_id', authUser.id);
             if (error) throw error;

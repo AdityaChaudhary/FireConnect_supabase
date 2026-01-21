@@ -85,7 +85,10 @@ const Matches: React.FC = () => {
         try {
             const { error } = await supabase
                 .from('connections')
-                .update({ status: 'CONNECTED' })
+                .update({ 
+                    status: 'CONNECTED',
+                    updated_at: new Date().toISOString()
+                })
                 .eq('requester_id', requesterId)
                 .eq('recipient_id', authUser?.id);
 
