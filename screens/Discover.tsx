@@ -150,7 +150,7 @@ const Discover: React.FC = () => {
                                         <UserDiscoveryCard
                                             user={user}
                                             isSpiedInitially={spiedUserIds.includes(user.id)}
-                                            onUpgradeClick={(mode) => {
+                                            onUpgradeClick={(mode: 'UPGRADE' | 'OUT_OF_CREDITS') => {
                                                 setModalMode(mode);
                                                 setIsUpgradeModalOpen(true);
                                             }}

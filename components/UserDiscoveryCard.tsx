@@ -18,11 +18,46 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
     const { safeNavigate } = useSafeNavigate();
     const queryClient = useQueryClient();
     const { stripeRole, profile, refreshProfile, user: authUser } = useAuth();
-    const [images, setImages] = useState<any[]>(user.profile_images || []);
-    const [loading, setLoading] = useState(!(user.profile_images && user.profile_images.length > 0));
+
+    const getInitialImages = () => {
+        if (user.profile_images && user.profile_images.length > 0) return user.profile_images;
+        if (user.profile_picture_url) {
+            return [{
+                id: 'profile',
+                url: user.profile_picture_url,
+                visibility: 'PUBLIC',
+                is_profile: true,
+                blurred_url: null
+            }];
+        }
+        return [];
+    };
+
+    // Pre-resolve public URLs to avoid loading flicker
+    const resolvePublicSync = (imgs: any[]) => {
+        const vUrls: Record<number, string> = {};
+        const bUrls: Record<number, string> = {};
+        imgs.forEach((img, idx) => {
+            const isPrivate = img.visibility === 'PRIVATE' || (img.url && (img.url.includes('/PRIVATE/') || img.url.includes('private-media/')));
+            if (!isPrivate && img.url) {
+                vUrls[idx] = resolveImageUrl(img.url);
+            }
+            if (img.blurred_url) {
+                bUrls[idx] = resolveImageUrl(img.blurred_url);
+            }
+        });
+        return { vUrls, bUrls };
+    };
+
+    const initialImages = getInitialImages();
+    const { vUrls: initialVUrls, bUrls: initialBUrls } = resolvePublicSync(initialImages);
+
+    const [images, setImages] = useState<any[]>(initialImages);
+    const [viewableUrls, setViewableUrls] = useState<Record<number, string>>(initialVUrls);
+    const [blurredViewableUrls, setBlurredViewableUrls] = useState<Record<number, string>>(initialBUrls);
+    const [loading, setLoading] = useState(initialImages.length === 0);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
-    const [viewableUrls, setViewableUrls] = useState<Record<number, string>>({});
-    const [blurredViewableUrls, setBlurredViewableUrls] = useState<Record<number, string>>({});
+
     const normalizedRole = (stripeRole || 'free').toUpperCase();
     const [isRevealed, setIsRevealed] = useState(isSpiedInitially && normalizedRole !== 'FREE');
     const [isSpied, setIsSpied] = useState(isSpiedInitially || false);
@@ -47,19 +82,14 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
     }, []);
 
     useEffect(() => {
-        if (user.profile_images && user.profile_images.length > 0) {
-            setImages(user.profile_images);
-            setLoading(false);
-        } else if (user.profile_picture_url) {
-            setImages([{
-                id: 'profile',
-                url: user.profile_picture_url,
-                visibility: 'PUBLIC',
-                is_profile: true,
-                blurred_url: null
-            }]);
-            setLoading(false);
-        }
+        const newImages = getInitialImages();
+        setImages(newImages);
+        setLoading(newImages.length === 0);
+        
+        // Update public URLs when images change from props
+        const { vUrls, bUrls } = resolvePublicSync(newImages);
+        setViewableUrls(prev => ({ ...prev, ...vUrls }));
+        setBlurredViewableUrls(prev => ({ ...prev, ...bUrls }));
     }, [user.profile_images, user.profile_picture_url]);
 
     useEffect(() => {
@@ -74,47 +104,59 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
     }, [notification]);
 
     useEffect(() => {
-        if (!hasBeenInView || images.length === 0) return;
+        if (images.length === 0) return;
 
         const resolveUrls = async () => {
             const vUrls: Record<number, string> = { ...viewableUrls };
             const bUrls: Record<number, string> = { ...blurredViewableUrls };
+            let hasChanges = false;
 
             const promises = images.map(async (img, idx) => {
-                const isPrivate = img.visibility === 'PRIVATE' || img.url.includes('/PRIVATE/') || img.url.includes('private-media/');
+                const isPrivate = img.visibility === 'PRIVATE' || (img.url && (img.url.includes('/PRIVATE/') || img.url.includes('private-media/')));
                 const canFetchPrivate = normalizedRole === 'MAX' || (normalizedRole === 'PRO' && isSpied);
 
+                // Resolution logic:
+                // 1. If public, always resolve if not in viewableUrls
+                // 2. If private and can fetch, resolve ONLY if hasBeenInView
+                
                 if (img.blurred_url && !bUrls[idx]) {
                     bUrls[idx] = resolveImageUrl(img.blurred_url);
+                    hasChanges = true;
                 }
 
-                if ((!isPrivate || canFetchPrivate) && !vUrls[idx]) {
-                    if (isPrivate) {
-                        const cleanPath = img.url
-                            .replace(/^(private-media)\//, '')
-                            .replace(/^\//, '');
-                        try {
-                            const { data } = await supabase.storage
-                                .from('private-media')
-                                .createSignedUrl(cleanPath, 3600);
-                            if (data) vUrls[idx] = data.signedUrl;
-                        } catch (e) {
-                            console.error("Error signing private URL", e);
-                        }
-                    } else {
+                if (!isPrivate) {
+                    if (!vUrls[idx]) {
                         vUrls[idx] = resolveImageUrl(img.url);
+                        hasChanges = true;
+                    }
+                } else if (canFetchPrivate && !vUrls[idx] && hasBeenInView) {
+                    const cleanPath = img.url
+                        .replace(/^(private-media)\//, '')
+                        .replace(/^\//, '');
+                    try {
+                        const { data } = await supabase.storage
+                            .from('private-media')
+                            .createSignedUrl(cleanPath, 3600);
+                        if (data) {
+                            vUrls[idx] = data.signedUrl;
+                            hasChanges = true;
+                        }
+                    } catch (e) {
+                        console.error("Error signing private URL", e);
                     }
                 }
             });
 
             await Promise.all(promises);
 
-            setViewableUrls(vUrls);
-            setBlurredViewableUrls(bUrls);
+            if (hasChanges) {
+                setViewableUrls(vUrls);
+                setBlurredViewableUrls(bUrls);
+            }
         };
 
         resolveUrls();
-    }, [images, stripeRole, isSpied, user.id, hasBeenInView]);
+    }, [images, stripeRole, isSpied, user.id, hasBeenInView, normalizedRole]);
 
     const handleNextImage = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -180,7 +222,8 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
                 }
 
                 setIsRevealed(true);
-                setNotification(isPro ? `Spying: Private photos unlocked!` : `Unlocked with MAX benefits!`);
+                const remainingCredits = isPro ? currentCredits - 1 : currentCredits;
+                setNotification(isPro ? `Reveal successful! ${remainingCredits} credits remaining.` : `Unlocked with MAX benefits!`);
 
                 const privateIdx = images.findIndex(img => img.visibility === 'PRIVATE');
                 if (privateIdx !== -1) {
@@ -474,12 +517,9 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
                         initial={{ opacity: 0, y: -20, x: '-50%' }}
                         animate={{ opacity: 1, y: 0, x: '-50%' }}
                         exit={{ opacity: 0, y: -20, x: '-50%' }}
-                        className="absolute top-20 left-1/2 z-30 bg-white/10 backdrop-blur-xl border border-white/20 px-5 py-2.5 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.5)] flex items-center gap-2.5"
+                        className="absolute top-10 left-1/2 z-[60] bg-black/80 backdrop-blur-md border border-white/10 px-4 py-2 rounded-full shadow-2xl flex items-center gap-2"
                     >
-                        <div className="size-5 rounded-full bg-primary/20 flex items-center justify-center">
-                            <Icon name="visibility" className="text-primary text-sm" filled />
-                        </div>
-                        <p className="text-white text-xs font-bold tracking-wide uppercase">{notification}</p>
+                        <p className="text-white text-sm font-medium">{notification}</p>
                     </motion.div>
                 )}
             </AnimatePresence>

@@ -78,7 +78,7 @@ const Sidebar: React.FC = () => {
                         <p className="text-sm font-bold text-white truncate">{profile?.display_name || profile?.username || 'User'}</p>
                         <p className="text-[10px] font-black tracking-widest text-primary uppercase">{stripeRole || 'LITE'}</p>
                     </div>
-                    <Icon name="more_vert" className="text-white/20 group-hover:text-white/50" />
+                    {/* <Icon name="more_vert" className="text-white/20 group-hover:text-white/50" /> */}
                 </button>
             </div>
         </aside>
