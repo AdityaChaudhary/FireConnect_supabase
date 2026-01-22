@@ -334,7 +334,9 @@ function AppContent() {
   }
 
   // Onboarding Logic (Conditional render is safe)
-  if (user && !isProfileComplete && !isPolicyPage && !isAuthPage) {
+  // if (user && !isProfileComplete && !isPolicyPage && !isAuthPage) {
+  //fix for onboarding not showing
+  if (user && !isProfileComplete && !isPolicyPage) {
     console.log("AppContent: Profile incomplete, showing Onboarding");
     return <Onboarding />;
   }
