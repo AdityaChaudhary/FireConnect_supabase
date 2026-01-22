@@ -9,6 +9,7 @@ import {
 } from "react-router";
 import type { Route } from "./+types/root";
 import type { MetaFunction } from "react-router";
+import { Analytics } from "@vercel/analytics/react";
 import { createSupabaseServerClient } from "../lib/supabase.server";
 
 export const meta: MetaFunction = () => {
@@ -243,6 +244,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <body>
         <NavigationProgress />
         {children}
+        <Analytics />
         <ScrollRestoration />
         <Scripts />
       </body>
