@@ -13,10 +13,10 @@ import { createSupabaseServerClient } from "../lib/supabase.server";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "FireConnect - Ignite Intimate Connections" },
-    { name: "description", content: "The most exclusive network for verified adults. Experience online initimacy, privacy, and uninhibited connection. Chat with strangers, share intimate stuff." },
-    { property: "og:title", content: "FireConnect" },
-    { property: "og:description", content: "Experience online intimacy, privacy, and uninhibited connection. Chat with strangers, share intimate stuff." },
+    { title: "FireConnect - Adult Chat, Dirty Chat & Intimate Connections" },
+    { name: "description", content: "The most exclusive network for verified adults. Experience online intimacy, private adult chat, and sexting with strangers. Join FireConnect for uninhibited connection." },
+    { property: "og:title", content: "FireConnect - Adult Chat & Dirty Chat" },
+    { property: "og:description", content: "Experience online intimacy, privacy, and uninhibited connection. Chat with strangers, explore private vaults and share intimate moments." },
     { property: "og:type", content: "website" },
   ];
 };

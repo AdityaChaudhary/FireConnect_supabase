@@ -1,11 +1,14 @@
 User-agent: *
 Allow: /
-Allow: /profile/*
+Allow: /privacy
+Allow: /terms
+Disallow: /profile/*
 Disallow: /chat/*
 Disallow: /settings/*
 Disallow: /matches
 Disallow: /notifications
 Disallow: /random-chat
 Disallow: /spy-list
+Disallow: /settings
 
-Sitemap: https://fireconnect.vercel.app/sitemap.xml
+Sitemap: https://fireconnect.me/sitemap.xml

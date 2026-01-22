@@ -11,10 +11,10 @@ import type { Route } from './+types/Home';
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
     if (!data?.user) {
         return [
-            { title: "FireConnect - Ignite Intimate Connections" },
-            { name: "description", content: "The most exclusive network for verified adults. Experience luxury, privacy, and uninhibited connection. Join FireConnect today." },
-            { property: "og:title", content: "FireConnect - Ignite Intimate Connections" },
-            { property: "og:description", content: "The most exclusive network for verified adults. Join FireConnect today." },
+            { title: "FireConnect - Adult Chat, Dirty Chat & Intimate Connections" },
+            { name: "description", content: "The most exclusive network for verified adults. Experience luxury, privacy, and adult chat with strangers. Join FireConnect for sexting and uninhibited connection." },
+            { property: "og:title", content: "FireConnect - Adult Chat & Sexting" },
+            { property: "og:description", content: "The most exclusive network for verified adults. Join FireConnect for dirty chat and intimate connections." },
             { property: "og:type", content: "website" },
         ];
     }
