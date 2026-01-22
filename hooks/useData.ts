@@ -76,7 +76,7 @@ export const useSpiedUserIds = (userId?: string) => {
 /**
  * Hook to fetch all user connections (Connected, Pending Sent, Pending Received).
  */
-export const useConnections = (userId?: string) => {
+export const useConnections = (userId?: string, initialData?: any) => {
     const [pollInterval, setPollInterval] = useState(60000); // Start at 60s
 
     const query = useQuery({
@@ -111,6 +111,7 @@ export const useConnections = (userId?: string) => {
         staleTime: 30 * 1000,
         enabled: !!userId,
         refetchInterval: pollInterval,
+        initialData: initialData,
     });
 
     // Handle dynamic polling backoff
@@ -558,7 +559,7 @@ export const useThreads = (userId?: string, initialData?: any[]) => {
 /**
  * Hook to fetch messages for a specific thread and subscribe to updates.
  */
-export const useMessages = (threadId?: string) => {
+export const useMessages = (threadId?: string, initialData?: any[]) => {
     const queryClient = useQueryClient();
 
     useEffect(() => {
@@ -601,13 +602,14 @@ export const useMessages = (threadId?: string) => {
             return data;
         },
         enabled: !!threadId,
+        initialData: initialData,
     });
 };
 
 /**
  * Hook to fetch or create a thread ID between two users.
  */
-export const useThreadId = (authUserId?: string, targetUserId?: string) => {
+export const useThreadId = (authUserId?: string, targetUserId?: string, initialData?: string | null) => {
     return useQuery({
         queryKey: ['thread-id', authUserId, targetUserId],
         queryFn: async () => {
@@ -624,5 +626,6 @@ export const useThreadId = (authUserId?: string, targetUserId?: string) => {
         },
         enabled: !!authUserId && !!targetUserId,
         staleTime: Infinity, // Thread IDs don't change
+        initialData: initialData,
     });
 };

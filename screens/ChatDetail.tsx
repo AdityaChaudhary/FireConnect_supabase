@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router';
+import { useParams, useNavigate, useLocation, useLoaderData } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import Icon from '../components/Icon';
@@ -7,13 +7,114 @@ import { useAuth } from '../context/AuthContext';
 import { compressImage } from '../lib/image-utils';
 import { useMessages, useUserDetail, useUserConnection, useHasReceivedMessage, useThreadId } from '../hooks/useData';
 import { supabase } from '../lib/supabase.client';
+import { createSupabaseServerClient } from '../lib/supabase.server';
 import CdnImage from '../components/CdnImage';
 import EllipsisMenu from '../components/EllipsisMenu';
 import EmojiPicker from '../components/EmojiPicker';
 import UpgradeModal from '../components/UpgradeModal';
+import type { Route } from './+types/ChatDetail';
+
+export async function loader({ request, params }: Route.LoaderArgs) {
+    const { supabase } = createSupabaseServerClient(request);
+    const { data: { user } } = await supabase.auth.getUser();
+    const { id: otherUserId } = params;
+
+    if (!user || !otherUserId) return { otherUser: null, connection: null, threadId: null, messages: [], hasReceivedMessage: false };
+
+    // 1. Fetch other user detail
+    // 2. Fetch connection status
+    // 3. Fetch thread ID
+    const [userRes, connRes, threadRes] = await Promise.all([
+        supabase
+            .from('users')
+            .select('*, user_online_status (last_seen_at)')
+            .eq('id', otherUserId)
+            .single(),
+        supabase
+            .from('connections')
+            .select('*')
+            .or(`and(requester_id.eq.${user.id},recipient_id.eq.${otherUserId}),and(requester_id.eq.${otherUserId},recipient_id.eq.${user.id})`),
+        supabase
+            .from('threads')
+            .select('id')
+            .contains('participants', [user.id, otherUserId])
+            .maybeSingle()
+    ]);
+
+    const otherUser = userRes.data;
+    const threadId = threadRes.data?.id || null;
+
+    // 4. Fetch messages and hasReceivedMessage if thread exists
+    let messages: any[] = [];
+    let hasReceivedMessage = false;
+
+    if (threadId) {
+        const [messagesRes, receivedRes] = await Promise.all([
+            supabase
+                .from('messages')
+                .select('*')
+                .eq('thread_id', threadId)
+                .order('created_at', { ascending: true }),
+            supabase
+                .from('messages')
+                .select('id')
+                .eq('thread_id', threadId)
+                .eq('sender_id', otherUserId)
+                .limit(1)
+                .maybeSingle()
+        ]);
+        messages = messagesRes.data || [];
+        hasReceivedMessage = !!receivedRes.data;
+    }
+
+    // Process connection data (same logic as useUserConnection hook)
+    let connection = null;
+    const connData = connRes.data || [];
+    if (connData.length > 0) {
+        const connected = connData.find(c => c.status === 'CONNECTED');
+        if (connected) {
+            const isRequester = connected.requester_id === user.id;
+            connection = {
+                ...connected,
+                status: 'CONNECTED',
+                incomingStatus: isRequester ? null : 'CONNECTED',
+                outgoingStatus: isRequester ? 'CONNECTED' : null
+            };
+        } else {
+            const incoming = connData.find(c => c.requester_id === otherUserId && c.status === 'PENDING');
+            if (incoming) {
+                connection = {
+                    ...incoming,
+                    status: incoming.status,
+                    incomingStatus: incoming.status,
+                    outgoingStatus: null
+                };
+            } else {
+                const outgoing = connData.find(c => c.requester_id === user.id && c.status === 'PENDING');
+                if (outgoing) {
+                    connection = {
+                        ...outgoing,
+                        status: outgoing.status,
+                        incomingStatus: null,
+                        outgoingStatus: outgoing.status
+                    };
+                }
+            }
+        }
+    }
+
+    return {
+        otherUser,
+        connection,
+        threadId,
+        messages,
+        hasReceivedMessage
+    };
+}
 
 const ChatDetail: React.FC = () => {
     const { id: otherUserId } = useParams<{ id: string }>();
+    const loaderData = useLoaderData<typeof loader>();
     const navigate = useNavigate();
     const location = useLocation();
     const queryClient = useQueryClient();
@@ -38,12 +139,12 @@ const ChatDetail: React.FC = () => {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const { data: otherUser, isLoading: userLoading } = useUserDetail(otherUserId || '');
-    const { data: connData, refetch: refetchConn } = useUserConnection(otherUserId || '', authUser?.id);
-    const { data: threadId, isLoading: threadLoading } = useThreadId(authUser?.id, otherUserId);
-    const { data: messages = [] } = useMessages(threadId || undefined);
+    const { data: otherUser, isLoading: userLoading } = useUserDetail(otherUserId || '', loaderData?.otherUser);
+    const { data: connData, refetch: refetchConn } = useUserConnection(otherUserId || '', authUser?.id, loaderData?.connection);
+    const { data: threadId, isLoading: threadLoading } = useThreadId(authUser?.id, otherUserId, loaderData?.threadId);
+    const { data: messages = [] } = useMessages(threadId || undefined, loaderData?.messages);
     // const { data: isSpied } = useSpiedStatus(otherUserId || '', authUser?.id);
-    const { data: hasReceivedMessage } = useHasReceivedMessage(otherUserId || '', authUser?.id);
+    const { data: hasReceivedMessage } = useHasReceivedMessage(otherUserId || '', authUser?.id, loaderData?.hasReceivedMessage);
 
     // Derived states
     const connectionStatus = connData?.status || null;

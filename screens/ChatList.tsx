@@ -1,10 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import type { MetaFunction } from "react-router";
-import { useNavigate } from 'react-router';
+import { useNavigate, useLoaderData } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import Icon from '../components/Icon';
 import NotificationIcon from '../components/NotificationIcon';
 import { useAuth } from '../context/AuthContext';
+import { createSupabaseServerClient } from '../lib/supabase.server';
+import type { Route } from './+types/ChatList';
 
 export const meta: MetaFunction = () => {
     return [
@@ -12,6 +14,70 @@ export const meta: MetaFunction = () => {
         { name: "description", content: "Stay connected with your matches and start private intimate conversations." },
     ];
 };
+
+export async function loader({ request }: Route.LoaderArgs) {
+    const { supabase } = createSupabaseServerClient(request);
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { connections: null, threads: null };
+
+    const [threadsRes, connectionsRes] = await Promise.all([
+        supabase
+            .from("threads")
+            .select("*")
+            .contains("participants", [user.id])
+            .order("last_message_time", { ascending: false }),
+        supabase
+            .from('connections')
+            .select(`
+                *,
+                requester:users!connections_requester_id_fkey(*, user_online_status(last_seen_at)),
+                recipient:users!connections_recipient_id_fkey(*, user_online_status(last_seen_at))
+            `)
+            .or(`requester_id.eq.${user.id},recipient_id.eq.${user.id}`)
+    ]);
+
+    let threads = threadsRes.data || [];
+    if (threads.length > 0) {
+        const otherUserIds = threads
+            .map((t: any) => t.participants.find((p: string) => p !== user.id))
+            .filter((id): id is string => !!id);
+
+        if (otherUserIds.length > 0) {
+            const { data: usersData } = await supabase
+                .from("users")
+                .select("*, user_online_status(*)")
+                .in("id", otherUserIds);
+
+            const usersMap = (usersData || []).reduce((acc: any, u: any) => {
+                acc[u.id] = u;
+                return acc;
+            }, {});
+
+            threads = threads.map((thread: any) => ({
+                ...thread,
+                otherUser: usersMap[thread.participants.find((p: string) => p !== user.id)] || null
+            }));
+        }
+    }
+
+    const rawConnections = connectionsRes.data || [];
+    const connections = rawConnections.filter(r => r.status === 'CONNECTED').map(r =>
+        r.requester_id === user.id ? r.recipient : r.requester
+    );
+    const sentRequests = rawConnections.filter(r => r.requester_id === user.id && r.status === 'PENDING').map(r => r.recipient);
+    const receivedRequests = rawConnections.filter(r => r.recipient_id === user.id && r.status === 'PENDING').map(r => r.requester);
+
+    return {
+        connections: {
+            connections,
+            sentRequests,
+            receivedRequests,
+            all: [...connections, ...sentRequests, ...receivedRequests]
+        },
+        threads
+    };
+}
 import { useConnections, useThreads } from '../hooks/useData';
 import CdnImage from '../components/CdnImage';
 import { getDefaultAvatar } from '../lib/image-utils';
@@ -19,12 +85,13 @@ import MatchAvatar from '../components/MatchAvatar';
 
 const ChatList: React.FC = () => {
     const { user: authUser, initialThreads } = useAuth();
+    const loaderData = useLoaderData<typeof loader>();
     const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
     const [currentTime, setCurrentTime] = useState(Date.now());
 
-    const { data: connectionsData, isLoading: connectionsLoading } = useConnections(authUser?.id);
-    const { data: threads = [], isLoading: threadsLoading } = useThreads(authUser?.id, initialThreads ?? undefined);
+    const { data: connectionsData, isLoading: connectionsLoading } = useConnections(authUser?.id, loaderData?.connections);
+    const { data: threads = [], isLoading: threadsLoading } = useThreads(authUser?.id, loaderData?.threads || initialThreads || undefined);
 
     const connections = connectionsData?.connections || [];
 
