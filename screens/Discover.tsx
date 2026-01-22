@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import type { MetaFunction } from "react-router";
 import Icon from '../components/Icon';
 import NotificationIcon from '../components/NotificationIcon';
 import UserDiscoveryCard from '../components/UserDiscoveryCard';
@@ -9,12 +8,7 @@ import { useDiscoveryUsers, useSpiedUserIds } from '../hooks/useData';
 import { useIntersectionObserver } from '../hooks/useIntersectionObserver';
 import CdnImage from '../components/CdnImage';
 
-export const meta: MetaFunction = () => {
-    return [
-        { title: "Discover People Nearby | FireConnect" },
-        { name: "description", content: "Explore verified profiles and discover intimate connections near you." },
-    ];
-};
+
 
 const Discover: React.FC = () => {
     const { user: authUser, profile, stripeRole } = useAuth();

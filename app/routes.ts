@@ -1,9 +1,9 @@
 import { type RouteConfig, index, route } from "@react-router/dev/routes";
 
 export default [
-  index("../screens/Discover.tsx"),
-  route("landing", "../screens/Landing.tsx"),
+  index("../screens/Home.tsx"),
   route("auth", "../screens/Auth.tsx"),
+  route("auth/callback", "./routes/auth.callback.tsx"),
   route("matches", "../screens/Matches.tsx"),
   route("chat", "../screens/ChatList.tsx"),
   route("chat/:id", "../screens/ChatDetail.tsx"),

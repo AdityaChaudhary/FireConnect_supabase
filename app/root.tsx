@@ -260,7 +260,7 @@ function AppContent() {
     loading 
   });
 
-  const isAuthPage = location.pathname === '/landing' || location.pathname === '/auth';
+  const isAuthPage = location.pathname === '/' || location.pathname === '/auth';
   const isPolicyPage = location.pathname === '/privacy' || location.pathname === '/terms' || location.pathname.startsWith('/settings/');
   const isProfileComplete = !!(profile && 
     profile.username && 
@@ -300,16 +300,16 @@ function AppContent() {
         return;
       }
 
-      if (isAuthPage) {
+      if (location.pathname === '/auth') {
         navigate('/');
         return;
       }
     }
 
     // Handle unauthenticated user redirection
-    if (!user && !isPolicyPage && !isAuthPage && location.pathname !== '/landing') {
-      console.log("AppContent: No user, redirecting to /landing via useEffect");
-      navigate('/landing', { replace: true });
+    if (!user && !isPolicyPage && !isAuthPage) {
+      console.log("AppContent: No user, redirecting to / via useEffect");
+      navigate('/', { replace: true });
     }
   }, [user, profile, loading, navigate, location.pathname, isProfileComplete, isPolicyPage, isAuthPage]);
 

@@ -56,6 +56,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, initialSes
         // If we are on the server, we're not loading (loaders already ran)
         if (typeof window === 'undefined') return false;
         
+        // If we have a code in the URL, we are definitely loading/processing auth
+        if (window.location.search.includes('code=')) return true;
+
         // If we have a user but no profile was passed, we might still be loading it on the client
         if (initialUser && initialProfile === undefined) return true;
         
@@ -227,7 +230,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, initialSes
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: window.location.origin
+                redirectTo: `${window.location.origin}/auth/callback`
             }
         });
         if (error) throw error;
@@ -237,7 +240,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, initialSes
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
         // Perform a hard redirect to ensure the session is cleared across SSR/Client
-        window.location.href = '/landing';
+        window.location.href = '/';
     };
 
     return (

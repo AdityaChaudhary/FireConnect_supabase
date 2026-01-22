@@ -14,10 +14,10 @@ type Pages = {
   "/": {
     params: {};
   };
-  "/landing": {
+  "/auth": {
     params: {};
   };
-  "/auth": {
+  "/auth/callback": {
     params: {};
   };
   "/matches": {
@@ -88,19 +88,19 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/landing" | "/auth" | "/matches" | "/chat" | "/chat/:id" | "/profile" | "/profile/edit" | "/settings" | "/subscription" | "/welcome" | "/credits-welcome" | "/profile/:id" | "/purchase-credits" | "/notifications" | "/random-chat" | "/spy-list" | "/settings/privacy" | "/settings/terms" | "/privacy" | "/terms" | "/*";
+    page: "/" | "/auth" | "/auth/callback" | "/matches" | "/chat" | "/chat/:id" | "/profile" | "/profile/edit" | "/settings" | "/subscription" | "/welcome" | "/credits-welcome" | "/profile/:id" | "/purchase-credits" | "/notifications" | "/random-chat" | "/spy-list" | "/settings/privacy" | "/settings/terms" | "/privacy" | "/terms" | "/*";
   };
-  "../screens/Discover.tsx": {
-    id: "../screens/Discover";
+  "../screens/Home.tsx": {
+    id: "../screens/Home";
     page: "/";
-  };
-  "../screens/Landing.tsx": {
-    id: "../screens/Landing";
-    page: "/landing";
   };
   "../screens/Auth.tsx": {
     id: "../screens/Auth";
     page: "/auth";
+  };
+  "./routes/auth.callback.tsx": {
+    id: "routes/auth.callback";
+    page: "/auth/callback";
   };
   "../screens/Matches.tsx": {
     id: "../screens/Matches";
@@ -179,9 +179,9 @@ type RouteFiles = {
 
 type RouteModules = {
   "root": typeof import("./app/root.tsx");
-  "../screens/Discover": unknown;
-  "../screens/Landing": unknown;
+  "../screens/Home": unknown;
   "../screens/Auth": unknown;
+  "routes/auth.callback": typeof import("./app/./routes/auth.callback.tsx");
   "../screens/Matches": unknown;
   "../screens/ChatList": unknown;
   "../screens/ChatDetail": unknown;

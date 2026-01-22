@@ -1,38 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import type { MetaFunction, LoaderFunctionArgs } from 'react-router';
 import { useAuth } from '../context/AuthContext';
-import { useLoaderData } from 'react-router';
-import { createSupabaseServerClient } from '../lib/supabase.server';
-
-export const meta: MetaFunction = () => {
-    return [
-        { title: "FireConnect - Ignite Intimate Connections" },
-        { name: "description", content: "The most exclusive network for verified adults. Experience luxury, privacy, and uninhibited connection." },
-        { property: "og:title", content: "FireConnect - Ignite Intimate Connections" },
-        { property: "og:description", content: "The most exclusive network for verified adults. Join FireConnect today." },
-        { property: "og:type", content: "website" },
-    ];
-};
-
-export async function loader({ request }: LoaderFunctionArgs) {
-    const { supabase: supabaseServer } = createSupabaseServerClient(request);
-    
-    // Fetch plans and AI users in parallel for SSR
-    const [products, aiUsersRes] = await Promise.all([
-        getStripeProducts(supabaseServer),
-        supabaseServer
-            .from('users')
-            .select('*, user_online_status(*)')
-            .eq('user_type', 'AI')
-            .order('created_at', { ascending: false })
-            .limit(20)
-    ]);
-
-    return {
-        initialProducts: products || [],
-        initialAiUsers: aiUsersRes.data || []
-    };
-}
 import { supabase } from '../lib/supabase.client';
 import { getStripeProducts, fetchWithRetry } from '../lib/stripe-utils';
 import { PLAN_THEMES, PLAN_DESCRIPTIONS, PLAN_FEATURES } from '../config/plans';
@@ -51,9 +18,13 @@ interface Plan {
     accent: string;
 }
 
-const Landing: React.FC = () => {
+interface LandingProps {
+    initialProducts?: any[];
+    initialAiUsers?: any[];
+}
+
+const Landing: React.FC<LandingProps> = ({ initialProducts = [], initialAiUsers = [] }) => {
     const { signInWithGoogle } = useAuth();
-    const loaderData = useLoaderData<typeof loader>();
 
     const mapPlans = (products: any[]) => {
         const activePlans = products.filter(p => !p.name.includes('Spy Credits'));
@@ -124,7 +95,7 @@ const Landing: React.FC = () => {
         }
     };
 
-    const initialPlans = mapPlans((loaderData.initialProducts || []) as any[]);
+    const initialPlans = mapPlans((initialProducts || []) as any[]);
     
     // Shuffle initial AI users
     const getShuffledAiUsers = (users: any[]) => {
@@ -138,16 +109,16 @@ const Landing: React.FC = () => {
 
     const [plans, setPlans] = useState<Plan[]>(initialPlans);
     const [loadingProducts, setLoadingProducts] = useState(initialPlans.length === 0);
-    const [aiUsers, setAiUsers] = useState<any[]>(Math.random() > -1 ? (loaderData.initialAiUsers || []).slice(0, 10) : []); // Hack to avoid TS issues if it thinks it's not array
-    const [loadingAIUsers, setLoadingAIUsers] = useState((loaderData.initialAiUsers || []).length === 0);
+    const [aiUsers, setAiUsers] = useState<any[]>(Math.random() > -1 ? (initialAiUsers || []).slice(0, 10) : []); // Hack to avoid TS issues if it thinks it's not array
+    const [loadingAIUsers, setLoadingAIUsers] = useState((initialAiUsers || []).length === 0);
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         // Only shuffle on the client after initial hydration
-        if (loaderData.initialAiUsers.length > 0) {
-            setAiUsers(getShuffledAiUsers(loaderData.initialAiUsers));
+        if (initialAiUsers.length > 0) {
+            setAiUsers(getShuffledAiUsers(initialAiUsers));
         }
-    }, [loaderData.initialAiUsers]);
+    }, [initialAiUsers]);
 
     useEffect(() => {
         const fetchPlans = async () => {
@@ -266,10 +237,10 @@ const Landing: React.FC = () => {
         if (initialPlans.length === 0) {
             fetchPlans();
         }
-        if (loaderData.initialAiUsers.length === 0) {
+        if (initialAiUsers.length === 0) {
             fetchAIUsers();
         }
-    }, [loaderData.initialAiUsers, initialPlans.length]);
+    }, [initialAiUsers, initialPlans.length]);
 
     // Set initial scroll position to middle
     useEffect(() => {

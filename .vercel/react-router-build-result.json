@@ -10,9 +10,9 @@
       }
     },
     "routeIdToServerBundleId": {
-      "../screens/Discover": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
-      "../screens/Landing": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "../screens/Home": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
       "../screens/Auth": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/auth.callback": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
       "../screens/Matches": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
       "../screens/ChatList": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
       "../screens/ChatDetail": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -40,20 +40,11 @@
         "path": "",
         "config": {}
       },
-      "../screens/Discover": {
-        "id": "../screens/Discover",
+      "../screens/Home": {
+        "id": "../screens/Home",
         "parentId": "root",
-        "file": "screens/Discover.tsx",
+        "file": "screens/Home.tsx",
         "index": true,
-        "config": {
-          "runtime": "nodejs"
-        }
-      },
-      "../screens/Landing": {
-        "id": "../screens/Landing",
-        "parentId": "root",
-        "file": "screens/Landing.tsx",
-        "path": "landing",
         "config": {
           "runtime": "nodejs"
         }
@@ -63,6 +54,15 @@
         "parentId": "root",
         "file": "screens/Auth.tsx",
         "path": "auth",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/auth.callback": {
+        "id": "routes/auth.callback",
+        "parentId": "root",
+        "file": "app/routes/auth.callback.tsx",
+        "path": "auth/callback",
         "config": {
           "runtime": "nodejs"
         }
@@ -258,23 +258,23 @@
         "file": "root.tsx",
         "path": ""
       },
-      "../screens/Discover": {
-        "id": "../screens/Discover",
+      "../screens/Home": {
+        "id": "../screens/Home",
         "parentId": "root",
-        "file": "../screens/Discover.tsx",
+        "file": "../screens/Home.tsx",
         "index": true
-      },
-      "../screens/Landing": {
-        "id": "../screens/Landing",
-        "parentId": "root",
-        "file": "../screens/Landing.tsx",
-        "path": "landing"
       },
       "../screens/Auth": {
         "id": "../screens/Auth",
         "parentId": "root",
         "file": "../screens/Auth.tsx",
         "path": "auth"
+      },
+      "routes/auth.callback": {
+        "id": "routes/auth.callback",
+        "parentId": "root",
+        "file": "./routes/auth.callback.tsx",
+        "path": "auth/callback"
       },
       "../screens/Matches": {
         "id": "../screens/Matches",
@@ -406,16 +406,16 @@
         "file": "root.tsx",
         "children": [
           {
-            "file": "../screens/Discover.tsx",
+            "file": "../screens/Home.tsx",
             "index": true
-          },
-          {
-            "file": "../screens/Landing.tsx",
-            "path": "landing"
           },
           {
             "file": "../screens/Auth.tsx",
             "path": "auth"
+          },
+          {
+            "file": "./routes/auth.callback.tsx",
+            "path": "auth/callback"
           },
           {
             "file": "../screens/Matches.tsx",
