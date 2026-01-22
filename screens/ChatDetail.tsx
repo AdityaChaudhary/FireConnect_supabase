@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Icon from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
 import { compressImage } from '../lib/image-utils';
-import { useMessages, useUserDetail, useUserConnection, useHasReceivedMessage, useThreadId } from '../hooks/useData';
+import { useMessages, useUserDetail, useUserConnection, useHasReceivedMessage, useThreadId, useProfileImages, useSpiedStatus } from '../hooks/useData';
 import { supabase } from '../lib/supabase.client';
 import { createSupabaseServerClient } from '../lib/supabase.server';
 import CdnImage from '../components/CdnImage';
@@ -134,6 +134,10 @@ const ChatDetail: React.FC = () => {
     const [revealedMessages, setRevealedMessages] = useState<Set<string>>(new Set());
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+    const [activeTab, setActiveTab] = useState<'PUBLIC' | 'PRIVATE'>('PUBLIC');
+    const [mediaPreviewIndex, setMediaPreviewIndex] = useState<number | null>(null);
+    const [isRevealed, setIsRevealed] = useState(false);
+    const [isSpying, setIsSpying] = useState(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -144,8 +148,10 @@ const ChatDetail: React.FC = () => {
     const { data: connData, refetch: refetchConn } = useUserConnection(otherUserId || '', authUser?.id, loaderData?.connection);
     const { data: threadId, isLoading: threadLoading } = useThreadId(authUser?.id, otherUserId, loaderData?.threadId);
     const { data: messages = [] } = useMessages(threadId || undefined, loaderData?.messages);
-    // const { data: isSpied } = useSpiedStatus(otherUserId || '', authUser?.id);
     const { data: hasReceivedMessage } = useHasReceivedMessage(otherUserId || '', authUser?.id, loaderData?.hasReceivedMessage);
+    const { data: images = [] } = useProfileImages(otherUserId || '');
+    const { data: initialSpied } = useSpiedStatus(otherUserId || '', authUser?.id);
+    const { refreshProfile } = useAuth();
 
     // Derived states
     const connectionStatus = connData?.status || null;
@@ -195,6 +201,12 @@ const ChatDetail: React.FC = () => {
             return () => timer && clearTimeout(timer);
         }
     }, [notification]);
+    
+    useEffect(() => {
+        if (initialSpied) {
+            setIsRevealed(true);
+        }
+    }, [initialSpied]);
 
     // Ensure thread exists in background if not found by hook
     useEffect(() => {
@@ -485,6 +497,79 @@ const ChatDetail: React.FC = () => {
 
     const handleImageClick = (url: string) => {
         setPreviewImage(url);
+    };
+
+    const handleMediaRevealClick = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!otherUser || !authUser) return;
+
+        const currentRole = stripeRole.toLowerCase();
+
+        if (currentRole === 'max' || currentRole === 'pro') {
+            if (isRevealed) return;
+
+            const isPro = currentRole === 'pro';
+            const currentCredits = Number(profile?.spy_credits || 0);
+
+            if (isPro && currentCredits <= 0) {
+                setShowUpgradeModal(true);
+                return;
+            }
+
+            setIsSpying(true);
+            try {
+                const { error: spiedError } = await supabase
+                    .from('spied_profiles')
+                    .insert({
+                        user_id: authUser.id,
+                        target_user_id: otherUser.id
+                    });
+                if (spiedError) throw spiedError;
+
+                if (isPro) {
+                    const { error: creditsError } = await supabase
+                        .from('users')
+                        .update({ spy_credits: currentCredits - 1 })
+                        .eq('id', authUser.id);
+                    if (creditsError) throw creditsError;
+                    await refreshProfile();
+                }
+
+                setIsRevealed(true);
+                queryClient.setQueryData(['spied-status', otherUser.id, authUser.id], true);
+                setNotification(isPro ? `Reveal successful! ${currentCredits - 1} credits remaining.` : `Unlocked with MAX benefits!`);
+            } catch (error) {
+                console.error("Error revealing profile", error);
+                setNotification("Failed to reveal. Please try again.");
+            } finally {
+                setIsSpying(false);
+            }
+        } else {
+            setShowUpgradeModal(true);
+        }
+    };
+
+    const handleNextMedia = (e?: React.MouseEvent) => {
+        e?.stopPropagation();
+        if (mediaPreviewIndex !== null && mediaPreviewIndex < images.length - 1) {
+            setMediaPreviewIndex(mediaPreviewIndex + 1);
+        }
+    };
+
+    const handlePrevMedia = (e?: React.MouseEvent) => {
+        e?.stopPropagation();
+        if (mediaPreviewIndex !== null && mediaPreviewIndex > 0) {
+            setMediaPreviewIndex(mediaPreviewIndex - 1);
+        }
+    };
+
+    const handleMediaDragEnd = (_e: any, info: any) => {
+        const swipeThreshold = 50;
+        if (info.offset.x < -swipeThreshold) {
+            handleNextMedia();
+        } else if (info.offset.x > swipeThreshold) {
+            handlePrevMedia();
+        }
     };
 
     const handleSend = async (e?: React.FormEvent) => {
@@ -994,17 +1079,104 @@ const ChatDetail: React.FC = () => {
                             </div>
 
                             {/* Quick Stats/Actions */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-white/5 rounded-3xl p-5 border border-white/5 flex flex-col items-center gap-1.5 text-center shadow-inner">
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="bg-white/5 rounded-2xl p-3.5 border border-white/5 flex flex-col items-center gap-1.5 text-center shadow-inner">
                                     <Icon name="favorite" className="text-primary text-xl" filled />
                                     <span className="text-[10px] font-black uppercase tracking-widest text-white/20">Status</span>
                                     <span className="text-xs font-bold text-white/90">{isConnected ? 'Matched' : 'Pending'}</span>
                                 </div>
-                                <div className="bg-white/5 rounded-3xl p-5 border border-white/5 flex flex-col items-center gap-1.5 text-center cursor-pointer hover:bg-white/10 hover:border-primary/30 transition-all shadow-inner group"
+                                <div className="bg-white/5 rounded-2xl p-3.5 border border-white/5 flex flex-col items-center gap-1.5 text-center cursor-pointer hover:bg-white/10 hover:border-primary/30 transition-all shadow-inner group"
                                     onClick={() => safeNavigate(`/profile/${otherUserId}`)}>
                                     <Icon name="person" className="text-primary text-xl group-hover:scale-110 transition-transform" />
                                     <span className="text-[10px] font-black uppercase tracking-widest text-white/20">Profile</span>
                                     <span className="text-xs font-bold text-white/90">View Bio</span>
+                                </div>
+                            </div>
+
+                            {/* Media Vault Section */}
+                            <div className="flex flex-col gap-6">
+                                <div className="flex items-center justify-between w-full">
+                                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 ml-1 flex items-center gap-2">
+                                        <Icon name="photo_library" className="text-[14px]" />
+                                        Media Vault
+                                    </h4>
+                                    <div className="flex bg-background-dark/50 rounded-full p-1 border border-white/5 shadow-inner scale-90 origin-right">
+                                        <button
+                                            onClick={() => setActiveTab('PUBLIC')}
+                                            className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'PUBLIC' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-white/40 hover:text-white/60'}`}
+                                        >
+                                            Public
+                                        </button>
+                                        <button
+                                            onClick={() => setActiveTab('PRIVATE')}
+                                            className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'PRIVATE' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-white/40 hover:text-white/60'}`}
+                                        >
+                                            Private
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    {images.filter(img => img.visibility === activeTab).map((img, idx) => {
+                                        const isImgPrivate = img.visibility === 'PRIVATE';
+                                        const showImgSpyMode = isImgPrivate && !isRevealed;
+
+                                        return (
+                                            <div
+                                                key={img.id || idx}
+                                                className="aspect-[3/4] rounded-2xl overflow-hidden bg-background-dark/50 relative group cursor-pointer border border-white/5 hover:border-primary/30 transition-all hover:scale-[1.02] active:scale-95 shadow-lg"
+                                                onClick={() => {
+                                                    const globalIndex = images.findIndex(i => i.id === img.id);
+                                                    if (!showImgSpyMode) setMediaPreviewIndex(globalIndex);
+                                                }}
+                                            >
+                                                <CdnImage
+                                                    path={img.url}
+                                                    className={`absolute inset-0 bg-cover bg-center transition-opacity duration-300 ${showImgSpyMode ? 'opacity-0' : 'opacity-100'}`}
+                                                    useAsBackground
+                                                    showSpinner={true}
+                                                />
+
+                                                {showImgSpyMode && (
+                                                    <CdnImage
+                                                        path={img.blurred_url || img.url}
+                                                        gender={otherUser?.gender}
+                                                        seed={otherUserId}
+                                                        className="absolute inset-0 bg-cover bg-center blur-xl scale-110"
+                                                        useAsBackground
+                                                        showSpinner={true}
+                                                    />
+                                                )}
+
+                                                {showImgSpyMode && (
+                                                    <div
+                                                        className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px] z-10 group-hover:bg-black/30 transition-colors"
+                                                        onClick={handleMediaRevealClick}
+                                                    >
+                                                        <div className="size-10 rounded-full bg-white/10 flex items-center justify-center border border-white/20 shadow-xl group-hover:scale-110 transition-transform">
+                                                            {isSpying ? (
+                                                                <div className="size-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                                                            ) : (
+                                                                <Icon name="visibility" className="text-white text-lg animate-pulse" />
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {isImgPrivate && !showImgSpyMode && (
+                                                    <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-md rounded-full p-1 border border-white/10 shadow-lg">
+                                                        <Icon name="key" className="text-[10px] text-primary" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                    {images.filter(img => img.visibility === activeTab).length === 0 && (
+                                        <div className="col-span-full py-10 flex flex-col items-center justify-center text-white/10 gap-2 bg-white/5 rounded-2xl border border-dashed border-white/5">
+                                            <Icon name="no_photography" className="text-2xl" />
+                                            <p className="text-[9px] font-black uppercase tracking-[0.2em]">No photos</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -1019,18 +1191,6 @@ const ChatDetail: React.FC = () => {
                                     </div>
                                 </div>
                             )}
-
-                            {/* Desktop Disconnect Action */}
-                            <div className="mt-auto pt-6 border-t border-white/5">
-                                {isConnected && (
-                                    <button 
-                                        onClick={() => setShowDisconnectModal(true)}
-                                        className="w-full h-14 rounded-2xl bg-white/5 hover:bg-red-500/10 border border-white/10 hover:border-red-500/30 text-white/40 hover:text-red-500 font-black text-[10px] uppercase tracking-[0.2em] transition-all"
-                                    >
-                                        Disconnect User
-                                    </button>
-                                )}
-                            </div>
                         </div>
                     </aside>
                 </div>
@@ -1094,6 +1254,141 @@ const ChatDetail: React.FC = () => {
                     )}
                 </AnimatePresence>
             </div>
+
+            {/* Media Vault Full Screen Modal */}
+            <AnimatePresence>
+                {mediaPreviewIndex !== null && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="fixed inset-0 z-[120] flex items-center justify-center bg-black/95 backdrop-blur-2xl"
+                        onClick={() => setMediaPreviewIndex(null)}
+                    >
+                        {/* Close Button */}
+                        <motion.button
+                            initial={{ opacity: 0, y: -20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            onClick={() => setMediaPreviewIndex(null)}
+                            className="absolute top-6 right-6 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all z-[140] backdrop-blur-md border border-white/10"
+                        >
+                            <Icon name="close" className="text-[24px]" />
+                        </motion.button>
+
+                        {/* Navigation Arrows */}
+                        <div className="absolute inset-y-0 left-0 w-16 md:w-24 flex items-center justify-center z-[130]">
+                            {mediaPreviewIndex > 0 && (
+                                <button
+                                    onClick={handlePrevMedia}
+                                    className="p-3 md:p-4 rounded-full bg-white/5 text-white hover:bg-white/10 transition-all border border-white/10 backdrop-blur-sm"
+                                >
+                                    <Icon name="chevron_left" className="text-2xl md:text-3xl" />
+                                </button>
+                            )}
+                        </div>
+                        <div className="absolute inset-y-0 right-0 w-16 md:w-24 flex items-center justify-center z-[130]">
+                            {mediaPreviewIndex < images.length - 1 && (
+                                <button
+                                    onClick={handleNextMedia}
+                                    className="p-3 md:p-4 rounded-full bg-white/5 text-white hover:bg-white/10 transition-all border border-white/10 backdrop-blur-sm"
+                                >
+                                    <Icon name="chevron_right" className="text-2xl md:text-3xl" />
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Swipeable Container */}
+                        <motion.div
+                            drag="x"
+                            dragConstraints={{ left: 0, right: 0 }}
+                            onDragEnd={handleMediaDragEnd}
+                            className="relative w-full h-full flex items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <AnimatePresence mode="wait">
+                                <motion.div
+                                    key={mediaPreviewIndex}
+                                    initial={{ opacity: 0, x: 100 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: -100 }}
+                                    transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                                    className="relative w-full h-full flex items-center justify-center p-4"
+                                >
+                                    {(() => {
+                                        const img = images[mediaPreviewIndex];
+                                        const isImgPrivate = img.visibility === 'PRIVATE';
+                                        const showImgSpyMode = isImgPrivate && !isRevealed;
+
+                                        return (
+                                            <div className="relative w-full h-full flex items-center justify-center">
+                                                {/* Main Image */}
+                                                <CdnImage
+                                                    path={img.url}
+                                                    gender={otherUser?.gender}
+                                                    seed={otherUserId}
+                                                    className={`max-h-full max-w-full object-contain rounded-xl shadow-2xl transition-opacity duration-300 ${showImgSpyMode ? 'opacity-0' : 'opacity-100'}`}
+                                                    showSpinner={true}
+                                                />
+
+                                                {/* Blurred Placeholder & Spy Overlay */}
+                                                {showImgSpyMode && (
+                                                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-6">
+                                                        <CdnImage
+                                                            path={img.blurred_url || img.url}
+                                                            gender={otherUser?.gender}
+                                                            seed={otherUserId}
+                                                            className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-50"
+                                                            useAsBackground
+                                                            showSpinner={true}
+                                                        />
+                                                        <div
+                                                            className="z-10 flex flex-col items-center gap-4 p-8 rounded-3xl bg-black/40 backdrop-blur-xl border border-white/10"
+                                                            onClick={handleMediaRevealClick}
+                                                        >
+                                                            <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center border border-primary/30 animate-pulse">
+                                                                <Icon name="visibility_off" className="text-4xl text-primary" />
+                                                            </div>
+                                                            <div className="text-center">
+                                                                <h4 className="text-xl font-bold text-white mb-1">{isSpying ? 'Unlocking...' : 'Private Photo'}</h4>
+                                                                <p className="text-white/60 text-sm">{isSpying ? 'Please wait' : 'Tap to reveal this media'}</p>
+                                                            </div>
+                                                            {stripeRole === 'pro' && !isSpying && (
+                                                                <div className="mt-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 flex items-center gap-2">
+                                                                    <Icon name="stars" className="text-primary text-sm" />
+                                                                    <span className="text-xs font-bold text-primary">{profile?.spy_credits || 0} Credits Left</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Visibility Badge */}
+                                                {isImgPrivate && !showImgSpyMode && (
+                                                    <div className="absolute bottom-10 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-primary/20 border border-primary/30 backdrop-blur-md flex items-center gap-2">
+                                                        <Icon name="lock_open" className="text-primary text-base" />
+                                                        <span className="text-xs font-bold text-primary uppercase tracking-widest">Private Revealed</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
+                                </motion.div>
+                            </AnimatePresence>
+                        </motion.div>
+
+                        {/* Pagination Dots */}
+                        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2 z-[140]">
+                            {images.map((_, idx) => (
+                                <div
+                                    key={idx}
+                                    className={`h-1.5 rounded-full transition-all duration-300 ${idx === mediaPreviewIndex ? 'w-8 bg-primary shadow-[0_0_15px_rgba(255,255,255,0.5)]' : 'w-1.5 bg-white/20'}`}
+                                />
+                            ))}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Background Blur Elements */}
             <div className="absolute top-[10%] -right-20 w-[600px] h-[600px] bg-primary/5 blur-[120px] rounded-full -z-10 pointer-events-none"></div>
