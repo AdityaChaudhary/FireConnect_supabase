@@ -6,6 +6,8 @@ import { PLAN_THEMES, PLAN_DESCRIPTIONS, PLAN_FEATURES } from '../config/plans';
 import CdnImage from '../components/CdnImage';
 import { getDefaultAvatar } from '../lib/image-utils';
 
+import { Link } from 'react-router';
+
 interface Plan {
     id: string;
     name: string;
@@ -296,6 +298,7 @@ const Landing: React.FC<LandingProps> = ({ initialProducts = [], initialAiUsers 
                             <a className="text-gray-400 hover:text-white text-sm font-semibold tracking-wide uppercase transition-colors" href="#discover">Discover</a>
                             <a className="text-gray-400 hover:text-white text-sm font-semibold tracking-wide uppercase transition-colors" href="#vaults">Vaults</a>
                             <a className="text-gray-400 hover:text-white text-sm font-semibold tracking-wide uppercase transition-colors" href="#membership">Membership</a>
+                            <Link className="text-gray-400 hover:text-white text-sm font-semibold tracking-wide uppercase transition-colors" to="/compare">Compare</Link>
                         </div>
                         <div className="flex items-center gap-6">
                             <button onClick={() => handleAuth()} className="text-gray-300 text-sm font-semibold hover:text-white transition-colors hidden sm:block uppercase tracking-wide">Login</button>
@@ -594,17 +597,19 @@ const Landing: React.FC<LandingProps> = ({ initialProducts = [], initialAiUsers 
                             </div>
                             <p className="text-gray-500 text-sm leading-relaxed">The premium destination for authentic adult connections in a secure, luxury environment.</p>
                         </div>
-                        {/* <div className="flex flex-col gap-4">
+                         <div className="flex flex-col gap-4">
                             <h4 className="text-white font-bold uppercase text-sm tracking-wider">Company</h4>
-                            <a className="text-gray-400 hover:text-fire-pink text-sm transition-colors" href="#">About</a>
+                            <a className="text-gray-400 hover:text-fire-pink text-sm transition-colors" href="/blog">Blog</a>
+                            <a className="text-gray-400 hover:text-fire-pink text-sm transition-colors" href="/compare">Compare</a>
+                        {/*    <a className="text-gray-400 hover:text-fire-pink text-sm transition-colors" href="#">About</a>
                             <a className="text-gray-400 hover:text-fire-pink text-sm transition-colors" href="#">Careers</a>
                             <a className="text-gray-400 hover:text-fire-pink text-sm transition-colors" href="#">Press</a>
-                        </div> */}
+                            */}
+                        </div> 
                         <div className="flex flex-col gap-4">
                             <h4 className="text-white font-bold uppercase text-sm tracking-wider">Legal</h4>
                             <a className="text-gray-400 hover:text-fire-pink text-sm transition-colors" href="/privacy">Privacy Policy</a>
                             <a className="text-gray-400 hover:text-fire-pink text-sm transition-colors" href="/terms">Terms</a>
-                            {/* <a className="text-gray-400 hover:text-fire-pink text-sm transition-colors" href="#">2257 Exempt</a> */}
                         </div>
                         {/* <div className="flex flex-col gap-4">
                             <h4 className="text-white font-bold uppercase text-sm tracking-wider">Social</h4>

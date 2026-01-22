@@ -20,6 +20,22 @@ type Pages = {
   "/auth/callback": {
     params: {};
   };
+  "/blog": {
+    params: {};
+  };
+  "/blog/:title": {
+    params: {
+      "title": string;
+    };
+  };
+  "/compare": {
+    params: {};
+  };
+  "/compare/:title": {
+    params: {
+      "title": string;
+    };
+  };
   "/matches": {
     params: {};
   };
@@ -88,7 +104,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/auth" | "/auth/callback" | "/matches" | "/chat" | "/chat/:id" | "/profile" | "/profile/edit" | "/settings" | "/subscription" | "/welcome" | "/credits-welcome" | "/profile/:id" | "/purchase-credits" | "/notifications" | "/random-chat" | "/spy-list" | "/settings/privacy" | "/settings/terms" | "/privacy" | "/terms" | "/*";
+    page: "/" | "/auth" | "/auth/callback" | "/blog" | "/blog/:title" | "/compare" | "/compare/:title" | "/matches" | "/chat" | "/chat/:id" | "/profile" | "/profile/edit" | "/settings" | "/subscription" | "/welcome" | "/credits-welcome" | "/profile/:id" | "/purchase-credits" | "/notifications" | "/random-chat" | "/spy-list" | "/settings/privacy" | "/settings/terms" | "/privacy" | "/terms" | "/*";
   };
   "../screens/Home.tsx": {
     id: "../screens/Home";
@@ -101,6 +117,20 @@ type RouteFiles = {
   "./routes/auth.callback.tsx": {
     id: "routes/auth.callback";
     page: "/auth/callback";
+  };
+  "../screens/BlogList.tsx": {
+    id: "blog-list";
+    page: "/blog";
+  } | {
+    id: "compare-list";
+    page: "/compare";
+  };
+  "../screens/BlogDetail.tsx": {
+    id: "blog-detail";
+    page: "/blog/:title";
+  } | {
+    id: "compare-detail";
+    page: "/compare/:title";
   };
   "../screens/Matches.tsx": {
     id: "../screens/Matches";
@@ -182,6 +212,10 @@ type RouteModules = {
   "../screens/Home": unknown;
   "../screens/Auth": unknown;
   "routes/auth.callback": typeof import("./app/./routes/auth.callback.tsx");
+  "blog-list": unknown;
+  "blog-detail": unknown;
+  "compare-list": unknown;
+  "compare-detail": unknown;
   "../screens/Matches": unknown;
   "../screens/ChatList": unknown;
   "../screens/ChatDetail": unknown;

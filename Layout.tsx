@@ -15,6 +15,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     const hideOn = ['/welcome', '/credits-welcome', '/notifications', '/settings/privacy', '/settings/terms', '/privacy', '/terms'];
     const showNav = !location.pathname.startsWith('/chat/') &&
         !location.pathname.startsWith('/profile/') &&
+        !location.pathname.startsWith('/blog') &&
+        !location.pathname.startsWith('/compare') &&
         !hideOn.includes(location.pathname) &&
         (location.pathname !== '/' || user);
 

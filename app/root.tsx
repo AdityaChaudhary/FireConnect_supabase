@@ -142,7 +142,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
             rel="stylesheet"
         />
-        <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+        <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries,typography"></script>
         <script dangerouslySetInnerHTML={{ __html: `
             tailwind.config = {
                 darkMode: "class",
@@ -264,6 +264,7 @@ function AppContent() {
 
   const isAuthPage = location.pathname === '/' || location.pathname === '/auth';
   const isPolicyPage = location.pathname === '/privacy' || location.pathname === '/terms' || location.pathname.startsWith('/settings/');
+  const isBlogPage = location.pathname.startsWith('/blog') || location.pathname.startsWith('/compare');
   const isProfileComplete = !!(profile && 
     profile.username && 
     profile.display_name && 
@@ -309,11 +310,11 @@ function AppContent() {
     }
 
     // Handle unauthenticated user redirection
-    if (!user && !isPolicyPage && !isAuthPage) {
+    if (!user && !isPolicyPage && !isAuthPage && !isBlogPage) {
       console.log("AppContent: No user, redirecting to / via useEffect");
       navigate('/', { replace: true });
     }
-  }, [user, profile, loading, navigate, location.pathname, isProfileComplete, isPolicyPage, isAuthPage]);
+  }, [user, profile, loading, navigate, location.pathname, isProfileComplete, isPolicyPage, isAuthPage, isBlogPage]);
 
   if (loading) {
     return (
