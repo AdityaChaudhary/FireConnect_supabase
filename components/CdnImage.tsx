@@ -13,6 +13,7 @@ interface CdnImageProps {
     placeholder?: string;
     gender?: string | null;
     seed?: string;
+    showSpinner?: boolean;
 }
 
 /**
@@ -30,7 +31,8 @@ const CdnImage: React.FC<CdnImageProps> = ({
     onClick,
     placeholder,
     gender,
-    seed
+    seed,
+    showSpinner = false
 }) => {
     const { url, loading } = useResolvedImage(path);
 
@@ -56,24 +58,45 @@ const CdnImage: React.FC<CdnImageProps> = ({
                 }}
                 onClick={onClick}
             >
+                {loading && showSpinner && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/10 backdrop-blur-[2px]">
+                        <div className="size-8 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                    </div>
+                )}
                 {/* We don't want to hide children while loading if we have a background image */}
                 {children}
             </div>
         );
     }
 
-    if (!displayUrl && loading) return null;
+    if (!displayUrl && loading) {
+        if (showSpinner) {
+            return (
+                <div className={`${className} flex items-center justify-center bg-surface-dark`}>
+                    <div className="size-8 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                </div>
+            )
+        }
+        return null;
+    }
 
     return (
-        <img
-            src={displayUrl || placeholder}
-            alt={alt}
-            crossOrigin="anonymous"
-            className={`${className} ${loading && !url ? 'opacity-0' : 'opacity-100 transition-opacity duration-300'}`}
-            style={style}
-            onClick={onClick}
-            onError={() => setError(true)}
-        />
+        <div className="relative h-full w-full">
+            <img
+                src={displayUrl || placeholder}
+                alt={alt}
+                crossOrigin="anonymous"
+                className={`${className} ${loading && !url ? 'opacity-0' : 'opacity-100 transition-opacity duration-300'}`}
+                style={style}
+                onClick={onClick}
+                onError={() => setError(true)}
+            />
+            {loading && showSpinner && url && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/10 backdrop-blur-[2px]">
+                    <div className="size-8 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                </div>
+            )}
+        </div>
     );
 };
 

@@ -143,6 +143,7 @@ const ProfilePreview: React.FC = () => {
     const [showDisconnectModal, setShowDisconnectModal] = useState(false);
     const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState<'UPGRADE' | 'OUT_OF_CREDITS'>('UPGRADE');
+    const [isSpying, setIsSpying] = useState(false);
 
     useEffect(() => {
         if (initialSpied) {
@@ -286,6 +287,7 @@ const ProfilePreview: React.FC = () => {
 
             const currentCredits = Number(myProfile?.spy_credits || 0);
             if (currentCredits > 0) {
+                setIsSpying(true);
                 try {
                     const { error: spiedError } = await browserSupabase
                         .from('spied_profiles')
@@ -321,6 +323,8 @@ const ProfilePreview: React.FC = () => {
                 } catch (error) {
                     console.error("Error revealing profile", error);
                     setNotification("Failed to reveal. Please try again.");
+                } finally {
+                    setIsSpying(false);
                 }
             } else {
                 setModalMode('OUT_OF_CREDITS');
@@ -417,6 +421,7 @@ const ProfilePreview: React.FC = () => {
                                 seed={targetUserId}
                                 className="h-full w-full rounded-full bg-cover bg-center border-4 border-background-dark"
                                 useAsBackground
+                                showSpinner={true}
                             />
                         </div>
                     </div>
@@ -514,6 +519,7 @@ const ProfilePreview: React.FC = () => {
                                         path={img.url}
                                         className={`absolute inset-0 bg-cover bg-center transition-opacity duration-300 ${showImgSpyMode ? 'opacity-0' : 'opacity-100'}`}
                                         useAsBackground
+                                        showSpinner={true}
                                     />
 
                                     {/* Blurred Placeholder for Private (Using blurred_url if exists) */}
@@ -524,6 +530,7 @@ const ProfilePreview: React.FC = () => {
                                             seed={targetUserId}
                                             className="absolute inset-0 bg-cover bg-center blur-2xl scale-110"
                                             useAsBackground
+                                            showSpinner={true}
                                         />
                                     )}
 
@@ -541,6 +548,13 @@ const ProfilePreview: React.FC = () => {
                                     {isImgPrivate && !showImgSpyMode && (
                                         <div className="absolute bottom-2 right-2 bg-black/50 backdrop-blur-md rounded-full p-1 border border-white/10">
                                             <Icon name="key" className="text-[10px] text-primary" />
+                                        </div>
+                                    )}
+
+                                    {/* Spying Loader */}
+                                    {isSpying && isImgPrivate && (
+                                        <div className="absolute inset-0 flex items-center justify-center z-20 bg-black/40 backdrop-blur-sm">
+                                            <div className="size-8 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
                                         </div>
                                     )}
                                 </div>
@@ -759,6 +773,7 @@ const ProfilePreview: React.FC = () => {
                                                     gender={user.gender}
                                                     seed={targetUserId}
                                                     className={`max-h-full max-w-full object-contain rounded-xl shadow-2xl transition-opacity duration-300 ${showImgSpyMode ? 'opacity-0' : 'opacity-100'}`}
+                                                    showSpinner={true}
                                                 />
 
                                                 {/* Blurred Placeholder & Spy Overlay */}
@@ -770,6 +785,7 @@ const ProfilePreview: React.FC = () => {
                                                             seed={targetUserId}
                                                             className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-50"
                                                             useAsBackground
+                                                            showSpinner={true}
                                                         />
                                                         <div
                                                             className="z-10 flex flex-col items-center gap-4 p-8 rounded-3xl bg-black/40 backdrop-blur-xl border border-white/10"
@@ -779,10 +795,10 @@ const ProfilePreview: React.FC = () => {
                                                                 <Icon name="visibility_off" className="text-4xl text-primary" />
                                                             </div>
                                                             <div className="text-center">
-                                                                <h4 className="text-xl font-bold text-white mb-1">Private Photo</h4>
-                                                                <p className="text-white/60 text-sm">Tap to reveal this media</p>
+                                                                <h4 className="text-xl font-bold text-white mb-1">{isSpying ? 'Unlocking...' : 'Private Photo'}</h4>
+                                                                <p className="text-white/60 text-sm">{isSpying ? 'Please wait' : 'Tap to reveal this media'}</p>
                                                             </div>
-                                                            {stripeRole === 'PRO' && (
+                                                            {stripeRole === 'PRO' && !isSpying && (
                                                                 <div className="mt-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 flex items-center gap-2">
                                                                     <Icon name="stars" className="text-primary text-sm" />
                                                                     <span className="text-xs font-bold text-primary">{myProfile?.spy_credits || 0} Credits Left</span>

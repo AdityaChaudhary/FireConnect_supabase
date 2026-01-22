@@ -1,14 +1,41 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
+import type { MetaFunction } from "react-router";
+import { useNavigate, useLoaderData } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase.client';
+import { createSupabaseServerClient } from '../lib/supabase.server';
 import Icon from '../components/Icon';
 import { compressImage, getDefaultAvatar } from '../lib/image-utils';
 import CdnImage from '../components/CdnImage';
+import type { Route } from './+types/EditProfile';
+
+export const meta: MetaFunction = () => {
+    return [
+        { title: "Edit Profile | FireConnect" },
+    ];
+};
+
+export async function loader({ request }: Route.LoaderArgs) {
+    const { supabase } = createSupabaseServerClient(request);
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { profile: null };
+
+    const { data: profile } = await supabase
+        .from("users")
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle();
+
+    return { profile };
+}
 
 const EditProfile: React.FC = () => {
-    const { user, profile, stripeRole, refreshProfile } = useAuth();
+    const { user, profile: authProfile, stripeRole, refreshProfile } = useAuth();
+    const loaderData = useLoaderData<typeof loader>();
     const navigate = useNavigate();
+
+    const profile = loaderData?.profile || authProfile;
 
     const [displayName, setDisplayName] = useState(profile?.display_name || '');
     const [bio, setBio] = useState(profile?.bio || '');

@@ -1,20 +1,55 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router';
+import React, { useState, useRef } from 'react';
+import type { MetaFunction } from "react-router";
+import { useNavigate, useLoaderData } from 'react-router';
 import Icon from '../components/Icon';
 import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase.client';
+import { createSupabaseServerClient } from '../lib/supabase.server';
 import { AVAILABLE_INTERESTS } from '../lib/config';
 import { blurImage, compressImage } from '../lib/image-utils';
 import CdnImage from '../components/CdnImage';
+import { useProfileImages, useSpyCount } from '../hooks/useData';
+import type { Route } from './+types/Profile';
+
+export const meta: MetaFunction = () => {
+    return [
+        { title: "My Profile | FireConnect" },
+        { name: "description", content: "Manage your profile, shared media, and spy credits on FireConnect." },
+    ];
+};
+
+export async function loader({ request }: Route.LoaderArgs) {
+    const { supabase } = createSupabaseServerClient(request);
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { images: [], spyCount: 0 };
+
+    const [imagesRes, spyCountRes] = await Promise.all([
+        supabase
+            .from('profile_images')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('display_order', { ascending: true }),
+        supabase
+            .from('spied_profiles')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+    ]);
+
+    return {
+        images: imagesRes.data || [],
+        spyCount: spyCountRes.count || 0
+    };
+}
 
 const Profile: React.FC = () => {
     const { user, profile, stripeRole, refreshProfile } = useAuth();
+    const loaderData = useLoaderData<typeof loader>();
     const navigate = useNavigate();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [activeTab, setActiveTab] = useState<'PUBLIC' | 'PRIVATE'>('PUBLIC');
-    const [images, setImages] = useState<any[]>([]);
     const [uploading, setUploading] = useState(false);
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [imageToDelete, setImageToDelete] = useState<string | null>(null);
@@ -22,46 +57,13 @@ const Profile: React.FC = () => {
     const [isAddInterestOpen, setIsAddInterestOpen] = useState(false);
     const [interestToRemove, setInterestToRemove] = useState<string | null>(null);
     const [updatingInterests, setUpdatingInterests] = useState(false);
-    const [spyCount, setSpyCount] = useState<number>(0);
+
+    const { data: images = [], refetch: refetchImages } = useProfileImages(user?.id || '', loaderData?.images);
+    const { data: spyCount = 0 } = useSpyCount(user?.id, loaderData?.spyCount);
 
     const subscriptionLevel = (stripeRole || 'FREE').toUpperCase() as 'FREE' | 'PRO' | 'MAX';
     const displayName = profile?.display_name || user?.user_metadata?.full_name || 'User';
 
-    const fetchSpyCount = async () => {
-        if (!user?.id) return;
-        try {
-            const { count, error } = await supabase
-                .from('spied_profiles')
-                .select('*', { count: 'exact', head: true })
-                .eq('user_id', user.id);
-
-            if (error) throw error;
-            setSpyCount(count || 0);
-        } catch (error) {
-            console.error("Error fetching spy count:", error);
-        }
-    };
-
-    const fetchImages = async () => {
-        if (!user?.id) return;
-        try {
-            const { data, error } = await supabase
-                .from('profile_images')
-                .select('*')
-                .eq('user_id', user.id)
-                .order('display_order', { ascending: true });
-
-            if (error) throw error;
-            setImages(data || []);
-        } catch (error) {
-            console.error("Error fetching images:", error);
-        }
-    };
-
-    useEffect(() => {
-        fetchImages();
-        fetchSpyCount();
-    }, [user?.id]);
 
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -115,7 +117,7 @@ const Profile: React.FC = () => {
 
             if (insertError) throw insertError;
 
-            await fetchImages();
+            await refetchImages();
         } catch (error) {
             console.error("Error uploading image:", error);
             alert("Failed to upload image.");
@@ -162,7 +164,7 @@ const Profile: React.FC = () => {
 
             if (deleteError) throw deleteError;
 
-            await fetchImages();
+            await refetchImages();
         } catch (error) {
             console.error("Error deleting image:", error);
             alert("Failed to delete image.");

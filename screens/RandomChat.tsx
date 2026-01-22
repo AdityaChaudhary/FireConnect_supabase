@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { MetaFunction } from "react-router";
-import { useNavigate } from 'react-router';
+import { useNavigate, useLoaderData } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import Icon from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
+import { createSupabaseServerClient } from '../lib/supabase.server';
+import type { Route } from './+types/RandomChat';
 
 export const meta: MetaFunction = () => {
     return [
@@ -11,6 +13,22 @@ export const meta: MetaFunction = () => {
         { name: "description", content: "Match with strangers instantly and start private intimate conversations." },
     ];
 };
+
+export async function loader({ request }: Route.LoaderArgs) {
+    const { supabase } = createSupabaseServerClient(request);
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { poolEntry: null };
+
+    const { data: poolEntry } = await supabase
+        .from('random_chat_pool')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+    return { poolEntry };
+}
+
 import { supabase } from '../lib/supabase.client';
 import CdnImage from '../components/CdnImage';
 import UpgradeModal from '../components/UpgradeModal';
@@ -19,12 +37,13 @@ type ChatStatus = 'IDLE' | 'SEARCHING' | 'MATCHED';
 
 const RandomChat: React.FC = () => {
     const navigate = useNavigate();
+    const loaderData = useLoaderData<typeof loader>();
     const [notification, setNotification] = useState<string | null>(null);
     const { stripeRole, profile, user: authUser } = useAuth();
     const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
     
-    const [status, setStatus] = useState<ChatStatus>('IDLE');
-    const [matchedUserId, setMatchedUserId] = useState<string | null>(null);
+    const [status, setStatus] = useState<ChatStatus>(loaderData?.poolEntry?.status || 'IDLE');
+    const [matchedUserId, setMatchedUserId] = useState<string | null>(loaderData?.poolEntry?.matched_with || null);
     const [matchedUser, setMatchedUser] = useState<any>(null);
     const [messages, setMessages] = useState<any[]>([]);
     const [newMessage, setNewMessage] = useState('');

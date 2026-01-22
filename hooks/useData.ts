@@ -74,6 +74,28 @@ export const useSpiedUserIds = (userId?: string) => {
 };
 
 /**
+ * Hook to fetch the number of times the current user's profile has been spied on.
+ */
+export const useSpyCount = (userId?: string, initialData?: number) => {
+    return useQuery({
+        queryKey: ['spy-count', userId],
+        queryFn: async () => {
+            if (!userId) return 0;
+            const { count, error } = await supabase
+                .from('spied_profiles')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', userId);
+
+            if (error) throw error;
+            return count || 0;
+        },
+        enabled: !!userId,
+        staleTime: 5 * 60 * 1000,
+        initialData: initialData,
+    });
+};
+
+/**
  * Hook to fetch all user connections (Connected, Pending Sent, Pending Received).
  */
 export const useConnections = (userId?: string, initialData?: any) => {
