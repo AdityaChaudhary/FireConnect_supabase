@@ -2,6 +2,8 @@ User-agent: *
 Allow: /
 Allow: /privacy
 Allow: /terms
+Allow: /blog
+Allow: /compare
 Disallow: /profile/*
 Disallow: /chat/*
 Disallow: /settings/*
