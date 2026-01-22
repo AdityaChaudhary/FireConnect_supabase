@@ -1,9 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import type { MetaFunction } from "react-router";
-import { useNavigate } from 'react-router';
+import { useNavigate, useLoaderData } from 'react-router';
 import Icon from '../components/Icon';
 import NotificationIcon from '../components/NotificationIcon';
 import { useAuth } from '../context/AuthContext';
+import { createSupabaseServerClient } from '../lib/supabase.server';
+import type { Route } from './+types/Matches';
 
 export const meta: MetaFunction = () => {
     return [
@@ -11,6 +13,40 @@ export const meta: MetaFunction = () => {
         { name: "description", content: "View your latest matches and connections on FireConnect." },
     ];
 };
+
+export async function loader({ request }: Route.LoaderArgs) {
+    const { supabase } = createSupabaseServerClient(request);
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { connections: null };
+
+    const { data, error } = await supabase
+        .from('connections')
+        .select(`
+            *,
+            requester:users!connections_requester_id_fkey(*, user_online_status(last_seen_at)),
+            recipient:users!connections_recipient_id_fkey(*, user_online_status(last_seen_at))
+        `)
+        .or(`requester_id.eq.${user.id},recipient_id.eq.${user.id}`);
+
+    if (error) throw error;
+
+    const connections = (data || []).filter(r => r.status === 'CONNECTED').map(r =>
+        r.requester_id === user.id ? r.recipient : r.requester
+    );
+
+    const sentRequests = (data || []).filter(r => r.requester_id === user.id && r.status === 'PENDING').map(r => r.recipient);
+    const receivedRequests = (data || []).filter(r => r.recipient_id === user.id && r.status === 'PENDING').map(r => r.requester);
+
+    return {
+        connections: {
+            connections,
+            sentRequests,
+            receivedRequests,
+            all: [...connections, ...sentRequests, ...receivedRequests]
+        }
+    };
+}
 import { useConnections } from '../hooks/useData';
 import CdnImage from '../components/CdnImage';
 import { getDefaultAvatar } from '../lib/image-utils';
@@ -20,11 +56,12 @@ import { useQueryClient } from '@tanstack/react-query';
 
 const Matches: React.FC = () => {
     const { user: authUser } = useAuth();
+    const loaderData = useLoaderData<typeof loader>();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const [searchQuery, setSearchQuery] = useState('');
     const [currentTime, setCurrentTime] = useState(Date.now());
-    const { data, isLoading: loading, refetch: fetchMatches } = useConnections(authUser?.id);
+    const { data, isLoading: loading, refetch: fetchMatches } = useConnections(authUser?.id, loaderData?.connections);
 
     // Real-time subscription to online status changes
     React.useEffect(() => {

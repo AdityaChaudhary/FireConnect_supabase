@@ -1,50 +1,49 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
+import React from 'react';
+import { useNavigate, useLoaderData } from 'react-router';
 import Icon from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../lib/supabase.client';
+
+import { createSupabaseServerClient } from '../lib/supabase.server';
 import CdnImage from '../components/CdnImage';
+import { useSpiedProfiles } from '../hooks/useData';
+import type { Route } from './+types/SpyList';
+
+export async function loader({ request }: Route.LoaderArgs) {
+    const { supabase } = createSupabaseServerClient(request);
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { spiedProfiles: [] };
+
+    const { data, error } = await supabase
+        .from('spied_profiles')
+        .select(`
+            target_user_id,
+            created_at,
+            target:users!target_user_id (
+                id,
+                display_name,
+                username,
+                profile_picture_url,
+                gender,
+                location,
+                bio
+            )
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return { spiedProfiles: data || [] };
+}
 
 const SpyList: React.FC = () => {
     const { user } = useAuth();
+    const loaderData = useLoaderData<typeof loader>();
     const navigate = useNavigate();
-    const [spiedProfiles, setSpiedProfiles] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
 
-    const fetchSpiedProfiles = async () => {
-        if (!user?.id) return;
-        setLoading(true);
-        try {
-            const { data, error } = await supabase
-                .from('spied_profiles')
-                .select(`
-                    target_user_id,
-                    created_at,
-                    target:users!target_user_id (
-                        id,
-                        display_name,
-                        username,
-                        profile_picture_url,
-                        gender,
-                        location,
-                        bio
-                    )
-                `)
-                .eq('user_id', user.id)
-                .order('created_at', { ascending: false });
+    const { data: spiedProfiles = [], isLoading: loading } = useSpiedProfiles(user?.id, loaderData?.spiedProfiles);
 
-            if (error) throw error;
-            setSpiedProfiles(data || []);
-        } catch (error) {
-            console.error("Error fetching spied profiles:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
 
-    useEffect(() => {
-        fetchSpiedProfiles();
-    }, [user?.id]);
 
     return (
         <div className="relative flex min-h-screen w-full flex-col overflow-hidden pb-24 text-white bg-background-dark">

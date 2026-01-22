@@ -1,9 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useLoaderData } from 'react-router';
 import Icon from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
 import { getStripeProducts, startStripeCheckout, redirectToCustomerPortal } from '../lib/stripe-utils';
 import { PLAN_THEMES, PLAN_DESCRIPTIONS, PLAN_FEATURES } from '../config/plans';
+import { useStripeProducts } from '../hooks/useData';
+import { createSupabaseServerClient } from '../lib/supabase.server';
+import type { Route } from './+types/Subscription';
+
+export async function loader({ request }: Route.LoaderArgs) {
+    const { supabase } = createSupabaseServerClient(request);
+    const data = await getStripeProducts(supabase);
+    return { stripeProducts: data || [] };
+}
 
 interface Plan {
     id: string;
@@ -33,12 +42,14 @@ interface StripeProduct {
 
 const Subscription: React.FC = () => {
     const { stripeRole, refreshProfile } = useAuth();
+    const loaderData = useLoaderData<typeof loader>();
     const navigate = useNavigate();
     const [updating, setUpdating] = useState(false);
     const [portalLoading, setPortalLoading] = useState(false);
     const [plans, setPlans] = useState<Plan[]>([]);
-    const [loadingProducts, setLoadingProducts] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    const { data: stripeProducts = [], isLoading: loadingProducts } = useStripeProducts(loaderData?.stripeProducts);
 
     const mapProductToPlan = (product: StripeProduct): Plan => {
         const metadata = product.metadata || {};
@@ -85,19 +96,12 @@ const Subscription: React.FC = () => {
         };
     };
 
-    const fetchPlans = async () => {
-        setLoadingProducts(true);
+    useEffect(() => {
+        if (!stripeProducts) return;
+        
         setError(null);
         try {
-            const data = await getStripeProducts();
-            // Filter out non-subscription products or "Spy Credits" if they appear here
-            // Also ensure we only get unique plans per role if multiple exist (priority ?)
-            // For now, map all and then dedup based on role logic
-
-            // Check if data is null or undefined which might happen if retry failed ultimately
-            if (!data) throw new Error("No data received from payment service");
-
-            const validProducts = (data as StripeProduct[]).filter(p => {
+            const validProducts = (stripeProducts as StripeProduct[]).filter(p => {
                 const name = p.name.toUpperCase();
                 return !name.includes('CREDIT') && !name.includes('SPY');
             });
@@ -105,10 +109,6 @@ const Subscription: React.FC = () => {
             if (validProducts.length > 0) {
                 const mappedPlans = validProducts.map(mapProductToPlan);
 
-                // If we have duplicates for a role (e.g. multiple PRO plans), we might need to pick one.
-                // Assuming backend returns active ones.
-
-                // Sort to ensure FREE < PRO < MAX order
                 const roleOrder = { FREE: 0, PRO: 1, MAX: 2 };
                 mappedPlans.sort((a, b) => {
                     const rA = roleOrder[a.id as keyof typeof roleOrder] ?? 1;
@@ -116,12 +116,6 @@ const Subscription: React.FC = () => {
                     return rA - rB;
                 });
 
-                // Ensure we have a FREE plan visual even if not in Stripe (or if purely DB based)
-                // Source code manually adds FREE if list is empty? Source logic:
-                // plans = stripeProducts.length > 0 ? mapped... : [Default FREE]
-                // We should probably allow mixing.
-
-                // Check if FREE exists
                 if (!mappedPlans.find(p => p.id === 'FREE')) {
                     mappedPlans.unshift({
                         id: 'FREE',
@@ -134,8 +128,6 @@ const Subscription: React.FC = () => {
                     });
                 }
 
-                // Remove duplicates, keeping the one appearing last (or first? usually first is best if sorted)
-                // Actually let's just keep unique IDs
                 const uniquePlans: Plan[] = [];
                 const seen = new Set();
                 mappedPlans.forEach(p => {
@@ -147,7 +139,6 @@ const Subscription: React.FC = () => {
 
                 setPlans(uniquePlans);
             } else {
-                // Fallback if no products found
                 setPlans([{
                     id: 'FREE',
                     name: 'LITE',
@@ -158,18 +149,11 @@ const Subscription: React.FC = () => {
                     ...PLAN_THEMES.FREE
                 }]);
             }
-
         } catch (err: any) {
-            console.error("Failed to load plans:", err);
-            setError(err.message || "Failed to load subscription plans. Please try again.");
-        } finally {
-            setLoadingProducts(false);
+            console.error("Failed to process plans:", err);
+            setError(err.message || "Failed to load subscription plans.");
         }
-    };
-
-    useEffect(() => {
-        fetchPlans();
-    }, []);
+    }, [stripeProducts]);
 
 
     const currentSubscriptionLevel = stripeRole ? stripeRole.toUpperCase() : 'FREE';
@@ -272,7 +256,7 @@ const Subscription: React.FC = () => {
                 <h3 className="text-xl font-bold text-white">Connection Error</h3>
                 <p className="text-white/60 text-center max-w-xs">{error}</p>
                 <button
-                    onClick={fetchPlans}
+                    onClick={() => {}} // Hook handles retry since it's now integrated
                     className="mt-4 px-8 py-3 bg-white/10 hover:bg-white/20 rounded-full text-white font-semibold transition-all active:scale-95"
                 >
                     Retry Connection

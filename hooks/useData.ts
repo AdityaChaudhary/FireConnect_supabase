@@ -224,7 +224,7 @@ export const useProfileImages = (userId: string, initialData?: any[]) => {
 /**
  * Hook to fetch Stripe products (subscription plans).
  */
-export const useStripeProducts = () => {
+export const useStripeProducts = (initialData?: any[]) => {
     return useQuery({
         queryKey: ['stripe-products'],
         queryFn: async () => {
@@ -242,6 +242,7 @@ export const useStripeProducts = () => {
                 });
         },
         staleTime: 60 * 60 * 1000, // 1 hour
+        initialData: initialData,
     });
 };
 
@@ -352,6 +353,41 @@ export const useSpiedStatus = (targetUserId: string, authUserId?: string, initia
             return !!data;
         },
         enabled: !!targetUserId && !!authUserId,
+        staleTime: 5 * 60 * 1000,
+        initialData: initialData,
+    });
+};
+
+/**
+ * Hook to fetch detailed spied profile information for the current user.
+ */
+export const useSpiedProfiles = (userId?: string, initialData?: any[]) => {
+    return useQuery({
+        queryKey: ['spied-profiles-list', userId],
+        queryFn: async () => {
+            if (!userId) return [];
+            const { data, error } = await supabase
+                .from('spied_profiles')
+                .select(`
+                    target_user_id,
+                    created_at,
+                    target:users!target_user_id (
+                        id,
+                        display_name,
+                        username,
+                        profile_picture_url,
+                        gender,
+                        location,
+                        bio
+                    )
+                `)
+                .eq('user_id', userId)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            return data || [];
+        },
+        enabled: !!userId,
         staleTime: 5 * 60 * 1000,
         initialData: initialData,
     });
