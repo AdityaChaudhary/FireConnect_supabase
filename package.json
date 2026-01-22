@@ -15,6 +15,7 @@
     "vault:prod": "env-cmd -f .env tsx scripts/set_prod_vault_secrets.ts"
   },
   "dependencies": {
+    "@emotion/is-prop-valid": "^1.4.0",
     "@multiavatar/multiavatar": "^1.0.7",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.90.1",
