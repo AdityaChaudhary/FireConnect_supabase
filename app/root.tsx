@@ -28,6 +28,7 @@ import MainLayout from "../Layout";
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router";
 import Onboarding from "../screens/Onboarding";
+import NavigationProgress from "../components/NavigationProgress";
 
 export async function loader({ request }: Route.LoaderArgs) {
   const { supabase, responseHeaders } = createSupabaseServerClient(request);
@@ -240,6 +241,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         `}} />
       </head>
       <body>
+        <NavigationProgress />
         {children}
         <ScrollRestoration />
         <Scripts />
