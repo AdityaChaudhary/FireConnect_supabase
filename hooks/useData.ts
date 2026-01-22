@@ -138,7 +138,7 @@ export const useConnections = (userId?: string) => {
 /**
  * Hook to fetch combined notifications.
  */
-export const useNotifications = (userId?: string) => {
+export const useNotifications = (userId?: string, initialData?: any[]) => {
     return useQuery({
         queryKey: ['notifications', userId],
         queryFn: async () => {
@@ -190,13 +190,14 @@ export const useNotifications = (userId?: string) => {
         },
         staleTime: 10 * 1000,
         enabled: !!userId,
+        initialData: initialData,
     });
 };
 
 /**
  * Hook to fetch a user's profile images.
  */
-export const useProfileImages = (userId: string) => {
+export const useProfileImages = (userId: string, initialData?: any[]) => {
     return useQuery({
         queryKey: ['profile-images', userId],
         queryFn: async () => {
@@ -215,6 +216,7 @@ export const useProfileImages = (userId: string) => {
         },
         enabled: !!userId,
         staleTime: 5 * 60 * 1000,
+        initialData: initialData,
     });
 };
 
@@ -245,7 +247,7 @@ export const useStripeProducts = () => {
 /**
  * Hook to fetch a user's details including online status.
  */
-export const useUserDetail = (userId: string) => {
+export const useUserDetail = (userId: string, initialData?: any) => {
     return useQuery({
         queryKey: ['user-detail', userId],
         queryFn: async () => {
@@ -265,13 +267,14 @@ export const useUserDetail = (userId: string) => {
         enabled: !!userId,
         staleTime: 30000,
         refetchInterval: 60000, // Poll user details every 60s
+        initialData: initialData,
     });
 };
 
 /**
  * Hook to fetch connection status between two users.
  */
-export const useUserConnection = (targetUserId: string, authUserId?: string) => {
+export const useUserConnection = (targetUserId: string, authUserId?: string, initialData?: any) => {
     return useQuery({
         queryKey: ['user-connection', targetUserId, authUserId],
         queryFn: async () => {
@@ -325,13 +328,14 @@ export const useUserConnection = (targetUserId: string, authUserId?: string) => 
         },
         enabled: !!targetUserId && !!authUserId,
         staleTime: 30 * 1000,
+        initialData: initialData,
     });
 };
 
 /**
  * Hook to check if a user has spied on a profile.
  */
-export const useSpiedStatus = (targetUserId: string, authUserId?: string) => {
+export const useSpiedStatus = (targetUserId: string, authUserId?: string, initialData?: boolean) => {
     return useQuery({
         queryKey: ['spied-status', targetUserId, authUserId],
         queryFn: async () => {
@@ -348,13 +352,14 @@ export const useSpiedStatus = (targetUserId: string, authUserId?: string) => {
         },
         enabled: !!targetUserId && !!authUserId,
         staleTime: 5 * 60 * 1000,
+        initialData: initialData,
     });
 };
 
 /**
  * Hook to check if any message has been received from a specific user.
  */
-export const useHasReceivedMessage = (targetUserId: string, authUserId?: string) => {
+export const useHasReceivedMessage = (targetUserId: string, authUserId?: string, initialData?: boolean) => {
     return useQuery({
         queryKey: ['received-message', targetUserId, authUserId],
         queryFn: async () => {
@@ -384,6 +389,7 @@ export const useHasReceivedMessage = (targetUserId: string, authUserId?: string)
         },
         enabled: !!targetUserId && !!authUserId,
         staleTime: 60 * 1000,
+        initialData: initialData,
     });
 };
 
