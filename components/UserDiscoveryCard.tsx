@@ -134,15 +134,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
         e.stopPropagation();
         const currentRole = (stripeRole || 'FREE').toUpperCase();
 
-        if (currentRole === 'MAX') {
-            setIsRevealed(true);
-            setIsSpied(true);
-            const privateIdx = images.findIndex(img => img.visibility === 'PRIVATE');
-            if (privateIdx !== -1) setCurrentImageIndex(privateIdx);
-            return;
-        }
-
-        if (currentRole === 'PRO') {
+        if (currentRole === 'MAX' || currentRole === 'PRO') {
             if (isSpied) {
                 setIsRevealed(true);
                 const privateIdx = images.findIndex(img => img.visibility === 'PRIVATE');
@@ -150,50 +142,55 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
                 return;
             }
 
+            const isPro = currentRole === 'PRO';
             const currentCredits = Number(profile?.spy_credits || 0);
-            if (currentCredits > 0) {
-                setIsSpying(true);
-                try {
-                    const { error: spyError } = await supabase
-                        .from('spied_profiles')
-                        .insert({ target_user_id: user.id, user_id: authUser?.id });
 
-                    if (spyError) throw spyError;
+            if (isPro && currentCredits <= 0) {
+                onUpgradeClick?.('OUT_OF_CREDITS');
+                return;
+            }
 
+            setIsSpying(true);
+            try {
+                const { error: spyError } = await supabase
+                    .from('spied_profiles')
+                    .insert({ target_user_id: user.id, user_id: authUser?.id });
+
+                if (spyError) throw spyError;
+
+                if (isPro) {
                     const { error: creditError } = await supabase
                         .from('users')
                         .update({ spy_credits: currentCredits - 1 })
                         .eq('id', authUser?.id);
 
                     if (creditError) throw creditError;
-
                     await refreshProfile();
-                    setIsSpied(true);
-
-                    // Update local cache for spied user IDs
-                    if (authUser?.id) {
-                        const queryKey = ['spied-user-ids', authUser.id];
-                        const previousIds = queryClient.getQueryData<string[]>(queryKey) || [];
-                        if (!previousIds.includes(user.id)) {
-                            queryClient.setQueryData<string[]>(queryKey, [...previousIds, user.id]);
-                        }
-                    }
-
-                    setIsRevealed(true);
-                    setNotification(`Spying: Private photos unlocked!`);
-
-                    const privateIdx = images.findIndex(img => img.visibility === 'PRIVATE');
-                    if (privateIdx !== -1) {
-                        setTimeout(() => setCurrentImageIndex(privateIdx), 100);
-                    }
-                } catch (error) {
-                    console.error("Error revealing profile", error);
-                    setNotification("Failed to spy. Please try again.");
-                } finally {
-                    setIsSpying(false);
                 }
-            } else {
-                onUpgradeClick?.('OUT_OF_CREDITS');
+
+                setIsSpied(true);
+
+                // Update local cache for spied user IDs
+                if (authUser?.id) {
+                    const queryKey = ['spied-user-ids', authUser.id];
+                    const previousIds = queryClient.getQueryData<string[]>(queryKey) || [];
+                    if (!previousIds.includes(user.id)) {
+                        queryClient.setQueryData<string[]>(queryKey, [...previousIds, user.id]);
+                    }
+                }
+
+                setIsRevealed(true);
+                setNotification(isPro ? `Spying: Private photos unlocked!` : `Unlocked with MAX benefits!`);
+
+                const privateIdx = images.findIndex(img => img.visibility === 'PRIVATE');
+                if (privateIdx !== -1) {
+                    setTimeout(() => setCurrentImageIndex(privateIdx), 100);
+                }
+            } catch (error) {
+                console.error("Error revealing profile", error);
+                setNotification("Failed to spy. Please try again.");
+            } finally {
+                setIsSpying(false);
             }
         } else {
             onUpgradeClick?.('UPGRADE');

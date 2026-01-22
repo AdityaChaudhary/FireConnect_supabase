@@ -274,61 +274,61 @@ const ProfilePreview: React.FC = () => {
 
         const currentRole = (stripeRole || '').toLowerCase();
 
-        if (currentRole === 'max') {
-            setIsRevealed(true);
-            return;
-        }
-
-        if (currentRole === 'pro') {
+        if (currentRole === 'max' || currentRole === 'pro') {
             if (isSpied) {
                 setIsRevealed(true);
                 return;
             }
 
+            const isPro = currentRole === 'pro';
             const currentCredits = Number(myProfile?.spy_credits || 0);
-            if (currentCredits > 0) {
-                setIsSpying(true);
-                try {
-                    const { error: spiedError } = await browserSupabase
-                        .from('spied_profiles')
-                        .insert({
-                            user_id: authUser.id,
-                            target_user_id: user.id
-                        });
-                    if (spiedError) throw spiedError;
 
+            if (isPro && currentCredits <= 0) {
+                setModalMode('OUT_OF_CREDITS');
+                setIsUpgradeModalOpen(true);
+                return;
+            }
+
+            setIsSpying(true);
+            try {
+                const { error: spiedError } = await browserSupabase
+                    .from('spied_profiles')
+                    .insert({
+                        user_id: authUser.id,
+                        target_user_id: user.id
+                    });
+                if (spiedError) throw spiedError;
+
+                if (isPro) {
                     const { error: creditsError } = await browserSupabase
                         .from('users')
                         .update({ spy_credits: currentCredits - 1 })
                         .eq('id', authUser.id);
                     if (creditsError) throw creditsError;
-
                     await refreshProfile();
-                    setIsSpied(true);
+                }
 
-                    // Update local cache for spied user IDs
-                    if (authUser?.id) {
-                        const queryKey = ['spied-user-ids', authUser.id];
-                        const previousIds = queryClient.getQueryData<string[]>(queryKey) || [];
-                        if (!previousIds.includes(user.id)) {
-                            queryClient.setQueryData<string[]>(queryKey, [...previousIds, user.id]);
-                        }
+                setIsSpied(true);
 
-                        // Also update spied-status for this specific user
-                        queryClient.setQueryData(['spied-status', user.id, authUser.id], true);
+                // Update local cache for spied user IDs
+                if (authUser?.id) {
+                    const queryKey = ['spied-user-ids', authUser.id];
+                    const previousIds = queryClient.getQueryData<string[]>(queryKey) || [];
+                    if (!previousIds.includes(user.id)) {
+                        queryClient.setQueryData<string[]>(queryKey, [...previousIds, user.id]);
                     }
 
-                    setIsRevealed(true);
-                    setNotification(`Reveal successful! ${currentCredits - 1} credits remaining.`);
-                } catch (error) {
-                    console.error("Error revealing profile", error);
-                    setNotification("Failed to reveal. Please try again.");
-                } finally {
-                    setIsSpying(false);
+                    // Also update spied-status for this specific user
+                    queryClient.setQueryData(['spied-status', user.id, authUser.id], true);
                 }
-            } else {
-                setModalMode('OUT_OF_CREDITS');
-                setIsUpgradeModalOpen(true);
+
+                setIsRevealed(true);
+                setNotification(isPro ? `Reveal successful! ${currentCredits - 1} credits remaining.` : `Unlocked with MAX benefits!`);
+            } catch (error) {
+                console.error("Error revealing profile", error);
+                setNotification("Failed to reveal. Please try again.");
+            } finally {
+                setIsSpying(false);
             }
         } else {
             setModalMode('UPGRADE');
