@@ -1,7 +1,27 @@
-import React from 'react';
-import { useNavigate, useLocation } from 'react-router';
+import type { LoaderFunctionArgs, MetaFunction } from 'react-router';
+import { useNavigate, useLoaderData } from 'react-router';
 import Icon from '../components/Icon';
 import { motion } from 'framer-motion';
+
+export const meta: MetaFunction<typeof loader> = ({ data }) => {
+    const title = data?.title || 'Policy';
+    return [
+        { title: `FireConnect - ${title}` },
+        { name: "description", content: `Read our ${title} to understand your rights and our responsibilities.` },
+    ];
+};
+
+export async function loader({ request }: LoaderFunctionArgs) {
+    const url = new URL(request.url);
+    const isPrivacy = url.pathname.includes('privacy');
+    const title = isPrivacy ? 'Privacy Policy' : 'Terms & Conditions';
+    
+    return {
+        isPrivacy,
+        title,
+        lastUpdated: 'January 21, 2026'
+    };
+}
 
 interface PolicySection {
     title: string;
@@ -10,11 +30,8 @@ interface PolicySection {
 
 const Policy: React.FC = () => {
     const navigate = useNavigate();
-    const location = useLocation();
-    const isPrivacy = location.pathname.includes('privacy');
-    
-    const title = isPrivacy ? 'Privacy Policy' : 'Terms & Conditions';
-    const lastUpdated = 'January 21, 2026';
+    const loaderData = useLoaderData<typeof loader>();
+    const { isPrivacy, title, lastUpdated } = loaderData;
 
     const privacySections: PolicySection[] = [
         {

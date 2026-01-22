@@ -30,8 +30,9 @@ export const fetchWithRetry = async <T>(
     throw lastError;
 };
 
-export const getStripeProducts = async () => {
-    return fetchWithRetry(async () => await supabase.rpc('get_active_plans'));
+export const getStripeProducts = async (customSupabase?: any) => {
+    const client = customSupabase || supabase;
+    return fetchWithRetry(async () => await client.rpc('get_active_plans'));
 };
 
 export const startStripeCheckout = async (priceId: string, mode: 'payment' | 'subscription' = 'subscription', options?: { planId?: string, credits?: number, oldBalance?: number }) => {

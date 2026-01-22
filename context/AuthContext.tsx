@@ -52,7 +52,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, initialSes
     const [profile, setProfile] = useState<Profile | null>(initialProfile ?? null);
     const [stripeRole, setStripeRole] = useState<string | null>(initialProfile?.stripe_role?.toLowerCase() ?? null);
     const [subscription, setSubscription] = useState<any | null>(null);
-    const [loading, setLoading] = useState(!(initialUser || initialSession));
+    const [loading, setLoading] = useState(() => {
+        // If we are on the server, we're not loading (loaders already ran)
+        if (typeof window === 'undefined') return false;
+        
+        // If we have a user but no profile was passed, we might still be loading it on the client
+        if (initialUser && initialProfile === undefined) return true;
+        
+        // If we have explicit results from loader (even if null), we can stop loading
+        if (initialUser !== undefined || initialSession !== undefined) return false;
+        
+        return true;
+    });
 
     const refreshProfile = async (specificUser?: User | null) => {
         let currentUser = specificUser || null;
@@ -173,12 +184,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, initialSes
             initializeAuth();
         } else {
             console.log("AuthContext: Hydrated from initial user/session.");
-            // Even if hydrated, we should still fetch subscription info in background if profile exists
-            if (initialProfile && (initialUser || initialSession?.user)) {
-                refreshProfile(initialUser || initialSession?.user); 
-            }
-            // CRITICAL: If we are hydrated, we MUST ensure loading is false
-            setLoading(false);
+            const hydrateProfile = async () => {
+                const currentUser = initialUser || initialSession?.user;
+                if (currentUser) {
+                    // Even if hydrated, we should still fetch profile/subscription info to be safe and fresh
+                    await refreshProfile(currentUser);
+                }
+                if (isMounted) {
+                    setLoading(false);
+                }
+            };
+            hydrateProfile();
         }
 
         // Listen for auth changes

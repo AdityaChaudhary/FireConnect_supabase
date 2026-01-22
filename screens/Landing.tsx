@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import type { MetaFunction } from 'react-router';
+import type { MetaFunction, LoaderFunctionArgs } from 'react-router';
 import { useAuth } from '../context/AuthContext';
+import { useLoaderData } from 'react-router';
+import { createSupabaseServerClient } from '../lib/supabase.server';
 
 export const meta: MetaFunction = () => {
     return [
@@ -11,6 +13,26 @@ export const meta: MetaFunction = () => {
         { property: "og:type", content: "website" },
     ];
 };
+
+export async function loader({ request }: LoaderFunctionArgs) {
+    const { supabase: supabaseServer } = createSupabaseServerClient(request);
+    
+    // Fetch plans and AI users in parallel for SSR
+    const [products, aiUsersRes] = await Promise.all([
+        getStripeProducts(supabaseServer),
+        supabaseServer
+            .from('users')
+            .select('*, user_online_status(*)')
+            .eq('user_type', 'AI')
+            .order('created_at', { ascending: false })
+            .limit(20)
+    ]);
+
+    return {
+        initialProducts: products || [],
+        initialAiUsers: aiUsersRes.data || []
+    };
+}
 import { supabase } from '../lib/supabase.client';
 import { getStripeProducts, fetchWithRetry } from '../lib/stripe-utils';
 import { PLAN_THEMES, PLAN_DESCRIPTIONS, PLAN_FEATURES } from '../config/plans';
@@ -31,6 +53,63 @@ interface Plan {
 
 const Landing: React.FC = () => {
     const { signInWithGoogle } = useAuth();
+    const loaderData = useLoaderData<typeof loader>();
+
+    const mapPlans = (products: any[]) => {
+        const activePlans = products.filter(p => !p.name.includes('Spy Credits'));
+        return activePlans.map((product: any) => {
+            const metadata = product.metadata || {};
+            const role = (metadata.role || product.name || 'PRO').toUpperCase();
+
+            let themeKey = 'PRO';
+            if (role.includes('MAX')) themeKey = 'MAX';
+            else if (role.includes('PRO')) themeKey = 'PRO';
+            else if (role.includes('LITE') || role.includes('FREE')) themeKey = 'FREE';
+
+            const theme = PLAN_THEMES[themeKey] || PLAN_THEMES.PRO;
+
+            const unitAmount = product.price_amount;
+            const currency = product.price_currency || 'USD';
+            const interval = product.interval;
+
+            const formattedPrice = unitAmount
+                ? (unitAmount / 100).toLocaleString('en-US', {
+                    style: 'currency',
+                    currency: currency.toUpperCase(),
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 2
+                })
+                : '$0';
+
+            const period = interval ? `/ ${interval === 'month' ? 'mo' : interval}` : '';
+
+            let features = PLAN_FEATURES[themeKey] || [];
+            if (metadata.features) {
+                try {
+                    const featuresList = (metadata.features as string).split(',').filter(f => f.trim().length > 0);
+                    features = featuresList.map(f => ({
+                        text: f.trim(),
+                        included: true
+                    }));
+                } catch (e) {
+                    console.warn('Failed to parse plan features', e);
+                }
+            }
+
+            return {
+                id: themeKey,
+                name: product.name,
+                price: formattedPrice,
+                period: period,
+                description: product.description || PLAN_DESCRIPTIONS[themeKey] || '',
+                features: features,
+                ...theme
+            };
+        }).sort((a: any, b: any) => {
+            const order = { 'FREE': 0, 'PRO': 1, 'MAX': 2 };
+            return (order[a.id as keyof typeof order] || 0) - (order[b.id as keyof typeof order] || 0);
+        });
+    };
 
     const handleAuth = async (intent?: string | { type: string, id?: string } | React.MouseEvent) => {
         try {
@@ -45,11 +124,30 @@ const Landing: React.FC = () => {
         }
     };
 
-    const [plans, setPlans] = useState<Plan[]>([]);
-    const [loadingProducts, setLoadingProducts] = useState(true);
-    const [aiUsers, setAiUsers] = useState<any[]>([]);
-    const [loadingAIUsers, setLoadingAIUsers] = useState(true);
+    const initialPlans = mapPlans((loaderData.initialProducts || []) as any[]);
+    
+    // Shuffle initial AI users
+    const getShuffledAiUsers = (users: any[]) => {
+        const shuffled = [...(users || [])];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled.slice(0, 10);
+    };
+
+    const [plans, setPlans] = useState<Plan[]>(initialPlans);
+    const [loadingProducts, setLoadingProducts] = useState(initialPlans.length === 0);
+    const [aiUsers, setAiUsers] = useState<any[]>(Math.random() > -1 ? (loaderData.initialAiUsers || []).slice(0, 10) : []); // Hack to avoid TS issues if it thinks it's not array
+    const [loadingAIUsers, setLoadingAIUsers] = useState((loaderData.initialAiUsers || []).length === 0);
     const scrollRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        // Only shuffle on the client after initial hydration
+        if (loaderData.initialAiUsers.length > 0) {
+            setAiUsers(getShuffledAiUsers(loaderData.initialAiUsers));
+        }
+    }, [loaderData.initialAiUsers]);
 
     useEffect(() => {
         const fetchPlans = async () => {
@@ -165,9 +263,13 @@ const Landing: React.FC = () => {
             }
         };
 
-        fetchPlans();
-        fetchAIUsers();
-    }, []);
+        if (initialPlans.length === 0) {
+            fetchPlans();
+        }
+        if (loaderData.initialAiUsers.length === 0) {
+            fetchAIUsers();
+        }
+    }, [loaderData.initialAiUsers, initialPlans.length]);
 
     // Set initial scroll position to middle
     useEffect(() => {
@@ -529,8 +631,8 @@ const Landing: React.FC = () => {
                         </div> */}
                         <div className="flex flex-col gap-4">
                             <h4 className="text-white font-bold uppercase text-sm tracking-wider">Legal</h4>
-                            <a className="text-gray-400 hover:text-fire-pink text-sm transition-colors" href="#/privacy">Privacy Policy</a>
-                            <a className="text-gray-400 hover:text-fire-pink text-sm transition-colors" href="#/terms">Terms</a>
+                            <a className="text-gray-400 hover:text-fire-pink text-sm transition-colors" href="/privacy">Privacy Policy</a>
+                            <a className="text-gray-400 hover:text-fire-pink text-sm transition-colors" href="/terms">Terms</a>
                             {/* <a className="text-gray-400 hover:text-fire-pink text-sm transition-colors" href="#">2257 Exempt</a> */}
                         </div>
                         {/* <div className="flex flex-col gap-4">
