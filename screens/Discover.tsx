@@ -8,12 +8,110 @@ import { useAuth } from '../context/AuthContext';
 import { useDiscoveryUsers, useSpiedUserIds } from '../hooks/useData';
 import { useIntersectionObserver } from '../hooks/useIntersectionObserver';
 import CdnImage from '../components/CdnImage';
+import { useQueryClient } from '@tanstack/react-query';
+import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
 
 
 
 const Discover: React.FC = () => {
     const { user: authUser, profile, stripeRole } = useAuth();
     const { safeNavigate } = useSafeNavigate();
+    const mainRef = React.useRef<HTMLElement>(null);
+
+    // Use a stable seed for randomization during a single session (or until refresh)
+    const [discoverySeed, setDiscoverySeed] = useState(() => {
+        if (typeof window === 'undefined') return Math.random().toString(36).substring(7);
+        
+        const EXPIRE_TIME = 15 * 60 * 1000; // 15 minutes
+        const now = Date.now();
+        const savedData = sessionStorage.getItem('discovery_seed_data');
+        
+        if (savedData) {
+            try {
+                const { seed, timestamp } = JSON.parse(savedData);
+                if (now - timestamp < EXPIRE_TIME) {
+                    return seed;
+                }
+            } catch (e) {
+                console.error("Error parsing discovery seed data:", e);
+            }
+        }
+        
+        const newSeed = Math.random().toString(36).substring(7);
+        sessionStorage.setItem('discovery_seed_data', JSON.stringify({
+            seed: newSeed,
+            timestamp: now
+        }));
+        return newSeed;
+    });
+
+    const queryClient = useQueryClient();
+
+    const handleRefresh = async () => {
+        const newSeed = Math.random().toString(36).substring(7);
+        sessionStorage.setItem('discovery_seed_data', JSON.stringify({
+            seed: newSeed,
+            timestamp: Date.now()
+        }));
+        setDiscoverySeed(newSeed);
+        // Reset scroll position on refresh
+        localStorage.removeItem(scrollKey);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Invalidate queries to fetch fresh data
+        await queryClient.invalidateQueries({ queryKey: ['discovery-users'] });
+    };
+
+    // Pull to Refresh Logic
+    const pullY = useMotionValue(0);
+    const pullOpacity = useTransform(pullY, [0, 40, 80], [0, 0.5, 1]);
+    const pullScale = useTransform(pullY, [0, 80], [0.6, 1]);
+    const pullRotate = useTransform(pullY, [0, 100], [0, 360]);
+    const [isPulling, setIsPulling] = useState(false);
+    const startY = React.useRef(0);
+    const threshold = 80;
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        const currentScroll = window.innerWidth >= 1024 
+            ? mainRef.current?.scrollTop 
+            : window.scrollY;
+
+        if (currentScroll === 0) {
+            startY.current = e.touches[0].clientY;
+            setIsPulling(true);
+        }
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (!isPulling) return;
+        const currentY = e.touches[0].clientY;
+        const diff = currentY - startY.current;
+
+        if (diff > 0) {
+            // Apply resistance: diff grows slower as it gets larger
+            const resistance = 0.4;
+            const y = diff * resistance;
+            pullY.set(y);
+
+            // Prevent default browser behavior (bouncing/scrolling) when pulling down from top
+            if (y > 5 && e.cancelable) {
+                e.preventDefault();
+            }
+        } else {
+            pullY.set(0);
+            setIsPulling(false);
+        }
+    };
+
+    const handleTouchEnd = () => {
+        if (!isPulling) return;
+        const currentPull = pullY.get();
+        if (currentPull >= threshold) {
+            handleRefresh();
+        }
+        animate(pullY, 0, { type: 'spring', stiffness: 300, damping: 30 });
+        setIsPulling(false);
+    };
+
     const {
         data,
         isLoading: loading,
@@ -21,7 +119,7 @@ const Discover: React.FC = () => {
         isFetchingNextPage,
         fetchNextPage,
         hasNextPage
-    } = useDiscoveryUsers(authUser?.id);
+    } = useDiscoveryUsers(authUser?.id, discoverySeed);
 
     const { data: spiedUserIds = [] } = useSpiedUserIds(authUser?.id);
 
@@ -128,6 +226,17 @@ const Discover: React.FC = () => {
                     <button className="hidden lg:flex size-10 items-center justify-center rounded-full bg-white/5 border border-white/10 text-white/60 hover:text-white transition-all">
                         <Icon type="lucide" name="Filter" size={18} />
                     </button> */}
+                    
+                    <button
+                        onClick={handleRefresh}
+                        className="hidden lg:flex size-10 items-center justify-center rounded-full bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 transition-all group relative"
+                        title="Refresh Feed"
+                    >
+                        <Icon type="lucide" name="RefreshCw" size={18} className={isFetching && !isFetchingNextPage ? 'animate-spin' : ''} />
+                        <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/80 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap border border-white/10 backdrop-blur-sm z-[100]">
+                            Refresh Feed
+                        </div>
+                    </button>
                     <NotificationIcon />
                 </div>
             </header>
@@ -135,7 +244,29 @@ const Discover: React.FC = () => {
             {/* Mobile spacing */}
             <div className="h-4 lg:hidden"></div>
 
-            <main className="flex-1 lg:overflow-y-auto lg:hide-scrollbar">
+            <main
+                ref={mainRef}
+                className="flex-1 lg:overflow-y-auto lg:hide-scrollbar relative"
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+            >
+                {/* Pull to Refresh Indicator */}
+                <motion.div
+                    style={{
+                        y: pullY,
+                        opacity: pullOpacity,
+                        scale: pullScale,
+                    }}
+                    className="absolute top-0 left-0 right-0 h-20 flex items-center justify-center pointer-events-none z-[100]"
+                >
+                    <div className="bg-primary/20 backdrop-blur-md border border-primary/30 p-2 rounded-full shadow-lg">
+                        <motion.div style={{ rotate: pullRotate }}>
+                            <Icon type="lucide" name="RefreshCw" size={24} className="text-primary" />
+                        </motion.div>
+                    </div>
+                </motion.div>
+
                 <section className="flex flex-col gap-8 pb-24 px-4 lg:px-6 lg:pb-12 lg:max-w-4xl lg:mx-auto lg:pt-4">
                     {users.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-20 text-white/50">

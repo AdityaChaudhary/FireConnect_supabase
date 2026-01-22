@@ -4,43 +4,32 @@ import { supabase } from '../lib/supabase.client';
 
 /**
  * Hook to fetch users for the discovery feed.
- * Shuffles them on the client side for variety.
+ * Uses a seed-based randomization via RPC to preserve stable pagination.
  */
-export const useDiscoveryUsers = (userId?: string) => {
+export const useDiscoveryUsers = (userId?: string, seed?: string) => {
     const PAGE_SIZE = 10;
 
     return useInfiniteQuery({
-        queryKey: ['discovery-users', userId],
+        queryKey: ['discovery-users', userId, seed],
         queryFn: async ({ pageParam = 0 }) => {
-            const { data: users, error } = await supabase
-                .from('users')
-                .select(`
-                    *,
-                    user_online_status (last_seen_at),
-                    profile_images (*)
-                `)
-                .neq('id', userId)
-                .order('created_at', { ascending: true })
-                .range(pageParam, pageParam + PAGE_SIZE - 1);
+            if (!seed) return [];
+
+            const { data: users, error } = await supabase.rpc('get_discovery_users', {
+                p_user_id: userId,
+                p_seed: seed,
+                p_offset: pageParam,
+                p_limit: PAGE_SIZE
+            });
 
             if (error) {
-                console.error("useDiscoveryUsers: Supabase error:", error);
+                console.error("useDiscoveryUsers: Supabase RPC error:", error);
                 throw error;
             }
-            const fetchedUsers = users || [];
-            console.log("useDiscoveryUsers: Fetched", fetchedUsers.length, "users");
+            
+            const fetchedUsers = (users as any[]) || [];
+            console.log("useDiscoveryUsers: Fetched", fetchedUsers.length, "users with seed", seed);
 
-            // Sort profile images for each user
-            const usersWithSortedImages = fetchedUsers.map(user => ({
-                ...user,
-                profile_images: (user.profile_images || []).sort((a: any, b: any) => {
-                    if (a.is_profile) return -1;
-                    if (b.is_profile) return 1;
-                    return (a.display_order || 0) - (b.display_order || 0);
-                })
-            }));
-
-            return usersWithSortedImages;
+            return fetchedUsers;
         },
         initialPageParam: 0,
         getNextPageParam: (lastPage, allPages) => {
@@ -48,7 +37,7 @@ export const useDiscoveryUsers = (userId?: string) => {
             return allPages.length * PAGE_SIZE;
         },
         staleTime: 5 * 60 * 1000,
-        enabled: !!userId,
+        enabled: !!userId && !!seed,
     });
 };
 

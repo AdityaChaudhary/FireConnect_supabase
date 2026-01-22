@@ -4,9 +4,18 @@ import { join } from 'path';
 import 'dotenv/config';
 
 const DATABASE_URL = process.env.SUPABASE_DB_URL || 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
-const MIGRATION_FILE = 'supabase/migrations/20260120000000_setup_ai_engine_cron.sql';
+//const MIGRATION_FILE = 'supabase/migrations/20260120000000_setup_ai_engine_cron.sql';
 
 async function main() {
+    const args = process.argv.slice(2);
+    const MIGRATION_FILE = args[0];
+
+    if(!MIGRATION_FILE) {
+        console.error("❌ Error: No migration file specified.");
+        console.error("Usage: npx tsx scripts/apply_local_migration.ts <migration_file_path>");
+        process.exit(1);
+    }
+
     console.log("🛠️ Applying migration:", MIGRATION_FILE);
 
     const client = new Client({
