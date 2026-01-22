@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { MetaFunction } from "react-router";
 import { useLoaderData } from 'react-router';
 import { useSafeNavigate } from '../hooks/useSafeNavigate';
@@ -43,6 +43,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 const Settings: React.FC = () => {
     const { logout, stripeRole, profile } = useAuth();
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
     const loaderData = useLoaderData<typeof loader>();
     const { safeNavigate, safeBack } = useSafeNavigate();
 
@@ -189,13 +190,34 @@ const Settings: React.FC = () => {
                 {/* Sign Out Button */}
                 <button
                     onClick={async () => {
-                        await logout();
-                        safeNavigate('/');
+                        if (isLoggingOut) return;
+                        setIsLoggingOut(true);
+                        try {
+                            await logout();
+                            safeNavigate('/');
+                        } catch (error) {
+                            console.error('Logout failed:', error);
+                            setIsLoggingOut(false);
+                        }
                     }}
-                    className="mt-4 flex w-full items-center justify-center rounded-xl bg-red-500/10 hover:bg-red-500/20 active:bg-red-500/30 text-red-400 p-4 border border-red-500/20 transition-colors gap-2"
+                    disabled={isLoggingOut}
+                    className={`mt-4 flex w-full items-center justify-center rounded-xl p-4 border transition-all gap-2 ${
+                        isLoggingOut 
+                        ? "bg-white/5 border-white/10 text-white/30 cursor-not-allowed" 
+                        : "bg-red-500/10 hover:bg-red-500/20 active:bg-red-500/30 text-red-400 border-red-500/20 active:scale-[0.98]"
+                    }`}
                 >
-                    <Icon name="logout" className="text-[20px]" />
-                    <span className="text-sm font-bold">Sign Out</span>
+                    {isLoggingOut ? (
+                        <>
+                            <Icon name="progress_activity" className="text-[20px] animate-spin" />
+                            <span className="text-sm font-bold">Signing Out...</span>
+                        </>
+                    ) : (
+                        <>
+                            <Icon name="logout" className="text-[20px]" />
+                            <span className="text-sm font-bold">Sign Out</span>
+                        </>
+                    )}
                 </button>
 
                 <div className="mt-8 text-center">

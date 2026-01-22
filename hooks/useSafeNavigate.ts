@@ -4,6 +4,7 @@ import { useCallback, useEffect } from 'react';
 // Shared history state across all instances of the hook
 let globalHistory: string[] = [];
 const MAX_HISTORY = 50;
+let sessionStartIdx = -1;
 
 // Load from sessionStorage on module load if available
 if (typeof window !== 'undefined') {
@@ -47,9 +48,15 @@ export const useSafeNavigate = () => {
                 globalHistory.push(currentPath);
                 if (globalHistory.length > MAX_HISTORY) {
                     globalHistory.shift();
+                    if (sessionStartIdx > 0) sessionStartIdx--;
                 }
             }
             saveHistory();
+        }
+
+        // Mark when this session started in the history if not already set
+        if (sessionStartIdx === -1) {
+            sessionStartIdx = globalHistory.length - 1;
         }
     }, [location]);
 
@@ -66,9 +73,13 @@ export const useSafeNavigate = () => {
 
         // 2. Specialized case: If we are going back to the previous page in our history
         // Example: ChatDetail -> ProfilePreview -> ChatDetail (click Message button)
+        // Only use navigate(-1) if we know the previous entry is in our current internal session
         if (targetPathBase === previousPathBase) {
-            navigate(-1);
-            return;
+            const previousIndex = globalHistory.length - 2;
+            if (previousIndex >= sessionStartIdx && sessionStartIdx !== -1) {
+                navigate(-1);
+                return;
+            }
         }
 
         // 3. Prevent duplicate ProfilePreview in history
@@ -81,12 +92,16 @@ export const useSafeNavigate = () => {
     }, [navigate, location.pathname]);
 
     const safeBack = useCallback((fallback: string = '/') => {
-        // If we have local app history, go back
-        if (globalHistory.length > 1) {
+        const previousIndex = globalHistory.length - 2;
+
+        // If we have local app history from this session, go back
+        if (previousIndex >= sessionStartIdx && sessionStartIdx !== -1) {
             navigate(-1);
         } else {
-            // If no history (e.g. fresh landing), go to fallback
-            navigate(fallback, { replace: true });
+            // If no history in this session, or interrupted by external redirect,
+            // navigate forward to the previous perceived path (if it exists) instead of browser-back
+            const target = previousIndex >= 0 ? globalHistory[previousIndex] : fallback;
+            navigate(target, { replace: true });
         }
     }, [navigate]);
 

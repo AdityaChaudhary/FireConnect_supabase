@@ -22,6 +22,7 @@ const Onboarding: React.FC = () => {
     const [suggestions, setSuggestions] = useState<any[]>([]);
     const [acceptedTerms, setAcceptedTerms] = useState(false);
     const [showSuggestions, setShowSuggestions] = useState(false);
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
 
     // Avatar state
     const [avatarSeed, setAvatarSeed] = useState(Math.random().toString(36).substring(7));
@@ -260,13 +261,30 @@ const Onboarding: React.FC = () => {
             <div className="absolute top-6 right-6 z-20">
                 <button
                     onClick={async () => {
-                        await logout();
-                        navigate('/');
+                        if (isLoggingOut) return;
+                        setIsLoggingOut(true);
+                        try {
+                            await logout();
+                            navigate('/');
+                        } catch (error) {
+                            console.error('Logout failed:', error);
+                            setIsLoggingOut(false);
+                        }
                     }}
-                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-surface-dark/40 hover:bg-surface-dark/60 border border-white/5 backdrop-blur-md text-white/70 hover:text-white transition-all active:scale-95 group"
+                    disabled={isLoggingOut}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full border backdrop-blur-md transition-all active:scale-95 group ${
+                        isLoggingOut 
+                        ? "bg-white/5 border-white/5 text-white/20 cursor-not-allowed" 
+                        : "bg-surface-dark/40 hover:bg-surface-dark/60 border-white/5 text-white/70 hover:text-white"
+                    }`}
                 >
-                    <Icon name="logout" className="text-[18px] group-hover:text-red-400 transition-colors" />
-                    <span className="text-xs font-bold tracking-wide uppercase">Sign Out</span>
+                    <Icon 
+                        name={isLoggingOut ? "progress_activity" : "logout"} 
+                        className={`text-[18px] ${isLoggingOut ? "animate-spin" : "group-hover:text-red-400 transition-colors"}`} 
+                    />
+                    <span className="text-xs font-bold tracking-wide uppercase">
+                        {isLoggingOut ? "Signing Out..." : "Sign Out"}
+                    </span>
                 </button>
             </div>
 

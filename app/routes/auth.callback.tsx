@@ -13,6 +13,14 @@ export async function loader({ request }: Route.LoaderArgs) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     
     if (!error) {
+      // Deterministically wait for the session cookies to be set in headers
+      // This addresses the race condition without arbitrary timeouts
+      let retries = 10;
+      while (retries > 0 && !responseHeaders.has("Set-Cookie")) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+        retries--;
+      }
+
       return redirect(next, {
         headers: responseHeaders,
       });

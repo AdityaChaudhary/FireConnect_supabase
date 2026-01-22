@@ -40,9 +40,9 @@ export const startStripeCheckout = async (priceId: string, mode: 'payment' | 'su
     console.log('Starting checkout for priceId: ', priceId);
 
     if (mode === 'subscription') {
-        successPath = `/#/welcome?plan=${options?.planId || 'PRO'}&session_id={CHECKOUT_SESSION_ID}`;
+        successPath = `/welcome?plan=${options?.planId || 'PRO'}&session_id={CHECKOUT_SESSION_ID}`;
     } else {
-        successPath = `/#/credits-welcome?credits=${options?.credits || 0}&oldBalance=${options?.oldBalance || 0}&session_id={CHECKOUT_SESSION_ID}`;
+        successPath = `/credits-welcome?credits=${options?.credits || 0}&oldBalance=${options?.oldBalance || 0}&session_id={CHECKOUT_SESSION_ID}`;
     }
 
     // Call Edge Function to create checkout session
@@ -51,7 +51,7 @@ export const startStripeCheckout = async (priceId: string, mode: 'payment' | 'su
             priceId,
             mode,
             successUrl: window.location.origin + successPath,
-            cancelUrl: window.location.origin + "/#/subscription",
+            cancelUrl: window.location.origin + "/subscription",
         }
     });
 
