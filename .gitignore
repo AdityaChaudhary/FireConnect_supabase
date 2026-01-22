@@ -42,3 +42,5 @@ scripts/bucket_local/
 .env.network
 
 supabase/.temp/
+
+.vercel
