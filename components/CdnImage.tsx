@@ -81,7 +81,7 @@ const CdnImage: React.FC<CdnImageProps> = ({
     }
 
     return (
-        <div className="relative h-full w-full">
+        <div className="relative h-full w-full flex items-center justify-center">
             <img
                 src={displayUrl || placeholder}
                 alt={alt}

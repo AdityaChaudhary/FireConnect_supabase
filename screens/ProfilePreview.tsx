@@ -411,9 +411,9 @@ const ProfilePreview: React.FC = () => {
                 </div>
             </header>
 
-            <main className="flex-1 flex flex-col items-center lg:flex-row lg:items-start lg:h-[calc(100vh-64px)] w-full max-w-7xl mx-auto overflow-hidden">
+            <main className="flex-1 flex flex-col items-center lg:flex-row lg:items-start lg:h-[calc(100vh-64px)] w-full max-w-7xl mx-auto lg:overflow-hidden pb-40 lg:pb-0">
                 {/* Left Column: Media Vault (Responsive) */}
-                <div className="flex-1 w-full lg:h-full lg:overflow-y-auto lg:hide-scrollbar p-4 lg:p-8">
+                <div className="flex-1 w-full lg:h-full lg:overflow-y-auto lg:hide-scrollbar p-4 lg:p-8 order-2 lg:order-1">
                     <div className="flex flex-col gap-6 w-full max-w-2xl mx-auto">
                         {/* Shared Media Header (Desktop only inside column) */}
                         <div className="flex items-center justify-between w-full">
@@ -501,7 +501,7 @@ const ProfilePreview: React.FC = () => {
                 </div>
 
                 {/* Right Column: User Info & Actions (Sticky on Desktop) */}
-                <div className="w-full lg:w-[450px] lg:h-full lg:overflow-y-auto lg:hide-scrollbar lg:border-l lg:border-white/5 bg-background-dark/50 backdrop-blur-sm p-6 lg:p-10 flex flex-col gap-8 pb-32 lg:pb-10">
+                <div className="w-full lg:w-[450px] lg:h-full lg:overflow-y-auto lg:hide-scrollbar lg:border-l lg:border-white/5 bg-background-dark/50 backdrop-blur-sm p-6 lg:p-10 flex flex-col gap-8 pb-10 order-1 lg:order-2">
                     <div className="flex flex-col items-center lg:items-start gap-6">
                         {/* Avatar */}
                         <div className="relative group">
@@ -582,9 +582,9 @@ const ProfilePreview: React.FC = () => {
                             </div>
                         )}
 
-                        {/* Actions (Floating on Mobile, Fixed Bottom on Desktop Column) */}
-                        <div className="fixed bottom-6 lg:relative lg:bottom-0 left-0 right-0 px-6 lg:px-0 w-full z-30 lg:mt-6">
-                            <div className="max-w-md mx-auto lg:max-w-none flex flex-col gap-3">
+                        {/* Actions (Desktop only) */}
+                        <div className="hidden lg:flex w-full mt-6">
+                            <div className="w-full flex flex-col gap-3">
                                 {isOwner ? (
                                     <button
                                         onClick={() => safeNavigate('/profile/edit')}
@@ -667,6 +667,92 @@ const ProfilePreview: React.FC = () => {
                                 )}
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                {/* Actions (Mobile only, fixed at bottom) */}
+                <div className="lg:hidden fixed bottom-0 left-0 right-0 z-[50] px-6 pb-8 pt-12 bg-gradient-to-t from-background-dark via-background-dark/95 to-transparent backdrop-blur-[2px]">
+                    <div className="max-w-md mx-auto">
+                    {isOwner ? (
+                        <button
+                            onClick={() => safeNavigate('/profile/edit')}
+                            className="h-16 w-full rounded-2xl bg-primary shadow-xl shadow-primary/30 flex items-center justify-center gap-3 font-black text-sm uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all text-white btn-glow"
+                        >
+                            <Icon name="edit" className="text-xl" />
+                            Edit Profile
+                        </button>
+                    ) : (
+                        <div className="flex gap-3">
+                            <AnimatePresence mode="wait">
+                                {connectionStatus !== 'CONNECTED' && (
+                                    <div className="flex-1 flex flex-col gap-3">
+                                        {incomingStatus === 'PENDING' ? (
+                                            <motion.button
+                                                key="accept"
+                                                initial={{ opacity: 0, scale: 0.9 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                exit={{ opacity: 0, scale: 0.9 }}
+                                                onClick={handleAcceptRequest}
+                                                disabled={requesting}
+                                                className="h-16 w-full rounded-2xl bg-primary shadow-xl shadow-primary/30 flex items-center justify-center gap-3 font-black text-sm uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all text-white btn-glow"
+                                            >
+                                                <Icon name="person_add" className="text-xl" />
+                                                {requesting ? 'Processing...' : 'Accept Request'}
+                                            </motion.button>
+                                        ) : connectionStatus === 'PENDING' ? (
+                                            <motion.button
+                                                key="pending"
+                                                initial={{ opacity: 0, scale: 0.9 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                exit={{ opacity: 0, scale: 0.9 }}
+                                                onClick={handleCancelRequest}
+                                                disabled={requesting}
+                                                className="h-16 w-full rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 flex items-center justify-center gap-3 font-black text-sm uppercase tracking-widest text-white/40 active:scale-95 transition-all"
+                                            >
+                                                <Icon name="hourglass_empty" className="text-xl animate-pulse" />
+                                                {requesting ? 'Cancelling...' : 'Request Sent'}
+                                            </motion.button>
+                                        ) : (
+                                            <motion.button
+                                                key="send"
+                                                initial={{ opacity: 0, scale: 0.9 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                exit={{ opacity: 0, scale: 0.9 }}
+                                                onClick={handleSendRequest}
+                                                disabled={requesting}
+                                                className="h-16 w-full rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 hover:border-primary/40 hover:bg-primary/10 flex items-center justify-center gap-3 font-black text-sm uppercase tracking-widest text-white hover:text-primary transition-all active:scale-95 group"
+                                            >
+                                                <Icon name="person_add" className="text-xl group-hover:scale-110 transition-transform" />
+                                                {requesting ? 'Sending...' : 'Send Request'}
+                                            </motion.button>
+                                        )}
+                                    </div>
+                                )}
+                            </AnimatePresence>
+
+                            {(amIMax || (amIPro && connectionStatus === 'CONNECTED') || (!amIMax && !amIPro && user?.user_type === 'HUMAN') || user?.user_type === 'AI' || hasReceivedMessage) && (
+                                <button
+                                    onClick={() => safeNavigate(`/chat/${user.id}`, {
+                                        state: {
+                                            user: {
+                                                name: user.display_name,
+                                                avatar: avatarUrl,
+                                                userType: user.user_type,
+                                                isTheyMax: isTheyMax
+                                            }
+                                        }
+                                    })}
+                                    className={`h-16 rounded-2xl flex items-center justify-center gap-3 font-black text-sm uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-95 ${connectionStatus === 'CONNECTED'
+                                        ? 'w-full bg-primary shadow-xl shadow-primary/30 text-white btn-glow'
+                                        : 'flex-1 bg-white/5 backdrop-blur-xl border border-white/10 text-white'
+                                        }`}
+                                >
+                                    <Icon name="chat_bubble" className="text-xl" filled />
+                                    Message
+                                </button>
+                            )}
+                        </div>
+                    )}
                     </div>
                 </div>
             </main>

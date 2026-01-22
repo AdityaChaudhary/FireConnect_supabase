@@ -9,7 +9,7 @@
     "start": "react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc",
     "lint": "eslint .",
-    "generate-personas": "tsx scripts/generate_ai_personas.ts",
+    "generate-personas": "env-cmd -f .env.local tsx scripts/generate_ai_personas.ts",
     "sync-personas": "env-cmd -f .env.local tsx scripts/sync_ai_personas.ts",
     "sync-personas:prod": "env-cmd -f .env tsx scripts/sync_ai_personas.ts",
     "vault:prod": "env-cmd -f .env tsx scripts/set_prod_vault_secrets.ts"
