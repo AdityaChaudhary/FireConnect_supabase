@@ -100,3 +100,25 @@ gracefully.
 [ ] - On login, website flickers, and shows registration page as well for a
 split second. It also takes user back to landing page, and re-navigates back to
 /.
+
+[ ] - For SEO optimization, change the / to landing and /discover to /discover,
+so that screenshots of the / page don't show loading screens
+
+[ ] - Add alternative / comparitive blog pages for SEO and easy search
+
+[ ] - To ensure that Search Engines can accurately identify the topic of this
+webpage, it is important to include the most common keywords in the title tag,
+meta description, and heading tags (from
+https://seositecheckup.com/seo-audit/fireconnect.me)
+
+[ ] - On Login the app flickers between /, onboarding, landing, and then / [ ] -
+On mobile discover card, add gesture to hold and view image in full screen (
+until hold) [ ] - On Profile media should show a loading icon if not loaded yet
+[ ] - In explore show spy list (4-5 width of screen), with button at the end to
+see all and navigate to the spy list page [ ] - Add beta icon on the app logo [
+] - Discover card images should show a loading spinner or just text while images
+are being fetched [ ] - Fix the navigation buttons in the app, with history
+removal of duplicate, and back button should not take user back to sign in page
+of Google or otherwise. It should only navigate within the app [ ] - Free user
+that has viewed someone sees loading on the hidden image [ ] - Max users spy
+list [ ] - App analytics [ ] - Stripe production release
