@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -29,6 +29,9 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
     const [notification, setNotification] = useState<string | null>(null);
     const [currentTime, setCurrentTime] = useState(Date.now());
     const [isSpying, setIsSpying] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(false);
+    const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const isDraggingRef = useRef(false);
 
     const { targetRef, hasBeenInView } = useIntersectionObserver({
         rootMargin: '1200px', // Fetch images for the next 2-3 profiles in advance
@@ -197,13 +200,50 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
         }
     };
 
-    const handleDragEnd = (_e: any, info: any) => {
+    const handleDragStart = () => {
+        isDraggingRef.current = true;
+        if (longPressTimerRef.current) {
+            clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+        }
+    };
+
+    const handleDragEnd = (_: any, info: any) => {
+        isDraggingRef.current = false;
         const swipeThreshold = 50;
         if (info.offset.x < -swipeThreshold && currentImageIndex < images.length - 1) {
             setCurrentImageIndex(prev => prev + 1);
         } else if (info.offset.x > swipeThreshold && currentImageIndex > 0) {
             setCurrentImageIndex(prev => prev - 1);
         }
+    };
+
+    const handlePointerDown = (_: React.PointerEvent) => {
+        if (isDraggingRef.current) return;
+        
+        // Prevent default long press behavior on mobile
+        longPressTimerRef.current = setTimeout(() => {
+            setIsFullscreen(true);
+            if (window.navigator.vibrate) {
+                window.navigator.vibrate(50); // Haptic feedback
+            }
+        }, 500); // 500ms for long press
+    };
+
+    const handlePointerUp = () => {
+        if (longPressTimerRef.current) {
+            clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+        }
+        setIsFullscreen(false);
+    };
+
+    const handlePointerCancel = () => {
+        if (longPressTimerRef.current) {
+            clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+        }
+        setIsFullscreen(false);
     };
 
     const getOnlineStatus = () => {
@@ -231,8 +271,14 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
             ref={targetRef}
             drag="x"
             dragConstraints={{ left: 0, right: 0 }}
+            onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
-            className="flex flex-col bg-surface-dark rounded-[32px] mx-4 overflow-hidden shadow-2xl relative aspect-[3/4.2] cursor-grab active:cursor-grabbing"
+            onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerCancel}
+            onPointerLeave={handlePointerUp}
+            className="flex flex-col bg-surface-dark rounded-[32px] mx-4 overflow-hidden shadow-2xl relative aspect-[3/4.2] cursor-grab active:cursor-grabbing select-none"
+            onContextMenu={(e) => e.preventDefault()}
         >
             {/* Loading State / Empty Card Placeholder */}
             <AnimatePresence>
@@ -259,7 +305,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
             </AnimatePresence>
 
             {/* Main Image Swipe Area */}
-            <div className="absolute inset-0 z-0 group/card">
+            <div className="absolute inset-0 z-10 group/card">
                 <div
                     className="flex h-full transition-transform duration-500 ease-out"
                     style={{ transform: `translateX(-${currentImageIndex * 100}%)` }}
@@ -295,8 +341,9 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
                                 )}
                                 {showImgSpyMode && (
                                     <div
-                                        className="absolute inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center cursor-pointer z-20"
+                                        className="absolute inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center cursor-pointer z-40"
                                         onClick={handleSpyClick}
+                                        onPointerDown={(e) => e.stopPropagation()}
                                     >
                                         <div className="text-center p-6">
                                             <div className="size-16 rounded-full bg-white/10 flex items-center justify-center mx-auto mb-4 border border-white/20 transition-transform active:scale-90 relative">
@@ -339,6 +386,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
                 <div
                     className="absolute inset-y-0 left-0 w-1/4 z-30 flex items-center justify-start pl-4 cursor-pointer"
                     onClick={handlePrevImage}
+                    onPointerDown={(e) => e.stopPropagation()}
                 >
                     <div className="flex size-10 rounded-full bg-black/20 backdrop-blur-md border border-white/10 items-center justify-center text-white opacity-0 group-hover/card:opacity-100 transition-opacity">
                         <Icon name="chevron_left" />
@@ -347,11 +395,13 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
                 <div
                     className="absolute inset-y-0 right-0 w-1/4 z-30 flex items-center justify-end pr-4 cursor-pointer"
                     onClick={handleNextImage}
+                    onPointerDown={(e) => e.stopPropagation()}
                 >
                     <div className="flex size-10 rounded-full bg-black/20 backdrop-blur-md border border-white/10 items-center justify-center text-white opacity-0 group-hover/card:opacity-100 transition-opacity">
                         <Icon name="chevron_right" />
                     </div>
                 </div>
+
             </div>
 
             {/* Gradient Overlay */}
@@ -499,6 +549,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
                 <div className="flex items-center justify-between gap-3 pt-2">
                     <button
                         onClick={(e) => { e.stopPropagation(); navigate(`/profile/${user.id}`); }}
+                        onPointerDown={(e) => e.stopPropagation()}
                         className="size-14 shrink-0 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all active:scale-90"
                     >
                         <Icon name="star_rate" className="text-2xl" filled />
@@ -508,6 +559,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
                     {images.some(img => img.visibility === 'PRIVATE') && (
                         <button
                             onClick={handleSpyClick}
+                            onPointerDown={(e) => e.stopPropagation()}
                             disabled={isSpying}
                             className={`size-14 shrink-0 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center transition-all active:scale-90 disabled:opacity-50 relative ${isSpied ? 'text-primary border-primary/20 bg-primary/5' : 'text-white/40 hover:text-white hover:bg-white/10'}`}
                         >
@@ -528,6 +580,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
 
                     <button
                         onClick={(e) => { e.stopPropagation(); navigate(`/chat/${user.id}`); }}
+                        onPointerDown={(e) => e.stopPropagation()}
                         className="flex-1 h-14 rounded-full bg-white/10 backdrop-blur-md border border-white/10 flex items-center justify-center gap-2 text-white hover:bg-white/20 transition-all active:scale-95"
                     >
                         <Icon name="favorite" className="text-xl text-primary" filled />
@@ -535,6 +588,46 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
                     </button>
                 </div>
             </div>
+            {/* Full Screen Image Overlay */}
+            <AnimatePresence>
+                {isFullscreen && images.length > 0 && viewableUrls[currentImageIndex] && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-2xl p-4 touch-none"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20, opacity: 0 }}
+                            animate={{ scale: 1, y: 0, opacity: 1 }}
+                            exit={{ scale: 0.9, y: 20, opacity: 0 }}
+                            transition={{ 
+                                type: "spring", 
+                                stiffness: 350, 
+                                damping: 25,
+                                mass: 0.8
+                            }}
+                            className="relative w-full max-w-lg aspect-[3/4.5] rounded-[40px] overflow-hidden shadow-[0_32px_128px_rgba(0,0,0,0.8)] border border-white/10"
+                        >
+                            <div
+                                className="absolute inset-0 bg-cover bg-center"
+                                style={{ backgroundImage: `url("${viewableUrls[currentImageIndex]}")` }}
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                            
+                            <motion.div 
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.2 }}
+                                className="absolute bottom-10 left-0 right-0 flex flex-col items-center gap-3"
+                            >
+                                <p className="text-white/40 text-[9px] font-bold uppercase tracking-widest animate-pulse">Release to close</p>
+                            </motion.div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </motion.article>
     );
 };
