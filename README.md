@@ -96,3 +96,7 @@ refresh.
 
 [ ] - The simultaneous connections from U1 and U2 to each other aren't handled
 gracefully.
+
+[ ] - On login, website flickers, and shows registration page as well for a
+split second. It also takes user back to landing page, and re-navigates back to
+/.

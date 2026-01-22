@@ -1,8 +1,16 @@
 import React, { useState, useMemo } from 'react';
+import type { MetaFunction } from "react-router";
 import { useNavigate } from 'react-router';
 import Icon from '../components/Icon';
 import NotificationIcon from '../components/NotificationIcon';
 import { useAuth } from '../context/AuthContext';
+
+export const meta: MetaFunction = () => {
+    return [
+        { title: "Explore Matches | FireConnect" },
+        { name: "description", content: "View your latest matches and connections on FireConnect." },
+    ];
+};
 import { useConnections } from '../hooks/useData';
 import CdnImage from '../components/CdnImage';
 import { getDefaultAvatar } from '../lib/image-utils';

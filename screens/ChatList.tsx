@@ -1,9 +1,17 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import type { MetaFunction } from "react-router";
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import Icon from '../components/Icon';
 import NotificationIcon from '../components/NotificationIcon';
 import { useAuth } from '../context/AuthContext';
+
+export const meta: MetaFunction = () => {
+    return [
+        { title: "Messages | FireConnect" },
+        { name: "description", content: "Stay connected with your matches and start private intimate conversations." },
+    ];
+};
 import { useConnections, useThreads } from '../hooks/useData';
 import CdnImage from '../components/CdnImage';
 import { getDefaultAvatar } from '../lib/image-utils';

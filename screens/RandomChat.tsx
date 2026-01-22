@@ -1,8 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
+import type { MetaFunction } from "react-router";
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import Icon from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
+
+export const meta: MetaFunction = () => {
+    return [
+        { title: "Random Intimate Chat | FireConnect" },
+        { name: "description", content: "Match with strangers instantly and start private intimate conversations." },
+    ];
+};
 import { supabase } from '../lib/supabase.client';
 import CdnImage from '../components/CdnImage';
 import UpgradeModal from '../components/UpgradeModal';

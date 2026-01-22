@@ -8,7 +8,18 @@ import {
   isRouteErrorResponse,
 } from "react-router";
 import type { Route } from "./+types/root";
+import type { MetaFunction } from "react-router";
 import { createSupabaseServerClient } from "../lib/supabase.server";
+
+export const meta: MetaFunction = () => {
+  return [
+    { title: "FireConnect - Ignite Intimate Connections" },
+    { name: "description", content: "The most exclusive network for verified adults. Experience online initimacy, privacy, and uninhibited connection. Chat with strangers, share intimate stuff." },
+    { property: "og:title", content: "FireConnect" },
+    { property: "og:description", content: "Experience online intimacy, privacy, and uninhibited connection. Chat with strangers, share intimate stuff." },
+    { property: "og:type", content: "website" },
+  ];
+};
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import OnlineStatusTracker from "../components/OnlineStatusTracker";
