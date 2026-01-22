@@ -328,7 +328,7 @@ const Landing: React.FC<LandingProps> = ({ initialProducts = [], initialAiUsers 
                         </div>
                         <h1 className="text-white text-6xl md:text-8xl font-black leading-[0.95] tracking-tighter drop-shadow-2xl">
                             Ignite Intimate <br />
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-neon-purple via-white to-fire-pink text-glow">Connections</span>
+                            <span className="inline-block text-transparent bg-clip-text bg-gradient-to-r from-neon-purple via-white to-fire-pink text-glow px-2">Connections</span>
                         </h1>
                         <p className="text-gray-400 text-lg md:text-2xl font-light max-w-3xl leading-relaxed mt-4">
                             Enter a world of luxury, privacy, and uninhibited connection. The most exclusive network for verified adults.
