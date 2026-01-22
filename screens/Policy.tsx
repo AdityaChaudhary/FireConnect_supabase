@@ -131,44 +131,73 @@ const Policy: React.FC = () => {
     const activeSections = isPrivacy ? privacySections : termsSections;
 
     return (
-        <div className="flex min-h-screen w-full flex-col bg-background-dark text-white pb-12">
+        <div className="min-h-screen w-full bg-background-dark font-display antialiased relative overflow-hidden flex flex-col">
+            {/* Background Decorations */}
+            <div className="absolute top-[10%] -right-20 w-[600px] h-[600px] bg-primary/5 blur-[120px] rounded-full pointer-events-none"></div>
+            <div className="absolute bottom-[10%] -left-20 w-[600px] h-[600px] bg-purple-500/5 blur-[120px] rounded-full pointer-events-none"></div>
+
             {/* Header */}
-            <header className="sticky top-0 z-20 flex w-full items-center gap-4 bg-background-dark/80 px-4 py-3 backdrop-blur-md border-b border-white/5">
-                <button
-                    onClick={() => navigate(-1)}
-                    className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-dark text-white hover:bg-white/10 active:scale-95 transition-all"
-                >
-                    <Icon name="arrow_back" />
-                </button>
-                <div className="flex flex-col">
-                    <span className="text-lg font-bold tracking-tight">{title}</span>
-                    <span className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Last Updated: {lastUpdated}</span>
+            <header className="sticky top-0 z-50 w-full bg-background-dark/80 backdrop-blur-xl border-b border-white/5">
+                <div className="max-w-7xl mx-auto px-6 h-24 flex items-center justify-between">
+                    <div className="flex items-center gap-6">
+                        <button
+                            onClick={() => navigate(-1)}
+                            className="size-12 rounded-2xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-all active:scale-95 group"
+                        >
+                            <Icon name="arrow_back" className="text-[28px] group-hover:-translate-x-0.5 transition-transform" />
+                        </button>
+                        <div className="flex flex-col">
+                            <h1 className="text-3xl font-black text-white tracking-tight leading-none mb-1">{title}</h1>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] items-center py-0.5 px-2 bg-primary/10 border border-primary/20 text-primary rounded-full font-black uppercase tracking-widest whitespace-nowrap">
+                                    Last Updated: {lastUpdated}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </header>
 
-            <main className="flex-1 px-5 pt-8 max-w-2xl mx-auto w-full">
-                <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex flex-col gap-10"
-                >
-                    {activeSections.map((section, index) => (
-                        <section key={index} className="flex flex-col gap-3 group">
-                            <h2 className="text-primary font-bold text-lg tracking-tight flex items-center gap-2">
-                                <div className="h-1 w-1 rounded-full bg-primary/40 group-hover:scale-150 transition-transform"></div>
-                                {section.title}
-                            </h2>
-                            <div className="text-white/70 text-sm leading-relaxed font-medium">
-                                {section.content}
-                            </div>
-                        </section>
-                    ))}
+            <main className="flex-1 w-full max-w-4xl mx-auto px-6 py-16 relative z-10">
+                <div className="bg-surface-dark/40 backdrop-blur-xl rounded-[40px] border border-white/10 p-8 lg:p-14 shadow-2xl relative">
+                    <motion.div 
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, ease: "easeOut" }}
+                        className="flex flex-col gap-16"
+                    >
+                        {activeSections.map((section, index) => (
+                            <section key={index} className="flex flex-col lg:flex-row gap-6 lg:gap-12 group">
+                                <div className="lg:w-1/4 shrink-0">
+                                    <h2 className="text-primary font-black text-xs uppercase tracking-[0.25em] sticky top-32">
+                                        {section.title.split('. ')[0]}
+                                    </h2>
+                                </div>
+                                <div className="flex-1 flex flex-col gap-4">
+                                    <h2 className="text-white text-2xl font-black tracking-tight group-hover:text-primary transition-colors duration-300">
+                                        {section.title.split('. ')[1] || section.title}
+                                    </h2>
+                                    <div className="text-white/40 text-[15px] leading-relaxed font-medium group-hover:text-white/60 transition-colors duration-300">
+                                        {section.content}
+                                    </div>
+                                </div>
+                            </section>
+                        ))}
 
-                    <div className="text-center pb-8 mt-12 border-t border-white/5 pt-8">
-                        <p className="text-[10px] text-white/20 font-bold uppercase tracking-[0.2em]">FireConnect Legal • {new Date().getFullYear()}</p>
-                    </div>
-                </motion.div>
+                        <div className="text-center pt-12 border-t border-white/5 opacity-50">
+                            <p className="text-[11px] text-white/30 font-black uppercase tracking-[0.4em] mb-4">FireConnect Legal • {new Date().getFullYear()}</p>
+                            <div className="flex items-center justify-center gap-6">
+                                <div className="size-1.5 rounded-full bg-primary/20"></div>
+                                <div className="size-2 rounded-full bg-primary/40"></div>
+                                <div className="size-1.5 rounded-full bg-primary/20"></div>
+                            </div>
+                        </div>
+                    </motion.div>
+                </div>
             </main>
+
+            {/* Bottom Decor */}
+            <div className="h-20 shrink-0"></div>
         </div>
     );
 };

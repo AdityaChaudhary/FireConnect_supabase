@@ -84,9 +84,10 @@ const Discover: React.FC = () => {
     }
 
     return (
-        <div className="flex flex-col pb-24 min-h-screen bg-background-dark">
-            <header className="sticky top-0 z-50 flex items-center justify-between p-4 bg-background-dark/95 backdrop-blur-md transition-all duration-300 border-b border-white/5">
-                <div className="flex items-center">
+        <div className="flex flex-col min-h-screen bg-background-dark lg:h-screen lg:overflow-hidden lg:pb-0">
+            {/* Header (Desktop: Hidden or integrated into sidebar/top, Mobile: Sticky) */}
+            <header className="sticky top-0 z-50 flex items-center justify-between p-4 bg-background-dark/95 backdrop-blur-md border-b border-white/5 lg:bg-transparent lg:border-none lg:p-6 lg:static">
+                <div className="flex items-center lg:hidden">
                     <div className="relative group cursor-pointer z-0" onClick={() => safeNavigate('/profile')}>
                         <CdnImage
                             path={profile?.profile_picture_url}
@@ -106,55 +107,77 @@ const Discover: React.FC = () => {
                         {stripeRole || 'LITE'}
                     </div>
                 </div>
-                <h1 className="absolute left-1/2 -translate-x-1/2 text-2xl font-bold bg-gradient-to-r from-white via-primary/80 to-primary bg-clip-text text-transparent tracking-tight">
+
+                <div className="hidden lg:flex flex-col gap-1">
+                    <h1 className="text-3xl font-bold text-white tracking-tight">Discovery</h1>
+                    {/* <p className="text-white/40 text-sm font-medium">Find your perfect connection nearby</p> */}
+                </div>
+
+                <h1 className="absolute left-1/2 -translate-x-1/2 text-2xl font-bold bg-gradient-to-r from-white via-primary/80 to-primary bg-clip-text text-transparent tracking-tight lg:hidden">
                     FireConnect
                     {isFetching && !loading && (
                         <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary/30 animate-pulse rounded-full"></span>
                     )}
                 </h1>
-                <NotificationIcon />
+
+                <div className="flex items-center gap-3">
+                    {/* <div className="hidden lg:flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-full text-xs font-bold text-white/60">
+                         <div className="size-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                         <span>12 miles away</span>
+                    </div>
+                    <button className="hidden lg:flex size-10 items-center justify-center rounded-full bg-white/5 border border-white/10 text-white/60 hover:text-white transition-all">
+                        <Icon type="lucide" name="Filter" size={18} />
+                    </button> */}
+                    <NotificationIcon />
+                </div>
             </header>
 
-            <div className="h-4"></div>
+            {/* Mobile spacing */}
+            <div className="h-4 lg:hidden"></div>
 
-            <main className="flex flex-col gap-8">
-                {users.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 text-white/50">
-                        <Icon name="person_off" className="text-[48px] mb-4" />
-                        <p>No new users found nearby.</p>
-                    </div>
-                ) : (
-                    <>
-                        {users.map((user, idx) => (
-                            <UserDiscoveryCard
-                                key={`${user.id}-${idx}`}
-                                user={user}
-                                isSpiedInitially={spiedUserIds.includes(user.id)}
-                                onUpgradeClick={(mode) => {
-                                    setModalMode(mode);
-                                    setIsUpgradeModalOpen(true);
-                                }}
-                            />
-                        ))}
-
-                        {/* Pagination Trigger / Loading Indicator */}
-                        <div ref={loadMoreRef} className="py-12 flex flex-col items-center justify-center gap-4">
-                            {(isFetchingNextPage || (inView && hasNextPage)) ? (
-                                <>
-                                    <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
-                                    <p className="text-primary text-sm font-medium animate-pulse">Loading more profiles...</p>
-                                </>
-                            ) : hasNextPage ? (
-                                <div className="h-20"></div> // Taller sentinel
-                            ) : users.length > 0 ? (
-                                <div className="flex flex-col items-center gap-2 py-4">
-                                    <div className="w-12 h-[1px] bg-white/10"></div>
-                                    <p className="text-white/20 text-xs font-medium italic">No more users found nearby</p>
-                                </div>
-                            ) : null}
+            <main className="flex-1 lg:overflow-y-auto lg:hide-scrollbar">
+                <section className="flex flex-col gap-8 pb-24 px-4 lg:px-6 lg:pb-12 lg:max-w-4xl lg:mx-auto lg:pt-4">
+                    {users.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-20 text-white/50">
+                            <Icon name="person_off" className="text-[48px] mb-4" />
+                            <p>No new users found nearby.</p>
                         </div>
-                    </>
-                )}
+                    ) : (
+                        <>
+                            <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-12">
+                                {users.map((user, idx) => (
+                                    <div key={`${user.id}-${idx}`} className="w-full max-w-sm mx-auto lg:max-w-none">
+                                        <UserDiscoveryCard
+                                            user={user}
+                                            isSpiedInitially={spiedUserIds.includes(user.id)}
+                                            onUpgradeClick={(mode) => {
+                                                setModalMode(mode);
+                                                setIsUpgradeModalOpen(true);
+                                            }}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Pagination Trigger / Loading Indicator */}
+                            <div ref={loadMoreRef} className="py-12 flex flex-col items-center justify-center gap-4">
+                                {(isFetchingNextPage || (inView && hasNextPage)) ? (
+                                    <>
+                                        <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                                        <p className="text-primary text-sm font-medium animate-pulse">Loading more profiles...</p>
+                                    </>
+                                ) : hasNextPage ? (
+                                    <div className="h-20"></div> // Taller sentinel
+                                ) : users.length > 0 ? (
+                                    <div className="flex flex-col items-center gap-2 py-4">
+                                        <div className="w-12 h-[1px] bg-white/10"></div>
+                                        <p className="text-white/20 text-xs font-medium italic">No more users found nearby</p>
+                                    </div>
+                                ) : null}
+                            </div>
+                        </>
+                    )}
+                </section>
             </main>
 
             <UpgradeModal

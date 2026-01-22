@@ -107,6 +107,7 @@ const Notifications: React.FC = () => {
                     title: 'New Connection Request',
                     body: `${actorName} sent you a connection request.`,
                     color: 'text-primary',
+                    bgColor: 'bg-primary/10',
                     link: `/profile/${notification.actor_id}`
                 };
             case 'CONNECTION_ACCEPTED':
@@ -114,7 +115,8 @@ const Notifications: React.FC = () => {
                     icon: 'handshake',
                     title: 'Request Accepted!',
                     body: `You are now connected with ${actorName}!`,
-                    color: 'text-green-400',
+                    color: 'text-green-500',
+                    bgColor: 'bg-green-500/10',
                     link: `/chat/${notification.actor_id}`
                 };
             case 'SPIED':
@@ -122,7 +124,8 @@ const Notifications: React.FC = () => {
                     icon: 'visibility',
                     title: 'Profile Spied!',
                     body: `${actorName} revealed your private photos!`,
-                    color: 'text-purple-400',
+                    color: 'text-purple-500',
+                    bgColor: 'bg-purple-500/10',
                     link: `/profile/${notification.actor_id}`
                 };
             case 'NEW_MESSAGE':
@@ -130,7 +133,8 @@ const Notifications: React.FC = () => {
                     icon: 'chat',
                     title: 'New Message',
                     body: `${actorName} sent you a message.`,
-                    color: 'text-blue-400',
+                    color: 'text-blue-500',
+                    bgColor: 'bg-blue-500/10',
                     link: `/chat/${notification.actor_id}`
                 };
             default:
@@ -139,6 +143,7 @@ const Notifications: React.FC = () => {
                     title: 'Update',
                     body: `New update from ${actorName}.`,
                     color: 'text-white/40',
+                    bgColor: 'bg-white/5',
                     link: '#'
                 };
         }
@@ -147,29 +152,48 @@ const Notifications: React.FC = () => {
     if (loading && notifications.length === 0) {
         return (
             <div className="min-h-screen w-full bg-background-dark flex items-center justify-center">
-                <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                <div className="relative">
+                    <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-2 h-2 bg-primary rounded-full animate-ping"></div>
+                    </div>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-background-dark flex flex-col pb-24">
+        <div className="min-h-screen bg-background-dark font-display antialiased relative overflow-hidden flex flex-col">
+            {/* Immersive Background Elements */}
+            <div className="absolute top-[10%] -right-20 w-[600px] h-[600px] bg-primary/5 blur-[120px] rounded-full pointer-events-none"></div>
+            <div className="absolute bottom-[10%] -left-20 w-[600px] h-[600px] bg-purple-500/5 blur-[120px] rounded-full pointer-events-none"></div>
+
             {/* Header */}
-            <header className="sticky top-0 z-40 flex items-center p-4 bg-background-dark/95 backdrop-blur-md border-b border-white/5">
-                <button
-                    onClick={() => navigate(-1)}
-                    className="p-2 -ml-2 rounded-full hover:bg-white/5 active:scale-95 transition-all text-white"
-                >
-                    <Icon name="arrow_back" />
-                </button>
-                <h1 className="ml-2 text-xl font-bold text-white">Notifications</h1>
+            <header className="sticky top-0 z-50 w-full bg-background-dark/80 backdrop-blur-xl border-b border-white/5">
+                <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => navigate(-1)}
+                            className="size-10 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-all active:scale-95 group"
+                        >
+                            <Icon name="arrow_back" className="text-[24px] group-hover:-translate-x-0.5 transition-transform" />
+                        </button>
+                        <h1 className="text-2xl font-black text-white tracking-tight">Notifications</h1>
+                    </div>
+                </div>
             </header>
 
-            <main className="flex-1 overflow-y-auto px-4 py-6">
+            <main className="flex-1 w-full max-w-3xl mx-auto px-6 py-12 relative z-10">
                 {notifications.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 text-white/20">
-                        <Icon name="notifications_off" className="text-6xl mb-4" />
-                        <p className="text-sm font-medium">No notifications yet.</p>
+                    <div className="flex flex-col items-center justify-center py-32 text-center">
+                        <div className="size-24 rounded-[40px] bg-white/5 border border-white/10 flex items-center justify-center mb-8 shadow-2xl relative group overflow-hidden">
+                            <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            <Icon name="notifications_off" className="text-4xl text-white/20 group-hover:text-primary/40 transition-colors" />
+                        </div>
+                        <h2 className="text-xl font-black text-white mb-2 tracking-tight">Nothing to see here</h2>
+                        <p className="text-sm font-medium text-white/40 max-w-[240px] leading-relaxed">
+                            Stay active and connect with people to see what's happening.
+                        </p>
                     </div>
                 ) : (
                     <div className="flex flex-col gap-4">
@@ -177,38 +201,52 @@ const Notifications: React.FC = () => {
                             const content = getNotificationContent(notification);
                             return (
                                 <motion.div
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: index * 0.05 }}
+                                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    transition={{ 
+                                        delay: index * 0.04,
+                                        type: "spring",
+                                        stiffness: 100,
+                                        damping: 15
+                                    }}
                                     key={notification.id}
                                     onClick={() => navigate(content.link)}
-                                    className="flex items-start gap-4 p-4 rounded-2xl bg-surface-dark border border-white/5 hover:border-white/10 active:scale-[0.98] transition-all cursor-pointer group"
+                                    className="group relative flex items-start gap-5 p-5 rounded-[28px] bg-surface-dark/40 backdrop-blur-xl border border-white/5 hover:border-primary/20 hover:bg-surface-dark/60 transition-all duration-300 cursor-pointer shadow-xl shadow-black/5 active:scale-[0.98]"
                                 >
-                                    <div className="relative">
-                                        <div className="size-12 rounded-full overflow-hidden border-2 border-white/10">
+                                    {/* Action Hover Background */}
+                                    <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/[0.02] to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity rounded-[28px]"></div>
+
+                                    <div className="relative shrink-0">
+                                        <div className="size-16 rounded-[22px] overflow-hidden border-2 border-white/10 group-hover:border-primary/30 transition-colors shadow-2xl p-0.5">
                                             <CdnImage
                                                 path={notification.actor?.profile_picture_url}
                                                 gender={notification.actor?.gender}
                                                 seed={notification.actor_id}
-                                                className="w-full h-full object-cover"
+                                                className="w-full h-full object-cover rounded-2xl"
                                             />
                                         </div>
-                                        <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-background-dark flex items-center justify-center border border-white/5 shadow-lg">
-                                            <Icon name={content.icon} className={`text-[12px] ${content.color}`} />
+                                        <div className={`absolute -bottom-1 -right-1 size-7 rounded-2xl ${content.bgColor} backdrop-blur-md flex items-center justify-center border border-white/10 shadow-lg`}>
+                                            <Icon name={content.icon} className={`text-[14px] ${content.color}`} />
                                         </div>
                                     </div>
-                                    <div className="flex-1">
-                                        <div className="flex items-center justify-between mb-0.5">
-                                            <h3 className="text-[15px] font-bold text-white group-hover:text-primary transition-colors">
+
+                                    <div className="flex-1 pt-1">
+                                        <div className="flex items-start justify-between gap-4 mb-1">
+                                            <h3 className="text-base font-black text-white group-hover:text-primary transition-colors leading-tight">
                                                 {content.title}
                                             </h3>
-                                            <span className="text-[10px] font-medium text-white/30 uppercase tracking-wider">
-                                                {formatNotificationTime(notification.created_at)}
+                                            <span className="shrink-0 text-[10px] font-black text-white/20 uppercase tracking-[0.2em] pt-0.5">
+                                                {formatNotificationTime(notification.updated_at || notification.created_at)}
                                             </span>
                                         </div>
-                                        <p className="text-sm text-white/50 leading-relaxed font-medium">
+                                        <p className="text-sm font-medium text-white/50 leading-relaxed group-hover:text-white/70 transition-colors">
                                             {content.body}
                                         </p>
+                                    </div>
+
+                                    {/* Arrow hint on hover */}
+                                    <div className="shrink-0 flex items-center justify-center size-8 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all duration-300">
+                                        <Icon name="chevron_right" className="text-primary text-xl" />
                                     </div>
                                 </motion.div>
                             );
@@ -216,6 +254,9 @@ const Notifications: React.FC = () => {
                     </div>
                 )}
             </main>
+
+            {/* Bottom Spacer for Mobile Navigation if present */}
+            <div className="h-24 lg:hidden"></div>
         </div>
     );
 };

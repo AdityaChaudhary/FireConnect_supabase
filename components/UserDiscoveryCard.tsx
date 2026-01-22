@@ -274,7 +274,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
             onPointerUp={handlePointerUp}
             onPointerCancel={handlePointerCancel}
             onPointerLeave={handlePointerUp}
-            className="flex flex-col bg-surface-dark rounded-[32px] mx-4 overflow-hidden shadow-2xl relative aspect-[3/4.2] cursor-grab active:cursor-grabbing select-none"
+            className="flex flex-col bg-surface-dark rounded-[32px] overflow-hidden shadow-2xl relative aspect-[3/4.2] cursor-grab active:cursor-grabbing select-none"
             onContextMenu={(e) => e.preventDefault()}
         >
             {/* Loading State / Empty Card Placeholder */}

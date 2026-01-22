@@ -700,361 +700,404 @@ const ChatDetail: React.FC = () => {
     }
 
     return (
-        <div className="bg-background-dark font-display antialiased fixed inset-0 flex flex-col overflow-hidden w-full">
-            {/* Notification */}
-            <AnimatePresence>
-                {notification && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -20, x: '-50%' }}
-                        animate={{ opacity: 1, y: 0, x: '-50%' }}
-                        exit={{ opacity: 0, y: -20, x: '-50%' }}
-                        className="absolute top-20 left-1/2 z-[100] bg-black/80 backdrop-blur-md border border-white/10 px-6 py-3 rounded-full shadow-2xl"
-                    >
-                        <p className="text-white text-sm font-bold tracking-tight">{notification}</p>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-             {/* Image Preview Modal */}
-             <AnimatePresence>
-                {previewImage && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="fixed inset-0 z-[120] flex items-center justify-center bg-black/95 backdrop-blur-xl p-4"
-                        onClick={() => setPreviewImage(null)}
-                    >
-                        <motion.button
-                            initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.8 }}
-                            transition={{ delay: 0.1 }}
-                            onClick={() => setPreviewImage(null)}
-                            className="absolute top-4 right-4 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors z-[130]"
-                        >
-                            <Icon name="close" className="text-[24px]" />
-                        </motion.button>
-                        <div onClick={(e) => e.stopPropagation()} className="relative max-h-[90vh] max-w-[90vw] overflow-hidden rounded-lg shadow-2xl">
-                             <CdnImage
-                                path={previewImage}
-                                className="w-full h-full object-contain max-h-[90vh]"
-                            />
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Upgrade Modal */}
-            <UpgradeModal 
-                isOpen={showUpgradeModal} 
-                onClose={() => setShowUpgradeModal(false)} 
-            />
-
-            {/* Top App Bar */}
-            <header className="bg-surface-dark/80 backdrop-blur-xl border-b border-white/5 shadow-lg shadow-black/5 w-full shrink-0 z-30">
-                <div className="flex items-center justify-between p-4 max-w-md mx-auto w-full">
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={() => safeBack('/')}
-                        className="flex items-center justify-center p-2 rounded-full hover:bg-white/10 transition-colors text-white group cursor-pointer"
-                    >
-                        <Icon name="arrow_back" className="text-[24px] group-active:-translate-x-1 transition-transform" />
-                    </button>
-                    <div
-                        className="flex items-center gap-3 cursor-pointer group/header"
-                        onClick={() => safeNavigate(`/profile/${otherUserId}`)}
-                    >
-                        <div className="relative">
-                            <div className="size-10 rounded-full overflow-hidden border-2 border-primary/20 group-hover/header:border-primary transition-all duration-300 shadow-md shadow-primary/10">
-                                <CdnImage
-                                    path={otherUser?.profile_picture_url || initialUser?.avatar}
-                                    gender={otherUser?.gender}
-                                    seed={otherUserId}
-                                    className="w-full h-full object-cover"
-                                />
-                            </div>
-                            {(isConnected || isTheyAI) && isOnline(otherUser?.user_online_status) && (
-                                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-background-dark rounded-full shadow-sm animate-pulse"></div>
-                            )}
-                        </div>
-                        <div className="flex flex-col">
-                            <h2 className="text-white text-sm font-bold leading-tight group-hover/header:text-primary transition-colors flex items-center gap-1">
-                                {displayName}
-                            </h2>
-                            {(isConnected || isTheyAI) && (
-                                isOnline(otherUser?.user_online_status) ? (
-                                    <p className="text-[10px] text-green-500 font-black tracking-wide">ONLINE NOW</p>
-                                ) : (
-                                    <p className="text-[10px] text-white/30 font-medium tracking-wide uppercase">{formatLastSeen(otherUser?.user_online_status)}</p>
-                                )
-                            )}
-                        </div>
-                    </div>
-                </div>
-                <div className="flex items-center gap-1">
-                    <EllipsisMenu
-                        items={[
-                            ...(isConnected ? [
-                                {
-                                    label: 'Disconnect',
-                                    icon: 'person_remove',
-                                    variant: 'danger' as const,
-                                    onClick: () => setShowDisconnectModal(true)
-                                }
-                            ] : [
-                                ...(incomingStatus === 'PENDING' ? [
-                                    {
-                                        label: 'Accept Request',
-                                        icon: 'person_add',
-                                        onClick: handleAcceptRequest
-                                    }
-                                ] : connectionStatus === 'PENDING' ? [
-                                    {
-                                        label: 'Cancel Request',
-                                        icon: 'hourglass_empty',
-                                        onClick: handleCancelRequest
-                                    }
-                                ] : [
-                                    {
-                                        label: 'Send Request',
-                                        icon: 'person_add',
-                                        onClick: handleSendRequest
-                                    }
-                                ])
-                            ])
-                        ]}
-                    />
-                    </div>
-                </div>
-            </header>
-
-            {/* Chat Area */}
-            <main 
-                ref={chatContainerRef}
-                className="flex-1 overflow-y-auto flex flex-col bg-background-dark relative w-full"
-            >
-                <div className="flex-1 flex flex-col px-4 py-6 max-w-md mx-auto w-full">
-                <div className="flex flex-col items-center justify-center my-8">
-                    <div className="size-16 rounded-full overflow-hidden mb-3 ring-4 ring-primary/10 shadow-xl border-2 border-primary/20">
-                        <CdnImage
-                            path={otherUser?.profile_picture_url || initialUser?.avatar}
-                            gender={otherUser?.gender}
-                            seed={otherUserId}
-                            className="w-full h-full object-cover"
-                        />
-                    </div>
-                    <p className="text-[11px] text-white/30 bg-white/5 border border-white/5 px-4 py-1.5 rounded-full uppercase tracking-widest font-bold backdrop-blur-sm">
-                        Conversation started
-                    </p>
-                    {!isConnected && (
-                        <motion.button
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => {
-                                if (incomingStatus === 'PENDING') handleAcceptRequest();
-                                else if (connectionStatus === 'PENDING') handleCancelRequest();
-                                else handleSendRequest();
-                            }}
-                            disabled={requesting}
-                            className={`mt-4 px-6 py-2 rounded-full text-[12px] font-black uppercase tracking-wider transition-all shadow-lg flex items-center gap-2 cursor-pointer ${incomingStatus === 'PENDING'
-                                ? 'bg-green-500 text-white shadow-green-500/20'
-                                : connectionStatus === 'PENDING'
-                                    ? 'bg-white/10 text-white/50 border border-white/10'
-                                    : 'bg-gradient-to-r from-primary to-pink-500 text-white shadow-primary/20'
-                                }`}
-                        >
-                            {requesting ? (
-                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                            ) : (
-                                <>
-                                    <Icon name={
-                                        incomingStatus === 'PENDING' ? 'person_add' :
-                                            connectionStatus === 'PENDING' ? 'hourglass_empty' : 'person_add'
-                                    } className="text-[18px]" />
-                                    {incomingStatus === 'PENDING' ? 'Accept Request' :
-                                        connectionStatus === 'PENDING' ? 'Cancel Request' : 'Send Request'}
-                                </>
-                            )}
-                        </motion.button>
-                    )}
-                </div>
-
-                <div className="flex flex-col gap-2">
-                    <AnimatePresence initial={false}>
-                        {messages.map(renderMessage)}
-                    </AnimatePresence>
-                </div>
-                
-                {!isMessagingAllowed && messages.length > 0 && (
-                    <div className="flex flex-col items-center justify-center my-8">
-                        <p className="text-[11px] text-red-500 bg-red-500/5 border border-red-500/20 px-4 py-1.5 rounded-full uppercase tracking-widest font-bold backdrop-blur-sm">
-                            Conversation restricted
-                        </p>
-                    </div>
-                )}
-
-                <div ref={messagesEndRef} className="h-4" />
-                </div>
-            </main>
-
-            {/* Footer Input */}
-            {isMessagingAllowed ? (
-                <footer className="pb-2 pt-2 bg-background-dark shrink-0 z-40 w-full border-t border-white/5 pb-[env(safe-area-inset-bottom,0.5rem)]">
-                    <div className="px-4 max-w-md mx-auto w-full">
-                        <div className="bg-surface-dark/95 backdrop-blur-xl rounded-[28px] p-2 shadow-2xl shadow-black/20 border border-white/5 transition-all duration-300 focus-within:ring-2 focus-within:ring-primary/30">
-                        <div className="flex items-end gap-1">
-                            <div className="flex items-center">
-
-                                <button
-                                    onClick={() => {
-                                        if (stripeRole === 'free') {
-                                            setShowUpgradeModal(true);
-                                        } else {
-                                            fileInputRef.current?.click();
-                                        }
-                                    }} 
-                                    className="flex items-center justify-center w-10 h-10 rounded-full text-white/20 hover:text-primary hover:bg-primary/5 transition-all cursor-pointer"
-                                >
-                                    <Icon name="photo_camera" className="text-[22px]" />
-                                </button>
-                                <input 
-                                    type="file" 
-                                    ref={fileInputRef} 
-                                    className="hidden" 
-                                    accept="image/*"
-                                    onChange={handleImageSelect}
-                                />
-                            </div>
-
-                            <div className="flex-1 px-2 py-2">
-                                <textarea
-                                    ref={textareaRef}
-                                    className="w-full bg-transparent border-0 p-0 text-white placeholder-white/20 focus:ring-0 resize-none text-[15px] leading-6 max-h-[120px] font-medium"
-                                    placeholder="Write your message..."
-                                    rows={1}
-                                    value={newMessage}
-                                    onChange={(e) => {
-                                        setNewMessage(e.target.value);
-                                        e.target.style.height = 'auto';
-                                        e.target.style.height = e.target.scrollHeight + 'px';
-                                    }}
-                                    onKeyPress={(e) => {
-                                        if (e.key === 'Enter' && !e.shiftKey) {
-                                            e.preventDefault();
-                                            handleSend();
-                                        }
-                                    }}
-                                ></textarea>
-                            </div>
-
-                            <div className="flex items-center relative">
-                                <button 
-                                    onMouseDown={(e) => e.stopPropagation()}
-                                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                                    className={`flex items-center justify-center w-10 h-10 rounded-full transition-all cursor-pointer ${showEmojiPicker ? 'text-yellow-500 bg-yellow-500/10' : 'text-white/20 hover:text-yellow-500 hover:bg-yellow-500/5'}`}
-                                >
-                                    <Icon name="sentiment_satisfied" className="text-[22px]" />
-                                </button>
-                                
-                                <AnimatePresence>
-                                    {showEmojiPicker && (
-                                        <EmojiPicker 
-                                            onEmojiSelect={(emoji) => {
-                                                handleEmojiSelect(emoji);
-                                            }} 
-                                            onClose={() => setShowEmojiPicker(false)} 
-                                        />
-                                    )}
-                                </AnimatePresence>
-
-                                <motion.button
-                                    whileTap={{ scale: 0.9 }}
-                                    onClick={() => handleSend()}
-                                    className={`flex items-center justify-center w-11 h-11 rounded-[20px] transition-all cursor-pointer ${newMessage.trim()
-                                        ? 'bg-primary text-white shadow-lg shadow-primary/30'
-                                        : 'bg-white/5 text-white/10'}`}
-                                >
-                                    <Icon name="send" className={`text-[20px] transition-all ${newMessage.trim() ? 'ml-0.5 rotate-0' : 'rotate-[-45deg]'}`} />
-                                </motion.button>
-                            </div>
-                        </div>
-                        </div>
-                    </div>
-                </footer>
-            ) : (
-                <footer className="px-4 pb-12 pt-4 bg-background-dark flex flex-col items-center justify-center text-center gap-2 z-40 border-t border-white/5">
-                    <div className="size-12 rounded-full bg-primary/10 flex items-center justify-center mb-1">
-                        <Icon name="lock" className="text-primary text-xl" />
-                    </div>
-                    <h3 className="text-white font-bold text-sm tracking-tight">
-                        {(!isConnected && (stripeRole === 'pro' || stripeRole === 'free')) ? 'Connection Required' : 'Initiation Locked'}
-                    </h3>
-                    <p className="text-white/40 text-[11px] max-w-[280px] leading-relaxed">
-                        {(!isConnected && (stripeRole === 'pro' || stripeRole === 'free')) ? (
-                            <>Connect with <span className="text-primary font-bold">{displayName}</span> to start messaging.</>
-                        ) : (
-                            <>Only <span className="text-primary font-bold">MAX</span> users can initiate conversations with anyone.</>
-                        )}
-                        <br />
-                        You can always reply to messages received.
-                    </p>
-                    <motion.button
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => safeNavigate('/subscription')}
-                        className="mt-3 px-8 py-2.5 bg-primary text-white text-[11px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-primary/20 transition-all cursor-pointer"
-                    >
-                        {(!isConnected && (stripeRole === 'pro' || stripeRole === 'free')) ? 'View Subscription' : 'Upgrade to Max'}
-                    </motion.button>
-                </footer>
-            )}
-
-            {/* Disconnect Modal */}
-            <AnimatePresence>
-                {showDisconnectModal && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
-                        onClick={() => setShowDisconnectModal(false)}
-                    >
+        <div className="bg-background-dark font-display antialiased fixed inset-0 flex flex-col items-center overflow-hidden w-full lg:h-screen lg:p-4">
+            <div className="flex flex-col w-full h-full max-w-7xl mx-auto overflow-hidden lg:rounded-[40px] lg:border lg:border-white/5 lg:bg-surface-dark lg:shadow-2xl lg:shadow-black/50">
+                {/* Notification */}
+                <AnimatePresence>
+                    {notification && (
                         <motion.div
-                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
-                            animate={{ scale: 1, opacity: 1, y: 0 }}
-                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="w-full max-w-sm bg-surface-dark border border-white/10 rounded-3xl overflow-hidden shadow-2xl"
-                            onClick={(e) => e.stopPropagation()}
+                            initial={{ opacity: 0, y: -20, x: '-50%' }}
+                            animate={{ opacity: 1, y: 0, x: '-50%' }}
+                            exit={{ opacity: 0, y: -20, x: '-50%' }}
+                            className="absolute top-20 left-1/2 z-[100] bg-black/80 backdrop-blur-md border border-white/10 px-6 py-3 rounded-full shadow-2xl"
                         >
-                            <div className="p-8 text-center">
-                                <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                                    <Icon name="person_remove" className="text-4xl text-red-500" />
-                                </div>
-                                <h3 className="text-2xl font-bold text-white mb-2">Disconnect?</h3>
-                                <p className="text-white/60 mb-8">Are you sure you want to remove {displayName} from your connections?</p>
-                                <div className="flex flex-col gap-3">
-                                    <button
-                                        onClick={handleDisconnect}
-                                        className="w-full h-14 rounded-2xl bg-red-500 text-white font-bold shadow-lg shadow-red-500/20 active:scale-95 transition-all cursor-pointer"
-                                    >
-                                        Yes, Disconnect
-                                    </button>
-                                    <button
-                                        onClick={() => setShowDisconnectModal(false)}
-                                        className="w-full h-14 rounded-2xl bg-white/5 text-white/50 font-bold hover:bg-white/10 active:scale-95 transition-all cursor-pointer"
-                                    >
-                                        Cancel
-                                    </button>
-                                </div>
+                            <p className="text-white text-sm font-bold tracking-tight">{notification}</p>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Image Preview Modal */}
+                <AnimatePresence>
+                    {previewImage && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="fixed inset-0 z-[120] flex items-center justify-center bg-black/95 backdrop-blur-xl p-4"
+                            onClick={() => setPreviewImage(null)}
+                        >
+                            <motion.button
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.8 }}
+                                transition={{ delay: 0.1 }}
+                                onClick={() => setPreviewImage(null)}
+                                className="absolute top-4 right-4 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors z-[130]"
+                            >
+                                <Icon name="close" className="text-[24px]" />
+                            </motion.button>
+                            <div onClick={(e) => e.stopPropagation()} className="relative max-h-[90vh] max-w-[90vw] overflow-hidden rounded-lg shadow-2xl border border-white/10">
+                                <CdnImage
+                                    path={previewImage}
+                                    className="w-full h-full object-contain max-h-[90vh]"
+                                />
                             </div>
                         </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                    )}
+                </AnimatePresence>
 
-            {/* Animated Background Elements */}
-            <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-primary/5 blur-[120px] rounded-full -z-10 pointer-events-none"></div>
-            <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-purple-500/5 blur-[120px] rounded-full -z-10 pointer-events-none"></div>
+                {/* Upgrade Modal */}
+                <UpgradeModal 
+                    isOpen={showUpgradeModal} 
+                    onClose={() => setShowUpgradeModal(false)} 
+                />
+
+                {/* Top App Bar */}
+                <header className="bg-surface-dark/80 backdrop-blur-xl border-b border-white/5 shadow-lg shadow-black/5 w-full shrink-0 z-30 lg:bg-transparent lg:border-none">
+                    <div className="flex items-center justify-between p-4 px-6 w-full">
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={() => safeBack('/')}
+                                className="flex items-center justify-center size-10 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-white group cursor-pointer"
+                            >
+                                <Icon name="arrow_back" className="text-[24px] group-active:-translate-x-1 transition-transform" />
+                            </button>
+                            <div
+                                className="flex items-center gap-3 cursor-pointer group/header"
+                                onClick={() => safeNavigate(`/profile/${otherUserId}`)}
+                            >
+                                <div className="relative">
+                                    <div className="size-11 rounded-full overflow-hidden border-2 border-primary/20 group-hover/header:border-primary transition-all duration-300 shadow-md shadow-primary/10 p-0.5">
+                                        <CdnImage
+                                            path={otherUser?.profile_picture_url || initialUser?.avatar}
+                                            gender={otherUser?.gender}
+                                            seed={otherUserId}
+                                            className="w-full h-full object-cover rounded-full"
+                                        />
+                                    </div>
+                                    {(isConnected || isTheyAI) && isOnline(otherUser?.user_online_status) && (
+                                        <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-[#1a0b12] rounded-full shadow-sm animate-pulse"></div>
+                                    )}
+                                </div>
+                                <div className="flex flex-col">
+                                    <h2 className="text-white text-base font-black leading-tight group-hover/header:text-primary transition-colors flex items-center gap-2">
+                                        {displayName}
+                                    </h2>
+                                    {(isConnected || isTheyAI) && (
+                                        isOnline(otherUser?.user_online_status) ? (
+                                            <p className="text-[10px] text-green-500 font-black tracking-widest uppercase">ONLINE NOW</p>
+                                        ) : (
+                                            <p className="text-[10px] text-white/30 font-bold tracking-tight uppercase">{formatLastSeen(otherUser?.user_online_status)}</p>
+                                        )
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <EllipsisMenu
+                                items={[
+                                    ...(isConnected ? [
+                                        {
+                                            label: 'Disconnect',
+                                            icon: 'person_remove',
+                                            variant: 'danger' as const,
+                                            onClick: () => setShowDisconnectModal(true)
+                                        }
+                                    ] : []),
+                                    {
+                                        label: 'View Profile',
+                                        icon: 'person',
+                                        onClick: () => safeNavigate(`/profile/${otherUserId}`)
+                                    },
+                                    // {
+                                    //     label: 'Report User',
+                                    //     icon: 'flag',
+                                    //     variant: 'danger' as const,
+                                    //     onClick: () => { /* Handle report */ }
+                                    // }
+                                ]}
+                            />
+                        </div>
+                    </div>
+                </header>
+
+                <div className="flex-1 flex overflow-hidden w-full">
+                    {/* Chat Window */}
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark/30 relative">
+                        {/* Chat Area Container */}
+                        <div
+                            ref={chatContainerRef}
+                            className="flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-8 flex flex-col gap-4 scroll-smooth hide-scrollbar"
+                        >
+                            <div className="flex flex-col items-center py-10 gap-4 opacity-50">
+                                <div className="size-16 rounded-full overflow-hidden border-2 border-primary/20 p-0.5">
+                                    <CdnImage
+                                        path={otherUser?.profile_picture_url || initialUser?.avatar}
+                                        gender={otherUser?.gender}
+                                        seed={otherUserId}
+                                        className="w-full h-full rounded-full object-cover"
+                                    />
+                                </div>
+                                <div className="text-center">
+                                    <p className="text-sm font-black uppercase tracking-widest text-white">Chat with {displayName}</p>
+                                    <p className="text-[10px] font-medium text-white/40 mt-1">
+                                        {isConnected ? 'You are connected' : 'Encryption active'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {messages.map((msg, idx) => renderMessage(msg, idx))}
+                            <div ref={messagesEndRef} className="h-4 w-full shrink-0" />
+                        </div>
+
+                        {/* Messaging Input Area */}
+                        <section className="shrink-0 p-4 lg:p-6 bg-gradient-to-t from-background-dark/80 via-background-dark/50 to-transparent">
+                            <div className="max-w-3xl mx-auto w-full">
+                                {isMessagingAllowed ? (
+                                    <form
+                                        onSubmit={handleSend}
+                                        className="relative flex items-end gap-2 bg-surface-dark/90 backdrop-blur-xl border border-white/10 rounded-[28px] p-2 pl-4 shadow-2xl transition-all focus-within:border-primary/40 focus-within:bg-surface-dark"
+                                    >
+                                        <button
+                                            type="button"
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className="size-10 shrink-0 rounded-full flex items-center justify-center text-white/40 hover:text-primary transition-all active:scale-90"
+                                        >
+                                            <Icon name="add_circle" className="text-[24px]" />
+                                        </button>
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            onChange={handleImageSelect}
+                                            accept="image/*"
+                                            className="hidden"
+                                        />
+                                        <textarea
+                                            ref={textareaRef}
+                                            rows={1}
+                                            value={newMessage}
+                                            onChange={(e) => {
+                                                setNewMessage(e.target.value);
+                                                e.target.style.height = 'auto';
+                                                e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
+                                            }}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && !e.shiftKey) {
+                                                    e.preventDefault();
+                                                    handleSend();
+                                                }
+                                            }}
+                                            placeholder="Type a message..."
+                                            className="flex-1 bg-transparent border-none focus:ring-0 text-white text-[15px] py-3 resize-none max-h-[150px] min-h-[44px] placeholder-white/20"
+                                        />
+                                        <div className="flex items-center gap-1 shrink-0 px-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                                                className="size-10 rounded-full flex items-center justify-center text-white/20 hover:text-yellow-400 transition-all active:scale-95"
+                                            >
+                                                <Icon name="sentiment_satisfied" className="text-[22px]" />
+                                            </button>
+                                            <button
+                                                type="submit"
+                                                disabled={!newMessage.trim() || isSending}
+                                                className="size-10 rounded-full bg-primary flex items-center justify-center text-white shadow-lg shadow-primary/30 active:scale-90 transition-all disabled:opacity-50 disabled:grayscale btn-glow"
+                                            >
+                                                {isSending ? (
+                                                    <div className="size-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                                                ) : (
+                                                    <Icon name="send" className="text-[20px] ml-1" filled />
+                                                )}
+                                            </button>
+                                        </div>
+
+                                        {/* Emoji Picker Overlay */}
+                                        <AnimatePresence>
+                                            {showEmojiPicker && (
+                                                <div className="absolute bottom-full left-0 mb-4 z-50">
+                                                    <EmojiPicker 
+                                                        onEmojiSelect={handleEmojiSelect} 
+                                                        onClose={() => setShowEmojiPicker(false)}
+                                                    />
+                                                </div>
+                                            )}
+                                        </AnimatePresence>
+                                    </form>
+                                ) : (
+                                    <div className="bg-surface-dark border border-white/5 p-6 rounded-[32px] flex flex-col items-center text-center gap-4 shadow-xl">
+                                        <div className="size-14 rounded-2xl bg-primary/10 flex items-center justify-center shadow-inner">
+                                            <Icon name="lock" className="text-primary text-2xl" />
+                                        </div>
+                                        <div className="flex flex-col gap-1">
+                                            <p className="text-white text-lg font-black tracking-tight">Messaging Restricted</p>
+                                            <p className="text-white/40 text-[13px] font-medium max-w-xs mx-auto">You must connect with {displayName} before you can start messaging.</p>
+                                        </div>
+                                        <div className="flex gap-3 w-full max-w-sm mt-2">
+                                            <button
+                                                onClick={() => safeNavigate(`/profile/${otherUserId}`)}
+                                                className="flex-1 h-14 rounded-2xl bg-white/5 border border-white/5 font-black text-xs uppercase tracking-widest text-white/60 hover:text-white hover:bg-white/10 transition-all"
+                                            >
+                                                View Profile
+                                            </button>
+                                            <button
+                                                onClick={handleSendRequest}
+                                                className="flex-1 h-14 rounded-2xl bg-primary font-black text-xs uppercase tracking-widest text-white shadow-xl shadow-primary/30 btn-glow"
+                                            >
+                                                Connect Now
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </section>
+                    </main>
+
+                    {/* Desktop Sidebar: Profile Insight */}
+                    <aside className="hidden lg:flex w-[380px] shrink-0 border-l border-white/5 bg-surface-dark/30 flex flex-col overflow-y-auto hide-scrollbar">
+                        <div className="p-8 flex flex-col gap-8">
+                            {/* Profile Summary */}
+                            <div className="flex flex-col items-center gap-5 mt-4">
+                                <div className="relative group cursor-pointer" onClick={() => safeNavigate(`/profile/${otherUserId}`)}>
+                                    <div className="size-36 rounded-full p-1 bg-gradient-to-tr from-primary to-purple-600 shadow-2xl shadow-primary/10 group-hover:scale-105 transition-transform duration-500">
+                                        <CdnImage
+                                            path={otherUser?.profile_picture_url || initialUser?.avatar}
+                                            gender={otherUser?.gender}
+                                            seed={otherUserId}
+                                            className="w-full h-full rounded-full object-cover border-4 border-[#1a0b12]"
+                                        />
+                                    </div>
+                                    {isOnline(otherUser?.user_online_status) && (
+                                        <div className="absolute bottom-2 right-2 size-6 bg-green-500 rounded-full border-4 border-[#1d0e14] shadow-sm animate-pulse"></div>
+                                    )}
+                                </div>
+                                <div className="text-center flex flex-col gap-1.5">
+                                    <h3 className="text-3xl font-black text-white tracking-tight leading-none">{displayName}</h3>
+                                    <p className="text-white/40 text-[11px] font-black tracking-[0.2em] uppercase">
+                                        {(isConnected || isTheyAI) ? (isOnline(otherUser?.user_online_status) ? 'Online Now' : formatLastSeen(otherUser?.user_online_status)) : 'Not Connected'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Quick Tags */}
+                            <div className="flex flex-wrap items-center justify-center gap-2">
+                                {otherUser?.location && (
+                                    <div className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-black uppercase tracking-widest">
+                                        {otherUser.location}
+                                    </div>
+                                )}
+                                {otherUser?.gender && otherUser?.gender !== 'PREFER_NOT_TO_SAY' && (
+                                    <div className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/40 text-[10px] font-black uppercase tracking-widest">
+                                        {otherUser.gender}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Quick Stats/Actions */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-white/5 rounded-3xl p-5 border border-white/5 flex flex-col items-center gap-1.5 text-center shadow-inner">
+                                    <Icon name="favorite" className="text-primary text-xl" filled />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-white/20">Status</span>
+                                    <span className="text-xs font-bold text-white/90">{isConnected ? 'Matched' : 'Pending'}</span>
+                                </div>
+                                <div className="bg-white/5 rounded-3xl p-5 border border-white/5 flex flex-col items-center gap-1.5 text-center cursor-pointer hover:bg-white/10 hover:border-primary/30 transition-all shadow-inner group"
+                                    onClick={() => safeNavigate(`/profile/${otherUserId}`)}>
+                                    <Icon name="person" className="text-primary text-xl group-hover:scale-110 transition-transform" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-white/20">Profile</span>
+                                    <span className="text-xs font-bold text-white/90">View Bio</span>
+                                </div>
+                            </div>
+
+                            {/* About Snippet */}
+                            {otherUser?.bio && (
+                                <div className="flex flex-col gap-4">
+                                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 ml-1">Profile Bio</h4>
+                                    <div className="bg-background-dark/30 rounded-3xl p-5 border border-white/5 italic shadow-inner">
+                                        <p className="text-white/60 text-[13px] leading-relaxed line-clamp-6 font-medium">
+                                            "{otherUser.bio}"
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Desktop Disconnect Action */}
+                            <div className="mt-auto pt-6 border-t border-white/5">
+                                {isConnected && (
+                                    <button 
+                                        onClick={() => setShowDisconnectModal(true)}
+                                        className="w-full h-14 rounded-2xl bg-white/5 hover:bg-red-500/10 border border-white/10 hover:border-red-500/30 text-white/40 hover:text-red-500 font-black text-[10px] uppercase tracking-[0.2em] transition-all"
+                                    >
+                                        Disconnect User
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+
+                {/* Mobile Extra UI - Restricted Message Hook (Hidden for desktop sidebar logic but kept for functionality) */}
+                {!isMessagingAllowed && (
+                    <footer className="lg:hidden shrink-0 bg-background-dark p-6 text-center border-t border-white/5">
+                         <p className="text-[11px] font-black uppercase tracking-[0.15em] text-white/30 leading-loose">
+                            Upgrade to start chatting.<br />
+                            You can always reply to received messages.
+                        </p>
+                        <button
+                            onClick={() => safeNavigate('/subscription')}
+                            className="mt-4 px-10 py-3 bg-primary text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-full shadow-xl shadow-primary/20 btn-glow"
+                        >
+                            Get Unlimited Access
+                        </button>
+                    </footer>
+                )}
+
+                {/* Disconnect Modal */}
+                <AnimatePresence>
+                    {showDisconnectModal && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md"
+                            onClick={() => setShowDisconnectModal(false)}
+                        >
+                            <motion.div
+                                initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                                animate={{ scale: 1, opacity: 1, y: 0 }}
+                                exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                                className="w-full max-w-sm bg-surface-dark border border-white/10 rounded-3xl overflow-hidden shadow-2xl"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <div className="p-10 text-center">
+                                    <div className="size-20 bg-red-500/10 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-inner">
+                                        <Icon name="person_remove" className="text-4xl text-red-500" />
+                                    </div>
+                                    <h3 className="text-2xl font-black text-white mb-2 tracking-tight">Disconnect?</h3>
+                                    <p className="text-white/40 text-sm font-medium mb-10 leading-relaxed">Are you sure you want to remove <span className="text-white font-bold">{displayName}</span> from your connections?</p>
+                                    <div className="flex flex-col gap-3">
+                                        <button
+                                            onClick={handleDisconnect}
+                                            className="w-full h-14 rounded-2xl bg-red-500 text-white font-black text-xs uppercase tracking-widest shadow-xl shadow-red-500/20 active:scale-95 transition-all"
+                                        >
+                                            Yes, Disconnect
+                                        </button>
+                                        <button
+                                            onClick={() => setShowDisconnectModal(false)}
+                                            className="w-full h-14 rounded-2xl bg-white/5 text-white/50 font-black text-xs uppercase tracking-widest hover:bg-white/10 active:scale-95 transition-all"
+                                        >
+                                            Keep Connection
+                                        </button>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
+
+            {/* Background Blur Elements */}
+            <div className="absolute top-[10%] -right-20 w-[600px] h-[600px] bg-primary/5 blur-[120px] rounded-full -z-10 pointer-events-none"></div>
+            <div className="absolute bottom-[10%] -left-20 w-[600px] h-[600px] bg-purple-500/5 blur-[120px] rounded-full -z-10 pointer-events-none"></div>
         </div>
     );
 };
