@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router';
+import { useSafeNavigate } from '../hooks/useSafeNavigate';
 import { motion, AnimatePresence } from 'framer-motion';
 import Icon from './Icon';
 import { supabase } from '../lib/supabase.client';
@@ -15,7 +15,7 @@ interface UserDiscoveryCardProps {
 }
 
 const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInitially, onUpgradeClick }) => {
-    const navigate = useNavigate();
+    const { safeNavigate } = useSafeNavigate();
     const queryClient = useQueryClient();
     const { stripeRole, profile, refreshProfile, user: authUser } = useAuth();
     const [images, setImages] = useState<any[]>(user.profile_images || []);
@@ -545,7 +545,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
                 {/* Bottom Actions */}
                 <div className="flex items-center justify-between gap-3 pt-2">
                     <button
-                        onClick={(e) => { e.stopPropagation(); navigate(`/profile/${user.id}`); }}
+                        onClick={(e) => { e.stopPropagation(); safeNavigate(`/profile/${user.id}`); }}
                         onPointerDown={(e) => e.stopPropagation()}
                         className="size-14 shrink-0 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all active:scale-90"
                     >
@@ -576,7 +576,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
                     )}
 
                     <button
-                        onClick={(e) => { e.stopPropagation(); navigate(`/chat/${user.id}`); }}
+                        onClick={(e) => { e.stopPropagation(); safeNavigate(`/chat/${user.id}`); }}
                         onPointerDown={(e) => e.stopPropagation()}
                         className="flex-1 h-14 rounded-full bg-white/10 backdrop-blur-md border border-white/10 flex items-center justify-center gap-2 text-white hover:bg-white/20 transition-all active:scale-95"
                     >

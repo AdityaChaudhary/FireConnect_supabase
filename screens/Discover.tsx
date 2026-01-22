@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Icon from '../components/Icon';
+import { useSafeNavigate } from '../hooks/useSafeNavigate';
 import NotificationIcon from '../components/NotificationIcon';
 import UserDiscoveryCard from '../components/UserDiscoveryCard';
 import UpgradeModal from '../components/UpgradeModal';
@@ -12,6 +13,7 @@ import CdnImage from '../components/CdnImage';
 
 const Discover: React.FC = () => {
     const { user: authUser, profile, stripeRole } = useAuth();
+    const { safeNavigate } = useSafeNavigate();
     const {
         data,
         isLoading: loading,
@@ -85,7 +87,7 @@ const Discover: React.FC = () => {
         <div className="flex flex-col pb-24 min-h-screen bg-background-dark">
             <header className="sticky top-0 z-50 flex items-center justify-between p-4 bg-background-dark/95 backdrop-blur-md transition-all duration-300 border-b border-white/5">
                 <div className="flex items-center">
-                    <div className="relative group cursor-pointer z-0" onClick={() => window.location.hash = '#/profile'}>
+                    <div className="relative group cursor-pointer z-0" onClick={() => safeNavigate('/profile')}>
                         <CdnImage
                             path={profile?.profile_picture_url}
                             gender={profile?.gender}

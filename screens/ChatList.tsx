@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import type { MetaFunction } from "react-router";
-import { useNavigate, useLoaderData } from 'react-router';
+import { useLoaderData } from 'react-router';
+import { useSafeNavigate } from '../hooks/useSafeNavigate';
 import { motion, AnimatePresence } from 'framer-motion';
 import Icon from '../components/Icon';
 import NotificationIcon from '../components/NotificationIcon';
@@ -86,7 +87,7 @@ import MatchAvatar from '../components/MatchAvatar';
 const ChatList: React.FC = () => {
     const { user: authUser, initialThreads } = useAuth();
     const loaderData = useLoaderData<typeof loader>();
-    const navigate = useNavigate();
+    const { safeNavigate } = useSafeNavigate();
     const [searchQuery, setSearchQuery] = useState('');
     const [currentTime, setCurrentTime] = useState(Date.now());
 
@@ -286,7 +287,7 @@ const ChatList: React.FC = () => {
                                         initial={{ x: -10, opacity: 0 }}
                                         animate={{ x: 0, opacity: 1 }}
                                         transition={{ delay: 0.3 + (index * 0.05) }}
-                                        onClick={() => navigate(`/chat/${otherUser.id}`, {
+                                        onClick={() => safeNavigate(`/chat/${otherUser.id}`, {
                                             state: {
                                                 user: {
                                                     name: otherUser.display_name,

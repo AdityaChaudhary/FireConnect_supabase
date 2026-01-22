@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useParams, useNavigate, useLoaderData } from 'react-router';
+import { useParams, useLoaderData } from 'react-router';
+import { useSafeNavigate } from '../hooks/useSafeNavigate';
 import type { MetaFunction, LoaderFunctionArgs } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import Icon from '../components/Icon';
@@ -114,7 +115,7 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => {
 const ProfilePreview: React.FC = () => {
     const initialData = useLoaderData<typeof loader>();
     const { id } = useParams<{ id: string }>();
-    const navigate = useNavigate();
+    const { safeNavigate, safeBack } = useSafeNavigate();
     const queryClient = useQueryClient();
     const { user: authUser, profile: myProfile, refreshProfile } = useAuth();
     const stripeRole = myProfile?.stripe_role || 'FREE';
@@ -350,7 +351,7 @@ const ProfilePreview: React.FC = () => {
                 <Icon name="person_off" className="text-6xl text-white/20 mb-4" />
                 <h2 className="text-xl font-bold mb-2">User Not Found</h2>
                 <button
-                    onClick={() => navigate(-1)}
+                    onClick={() => safeBack()}
                     className="mt-4 px-6 py-2 bg-primary rounded-full font-bold"
                 >
                     Go Back
@@ -379,7 +380,7 @@ const ProfilePreview: React.FC = () => {
             <header className="sticky top-0 z-20 flex w-full items-center bg-background-dark/80 px-4 py-3 backdrop-blur-md">
                 <div className="flex w-10 items-center justify-start">
                     <button
-                        onClick={() => navigate(-1)}
+                    onClick={() => safeBack()}
                         className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-white hover:bg-white/10 active:scale-95 transition-all"
                     >
                         <Icon name="arrow_back" />
@@ -572,7 +573,7 @@ const ProfilePreview: React.FC = () => {
                 <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-md px-6 flex gap-4 z-30">
                     {authUser?.id === id ? (
                         <button
-                            onClick={() => navigate('/profile/edit')}
+                            onClick={() => safeNavigate('/profile/edit')}
                             className="flex-1 h-14 rounded-2xl bg-primary shadow-lg shadow-primary/30 flex items-center justify-center gap-2 font-bold active:scale-95 transition-all text-white"
                         >
                             <Icon name="edit" className="text-xl" />
@@ -631,7 +632,7 @@ const ProfilePreview: React.FC = () => {
                             </AnimatePresence>
                             {(amIMax || (amIPro && connectionStatus === 'CONNECTED') || (!amIMax && !amIPro && user?.user_type === 'HUMAN') || user?.user_type === 'AI' || hasReceivedMessage) && (
                                 <button
-                                    onClick={() => navigate(`/chat/${user.id}`, {
+                                    onClick={() => safeNavigate(`/chat/${user.id}`, {
                                         state: {
                                             user: {
                                                 name: user.display_name,

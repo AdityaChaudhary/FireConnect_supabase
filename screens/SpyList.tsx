@@ -1,5 +1,6 @@
 import React from 'react';
-import { useNavigate, useLoaderData } from 'react-router';
+import { useLoaderData } from 'react-router';
+import { useSafeNavigate } from '../hooks/useSafeNavigate';
 import Icon from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
 
@@ -39,7 +40,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 const SpyList: React.FC = () => {
     const { user } = useAuth();
     const loaderData = useLoaderData<typeof loader>();
-    const navigate = useNavigate();
+    const { safeNavigate, safeBack } = useSafeNavigate();
 
     const { data: spiedProfiles = [], isLoading: loading } = useSpiedProfiles(user?.id, loaderData?.spiedProfiles);
 
@@ -49,7 +50,7 @@ const SpyList: React.FC = () => {
         <div className="relative flex min-h-screen w-full flex-col overflow-hidden pb-24 text-white bg-background-dark">
             <header className="sticky top-0 z-20 flex w-full items-center gap-4 bg-background-dark/80 px-4 py-4 backdrop-blur-md border-b border-white/5">
                 <button
-                    onClick={() => navigate(-1)}
+                    onClick={() => safeBack()}
                     className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-dark text-white hover:bg-white/10 active:scale-95 transition-all"
                 >
                     <Icon name="arrow_back" />
@@ -81,7 +82,7 @@ const SpyList: React.FC = () => {
                             return (
                                 <div
                                     key={profile.id}
-                                    onClick={() => navigate(`/profile/${profile.id}`)}
+                                    onClick={() => safeNavigate(`/profile/${profile.id}`)}
                                     className="flex items-center gap-4 p-4 rounded-2xl bg-surface-dark border border-white/5 hover:border-primary/30 active:scale-[0.98] transition-all cursor-pointer group"
                                 >
                                     <div className="h-16 w-16 rounded-xl overflow-hidden bg-background-dark border border-white/10 relative">

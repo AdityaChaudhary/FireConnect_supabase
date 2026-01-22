@@ -1,12 +1,13 @@
 import React from 'react';
-import { useLocation, useNavigate } from 'react-router';
+import { useLocation } from 'react-router';
+import { useSafeNavigate } from '../hooks/useSafeNavigate';
 import Icon from './Icon';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useUnreadBadge } from '../hooks/useData';
 
 const BottomNav: React.FC = () => {
-    const navigate = useNavigate();
+    const { safeNavigate } = useSafeNavigate();
     const location = useLocation();
     const { user: authUser } = useAuth();
 
@@ -17,7 +18,7 @@ const BottomNav: React.FC = () => {
         <nav className="fixed bottom-0 left-0 right-0 z-50 glass-nav border-t border-white/5 max-w-md mx-auto">
             <div className="flex justify-around items-center h-[80px] px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
                 <button
-                    onClick={() => navigate('/')}
+                    onClick={() => safeNavigate('/')}
                     className={`flex flex-col items-center justify-center w-full gap-1 p-2 transition-colors group ${isActive('/') ? 'text-primary' : 'text-white/50 hover:text-white'}`}
                 >
                     <div className={`p-1 rounded-2xl transition-colors ${isActive('/') ? 'bg-primary/10' : 'group-hover:bg-white/5'}`}>
@@ -27,7 +28,7 @@ const BottomNav: React.FC = () => {
                 </button>
 
                 <button
-                    onClick={() => navigate('/matches')}
+                    onClick={() => safeNavigate('/matches')}
                     className={`flex flex-col items-center justify-center w-full gap-1 p-2 transition-colors group ${isActive('/matches') ? 'text-primary' : 'text-white/50 hover:text-white'}`}
                 >
                     <div className={`p-1 rounded-2xl transition-colors ${isActive('/matches') ? 'bg-primary/10' : 'group-hover:bg-white/5'}`}>
@@ -37,14 +38,14 @@ const BottomNav: React.FC = () => {
                 </button>
 
                 <button 
-                    onClick={() => navigate('/random-chat')}
+                    onClick={() => safeNavigate('/random-chat')}
                     className={`flex items-center justify-center -mt-8 size-14 rounded-full shadow-lg transition-all hover:scale-105 active:scale-95 ${isActive('/random-chat') ? 'bg-white text-primary' : 'bg-primary text-white shadow-primary/40'}`}
                 >
                     <Icon type="lucide" name="Shuffle" size={28} />
                 </button>
 
                 <button
-                    onClick={() => navigate('/chat')}
+                    onClick={() => safeNavigate('/chat')}
                     className={`flex flex-col items-center justify-center w-full gap-1 p-2 transition-colors group ${isActive('/chat') ? 'text-primary' : 'text-white/50 hover:text-white'}`}
                 >
                     <motion.div
@@ -74,7 +75,7 @@ const BottomNav: React.FC = () => {
                 </button>
 
                 <button
-                    onClick={() => navigate('/profile')}
+                    onClick={() => safeNavigate('/profile')}
                     className={`flex flex-col items-center justify-center w-full gap-1 p-2 transition-colors group ${isActive('/profile') ? 'text-primary' : 'text-white/50 hover:text-white'}`}
                 >
                     <div className={`p-1 rounded-2xl transition-colors ${isActive('/profile') ? 'bg-primary/10' : 'group-hover:bg-white/5'}`}>

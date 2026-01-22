@@ -1,9 +1,9 @@
 import React from 'react';
 import type { MetaFunction } from "react-router";
-import { useNavigate, useLoaderData } from 'react-router';
+import { useLoaderData } from 'react-router';
+import { useSafeNavigate } from '../hooks/useSafeNavigate';
 import Icon from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
-import { redirectToCustomerPortal } from '../lib/stripe-utils';
 import { createSupabaseServerClient } from '../lib/supabase.server';
 import type { Route } from './+types/Settings';
 
@@ -44,29 +44,19 @@ export async function loader({ request }: Route.LoaderArgs) {
 const Settings: React.FC = () => {
     const { logout, stripeRole, profile } = useAuth();
     const loaderData = useLoaderData<typeof loader>();
-    const navigate = useNavigate();
-    const [portalLoading, setPortalLoading] = React.useState(false);
+    const { safeNavigate, safeBack } = useSafeNavigate();
+
 
     const stats = loaderData?.stats;
 
-    const handleManageSubscription = async () => {
-        setPortalLoading(true);
-        try {
-            await redirectToCustomerPortal();
-        } catch (error) {
-            console.error("Error redirecting to customer portal:", error);
-            alert("Failed to open subscription management. Please try again later.");
-        } finally {
-            setPortalLoading(false);
-        }
-    };
+
 
     return (
         <div className="flex min-h-screen w-full flex-col bg-background-dark text-white pb-24">
             {/* Header */}
             <header className="sticky top-0 z-20 flex w-full items-center gap-4 bg-background-dark/80 px-4 py-3 backdrop-blur-md border-b border-white/5">
                 <button
-                    onClick={() => navigate(-1)}
+                    onClick={() => safeBack()}
                     className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-dark text-white hover:bg-white/10 active:scale-95 transition-all"
                 >
                     <Icon name="arrow_back" />
@@ -103,7 +93,7 @@ const Settings: React.FC = () => {
                     <h3 className="text-white/50 text-[10px] font-black uppercase tracking-[0.2em] px-2 mb-1">Account</h3>
                     <div className="flex flex-col rounded-[24px] bg-surface-dark overflow-hidden border border-white/5 shadow-xl">
                         <button 
-                            onClick={() => navigate('/settings/privacy')}
+                            onClick={() => safeNavigate('/settings/privacy')}
                             className="flex w-full items-center justify-between p-4 px-5 active:bg-white/5 transition-colors text-left group"
                         >
                             <div className="flex items-center gap-3">
@@ -116,7 +106,7 @@ const Settings: React.FC = () => {
                         </button>
                         <div className="h-px w-full bg-white/5 mx-5"></div>
                         <button 
-                            onClick={() => navigate('/settings/terms')}
+                            onClick={() => safeNavigate('/settings/terms')}
                             className="flex w-full items-center justify-between p-4 px-5 active:bg-white/5 transition-colors text-left group"
                         >
                             <div className="flex items-center gap-3">
@@ -135,9 +125,8 @@ const Settings: React.FC = () => {
                     <h3 className="text-white/50 text-[10px] font-black uppercase tracking-[0.2em] px-2 mb-1">Subscription</h3>
                     <div className="flex flex-col rounded-[24px] bg-surface-dark overflow-hidden border border-white/5 shadow-xl">
                         <button
-                            onClick={handleManageSubscription}
-                            disabled={portalLoading}
-                            className="flex w-full items-center justify-between p-4 px-5 active:bg-white/5 transition-colors text-left group disabled:opacity-50"
+                            onClick={() => safeNavigate('/subscription')}
+                            className="flex w-full items-center justify-between p-4 px-5 active:bg-white/5 transition-colors text-left group"
                         >
                             <div className="flex items-center gap-3">
                                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-white/60 group-hover:text-primary transition-colors">
@@ -156,7 +145,7 @@ const Settings: React.FC = () => {
                         </button>
                         <div className="h-px w-full bg-white/5 mx-5"></div>
                         <button
-                            onClick={() => navigate('/purchase-credits')}
+                            onClick={() => safeNavigate('/purchase-credits')}
                             className="flex w-full items-center justify-between p-4 px-5 active:bg-white/5 transition-colors text-left group"
                         >
                             <div className="flex items-center gap-3">
@@ -168,7 +157,9 @@ const Settings: React.FC = () => {
                             <div className="flex items-center gap-2">
                                 <div className="flex items-center gap-1 bg-white/5 px-3 py-1 rounded-full">
                                     <Icon name="bolt" className="text-[10px] text-primary" filled />
-                                    <span className="text-xs font-black text-white">{(profile?.spy_credits || 0)}</span>
+                                    <span className="text-xs font-black text-white">
+                                        {stripeRole === 'max' ? '∞' : (profile?.spy_credits || 0)}
+                                    </span>
                                 </div>
                                 <Icon name="chevron_right" className="text-white/20" />
                             </div>
@@ -199,7 +190,7 @@ const Settings: React.FC = () => {
                 <button
                     onClick={async () => {
                         await logout();
-                        navigate('/');
+                        safeNavigate('/');
                     }}
                     className="mt-4 flex w-full items-center justify-center rounded-xl bg-red-500/10 hover:bg-red-500/20 active:bg-red-500/30 text-red-400 p-4 border border-red-500/20 transition-colors gap-2"
                 >

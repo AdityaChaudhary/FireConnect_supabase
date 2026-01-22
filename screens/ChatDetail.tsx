@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, useLocation, useLoaderData } from 'react-router';
+import { useParams, useLocation, useLoaderData } from 'react-router';
+import { useSafeNavigate } from '../hooks/useSafeNavigate';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import Icon from '../components/Icon';
@@ -115,7 +116,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 const ChatDetail: React.FC = () => {
     const { id: otherUserId } = useParams<{ id: string }>();
     const loaderData = useLoaderData<typeof loader>();
-    const navigate = useNavigate();
+    const { safeNavigate, safeBack } = useSafeNavigate();
     const location = useLocation();
     const queryClient = useQueryClient();
     const { user: authUser, profile } = useAuth();
@@ -608,7 +609,7 @@ const ChatDetail: React.FC = () => {
                 {!isMe && (
                     <div className="w-8 flex-shrink-0 flex justify-center">
                         {showAvatar ? (
-                            <div className="size-8 rounded-full overflow-hidden cursor-pointer border-2 border-white/10 shadow-sm" onClick={() => navigate(`/profile/${otherUserId}`)}>
+                            <div className="size-8 rounded-full overflow-hidden cursor-pointer border-2 border-white/10 shadow-sm" onClick={() => safeNavigate(`/profile/${otherUserId}`)}>
                                 <CdnImage
                                     path={otherUser?.profile_picture_url}
                                     gender={otherUser?.gender}
@@ -756,14 +757,14 @@ const ChatDetail: React.FC = () => {
                 <div className="flex items-center justify-between p-4 max-w-md mx-auto w-full">
                 <div className="flex items-center gap-3">
                     <button
-                        onClick={() => navigate(-1)}
+                        onClick={() => safeBack('/')}
                         className="flex items-center justify-center p-2 rounded-full hover:bg-white/10 transition-colors text-white group cursor-pointer"
                     >
                         <Icon name="arrow_back" className="text-[24px] group-active:-translate-x-1 transition-transform" />
                     </button>
                     <div
                         className="flex items-center gap-3 cursor-pointer group/header"
-                        onClick={() => navigate(`/profile/${otherUserId}`)}
+                        onClick={() => safeNavigate(`/profile/${otherUserId}`)}
                     >
                         <div className="relative">
                             <div className="size-10 rounded-full overflow-hidden border-2 border-primary/20 group-hover/header:border-primary transition-all duration-300 shadow-md shadow-primary/10">
@@ -1000,7 +1001,7 @@ const ChatDetail: React.FC = () => {
                     </p>
                     <motion.button
                         whileTap={{ scale: 0.95 }}
-                        onClick={() => navigate('/subscription')}
+                        onClick={() => safeNavigate('/subscription')}
                         className="mt-3 px-8 py-2.5 bg-primary text-white text-[11px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-primary/20 transition-all cursor-pointer"
                     >
                         {(!isConnected && (stripeRole === 'pro' || stripeRole === 'free')) ? 'View Subscription' : 'Upgrade to Max'}
