@@ -156,6 +156,7 @@ const ChatDetail: React.FC = () => {
     // Derived states
     const connectionStatus = connData?.status || null;
     const incomingStatus = connData?.incomingStatus || null;
+    const outgoingStatus = connData?.outgoingStatus || null;
     const stripeRole = (profile?.stripe_role || 'FREE').toLowerCase();
     const isTheyAI = otherUser?.user_type === 'AI';
     
@@ -1012,11 +1013,16 @@ const ChatDetail: React.FC = () => {
                                 ) : (
                                     <div className="bg-surface-dark border border-white/5 p-6 rounded-[32px] flex flex-col items-center text-center gap-4 shadow-xl">
                                         <div className="size-14 rounded-2xl bg-primary/10 flex items-center justify-center shadow-inner">
-                                            <Icon name="lock" className="text-primary text-2xl" />
+                                            <Icon name={outgoingStatus === 'PENDING' ? "hourglass_empty" : "lock"} className="text-primary text-2xl" />
                                         </div>
                                         <div className="flex flex-col gap-1">
                                             <p className="text-white text-lg font-black tracking-tight">Messaging Restricted</p>
-                                            <p className="text-white/40 text-[13px] font-medium max-w-xs mx-auto">You must connect with {displayName} before you can start messaging.</p>
+                                            <p className="text-white/40 text-[13px] font-medium max-w-xs mx-auto">
+                                                {(outgoingStatus === 'PENDING' || isConnected)
+                                                    ? `Awaiting for ${displayName} to initiate the conversation.`
+                                                    : `You must connect with ${displayName} before you can start messaging.`
+                                                }
+                                            </p>
                                         </div>
                                         <div className="flex gap-3 w-full max-w-sm mt-2">
                                             <button
@@ -1025,12 +1031,14 @@ const ChatDetail: React.FC = () => {
                                             >
                                                 View Profile
                                             </button>
-                                            <button
-                                                onClick={handleSendRequest}
-                                                className="flex-1 h-14 rounded-2xl bg-primary font-black text-xs uppercase tracking-widest text-white shadow-xl shadow-primary/30 btn-glow"
-                                            >
-                                                Connect Now
-                                            </button>
+                                            {!isConnected && outgoingStatus !== 'PENDING' && (
+                                                <button
+                                                    onClick={handleSendRequest}
+                                                    className="flex-1 h-14 rounded-2xl bg-primary font-black text-xs uppercase tracking-widest text-white shadow-xl shadow-primary/30 btn-glow"
+                                                >
+                                                    Connect Now
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 )}
