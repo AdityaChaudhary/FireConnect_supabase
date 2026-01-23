@@ -311,6 +311,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
             ref={targetRef}
             drag="x"
             dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
             onPointerDown={handlePointerDown}
