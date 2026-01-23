@@ -406,7 +406,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
                                         </div>
                                     </div>
                                 )}
-                                {((loading || isSpying) || (isSpied && !viewUrl && isImgPrivate)) && currentImageIndex === idx && (
+                                {((loading || (isSpying && !showImgSpyMode)) || (isSpied && !viewUrl && isImgPrivate)) && currentImageIndex === idx && (
                                     <div className="absolute inset-0 flex items-center justify-center z-20 bg-black/20 backdrop-blur-sm">
                                         <div className="flex flex-col items-center gap-4 -mt-24">
                                             <div className="size-12 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
