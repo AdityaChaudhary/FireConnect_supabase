@@ -31,7 +31,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <main className={`flex-1 min-h-[100dvh] relative bg-background-dark overflow-x-hidden transition-all duration-300
                 ${(location.pathname === '/' && !user) || location.pathname.startsWith('/chat/') || !user 
                     ? 'w-full' 
-                    : 'max-w-md mx-auto lg:max-w-none lg:mx-0'}`}>
+                    : 'w-full lg:max-w-none lg:mx-0'}`}>
                 {children}
             </main>
 
