@@ -458,25 +458,9 @@ const ChatDetail: React.FC = () => {
                 })
                 .eq('id', threadId);
 
-            // Invalidate queries
+            // 3. Manually invalidate queries for immediate feedback
             queryClient.invalidateQueries({ queryKey: ['messages', threadId] });
             queryClient.invalidateQueries({ queryKey: ['threads'] });
-
-            // Trigger AI if needed
-            if (isTheyAI && otherUserId) {
-                 try {
-                    await supabase.functions.invoke('ai-engine', {
-                        body: {
-                            threadId: threadId,
-                            text: "[Image Sent]", 
-                            userId: authUser.id,
-                            targetUserId: otherUserId
-                        }
-                    });
-                } catch (aiError) {
-                    console.error("AI Engine error:", aiError);
-                }
-            }
 
         } catch (error: any) {
             console.error('Error sending image:', error);
@@ -610,22 +594,6 @@ const ChatDetail: React.FC = () => {
             // 3. Manually invalidate queries for immediate feedback
             queryClient.invalidateQueries({ queryKey: ['messages', threadId] });
             queryClient.invalidateQueries({ queryKey: ['threads'] });
-
-            // 4. If AI user, call AI engine
-            if (isTheyAI) {
-                try {
-                    await supabase.functions.invoke('ai-engine', {
-                        body: {
-                            threadId: threadId,
-                            text: text,
-                            userId: authUser.id,
-                            targetUserId: otherUserId
-                        }
-                    });
-                } catch (aiError) {
-                    console.error("AI Engine error:", aiError);
-                }
-            }
         } catch (error) {
             console.error("Error sending message:", error);
         } finally {
