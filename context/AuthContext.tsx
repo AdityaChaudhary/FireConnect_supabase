@@ -56,9 +56,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, initialSes
         // If we are on the server, we're not loading (loaders already ran)
         if (typeof window === 'undefined') return false;
         
-        // If we have a code in the URL, we are definitely loading/processing auth
-        if (window.location.search.includes('code=')) return true;
-
         // If we have a user but no profile was passed, we might still be loading it on the client
         if (initialUser && initialProfile === undefined) return true;
         
@@ -237,10 +234,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, initialSes
     };
 
     const logout = async () => {
-        const { error } = await supabase.auth.signOut();
+        // Fire global signout in background
+        supabase.auth.signOut({ scope: 'global' }).catch(err => {
+            console.error("AuthContext: Global signout background error:", err);
+        });
+
+        // Resolve immediately with local scope
+        const { error } = await supabase.auth.signOut({ scope: 'local' });
         if (error) throw error;
-        // Perform a hard redirect to ensure the session is cleared across SSR/Client
-        window.location.href = '/';
+        
+        // No hard redirect here, components handle navigation
     };
 
     return (

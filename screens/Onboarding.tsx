@@ -25,9 +25,8 @@ const Onboarding: React.FC = () => {
     const [isLoggingOut, setIsLoggingOut] = useState(false);
 
     // Avatar state
-    const [avatarSeed, setAvatarSeed] = useState(Math.random().toString(36).substring(7));
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
-    const [avatarPreview, setAvatarPreview] = useState<string>(getDefaultAvatar(null, avatarSeed));
+    const [avatarPreview, setAvatarPreview] = useState<string>(() => getDefaultAvatar(null, user?.id || 'default'));
 
     useEffect(() => {
         if (user?.user_metadata?.full_name && !displayName && !profile?.display_name) {
@@ -134,7 +133,6 @@ const Onboarding: React.FC = () => {
 
     const handleRegenerateAvatar = () => {
         const newSeed = Math.random().toString(36).substring(7);
-        setAvatarSeed(newSeed);
         setAvatarFile(null);
         setAvatarPreview(getDefaultAvatar(gender, newSeed));
     };
