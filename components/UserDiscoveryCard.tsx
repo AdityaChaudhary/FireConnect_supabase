@@ -589,7 +589,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
                         onPointerDown={(e) => e.stopPropagation()}
                         className="size-14 shrink-0 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all active:scale-90"
                     >
-                        <Icon name="star_rate" className="text-2xl" filled />
+                        <Icon name="account_circle" className="text-2xl" filled />
                     </button>
 
                     {/* Spy Button - Theme Highlighted */}
