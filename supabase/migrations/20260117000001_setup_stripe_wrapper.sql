@@ -13,13 +13,48 @@ create foreign data wrapper stripe_wrapper
   handler extensions.stripe_fdw_handler
   validator extensions.stripe_fdw_validator;
 
--- Create the server (using plain text key to fix db reset issue)
--- Note: In production, we should migrate this to use Vault.
-create server stripe_server
-  foreign data wrapper stripe_wrapper
-  options (
-    api_key 'rk_test_51SiYg1GjpIR6M2m6rPKaQ7BjqZBzgdNmMXpJvd9kTu2U7Btnku1z7DIeL3b6PIRVa9RlEc0Z2aUlBvoAaJG7ThN600fKLUfG7v'
-  );
+-- Check if vault secret doesn't exists, then set dummy value
+-- DO $$
+-- DECLARE
+--   v_secret_id uuid;
+-- BEGIN
+--   -- Get the secret ID by name
+--   SELECT id INTO v_secret_id FROM vault.secrets WHERE name = 'stripe_wrapper_api_key_id';
+  
+--   IF v_secret_id IS NULL THEN
+--     -- Set a dummy secret for now
+--     select vault.create_secret('dummy', 'stripe_wrapper_api_key_id', 'Stripe API Key for FDW');
+--     -- RAISE EXCEPTION 'Vault secret "stripe_wrapper_api_key_id" not found. Please ensure it is created in the vault.secrets table.';
+--     -- set v_secret_id to dummy secret
+--     select id INTO v_secret_id FROM vault.secrets WHERE name = 'stripe_wrapper_api_key_id';
+--   END IF;
+-- END $$;
+
+-- Create the server using Vault secret
+DO $$
+DECLARE
+  v_secret_id uuid;
+BEGIN
+  -- Get the secret ID by name
+  SELECT id INTO v_secret_id FROM vault.secrets WHERE name = 'stripe_wrapper_api_key_id';
+  
+  IF v_secret_id IS NULL THEN
+    -- Set a dummy secret for now
+    PERFORM vault.create_secret('dummy', 'stripe_wrapper_api_key_id', 'Stripe API Key for FDW');
+    -- RAISE EXCEPTION 'Vault secret "stripe_wrapper_api_key_id" not found. Please ensure it is created in the vault.secrets table.';
+    -- set v_secret_id to dummy secret
+    select id INTO v_secret_id FROM vault.secrets WHERE name = 'stripe_wrapper_api_key_id';
+  END IF;
+
+  -- Create the server using the secret ID
+  EXECUTE format('
+    CREATE SERVER stripe_server
+    FOREIGN DATA WRAPPER stripe_wrapper
+    OPTIONS (
+      api_key_id %L
+    );
+  ', v_secret_id);
+END $$;
 
 -- Create the schema for Stripe foreign tables
 create schema if not exists stripe;
