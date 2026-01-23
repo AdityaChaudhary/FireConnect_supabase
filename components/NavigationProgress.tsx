@@ -24,20 +24,23 @@ const NavigationProgress: React.FC = () => {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed top-0 left-0 right-0 z-[9999] pointer-events-none h-1"
+                    className="fixed top-0 left-0 right-0 z-[9999] pointer-events-none h-1.5"
                 >
                     <motion.div
-                        className="h-full bg-gradient-to-r from-fire-pink via-primary to-neon-purple shadow-[0_0_8px_rgba(255,0,85,0.5)]"
+                        className="h-full bg-gradient-to-r from-fire-pink via-primary to-neon-purple relative overflow-hidden loader-glow-bar"
                         initial={{ width: "0%" }}
                         animate={{ 
-                            width: ["0%", "30%", "70%", "90%"],
+                            width: ["0%", "30%", "70%", "95%"],
                             transition: { 
                                 duration: 15, 
                                 ease: "linear",
                                 times: [0, 0.1, 0.4, 1]
                             }
                         }}
-                    />
+                    >
+                        {/* Shimmer effect */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent w-full h-full transform -skew-x-12 animate-[loader-shimmer_1.5s_infinite]" />
+                    </motion.div>
                 </motion.div>
             )}
         </AnimatePresence>

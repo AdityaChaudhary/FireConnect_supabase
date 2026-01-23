@@ -1,16 +1,19 @@
 import React from 'react';
-import { useLocation } from 'react-router';
+import { useLocation, useNavigation } from 'react-router';
 import { useSafeNavigate } from '../hooks/useSafeNavigate';
 import Icon from './Icon';
 import { useAuth } from '../context/AuthContext';
 import CdnImage from './CdnImage';
+import { motion } from 'framer-motion';
 
 const Sidebar: React.FC = () => {
     const { safeNavigate } = useSafeNavigate();
     const location = useLocation();
+    const navigation = useNavigation();
     const { user: authUser, profile, stripeRole } = useAuth();
 
     const isActive = (path: string) => location.pathname === path;
+    const isNavigatingTo = (path: string) => navigation.location?.pathname === path;
 
     const navItems = [
         { name: 'Discovery', path: '/', icon: 'LayoutGrid', lucide: true },
@@ -38,7 +41,8 @@ const Sidebar: React.FC = () => {
                     <button
                         key={item.path}
                         onClick={() => safeNavigate(item.path)}
-                        className={`flex items-center gap-4 px-4 py-3 rounded-2xl transition-all group ${
+                        disabled={navigation.state === 'loading'}
+                        className={`flex items-center gap-4 px-4 py-3 rounded-2xl transition-all group relative overflow-hidden ${
                             isActive(item.path)
                                 ? 'bg-primary/10 text-primary'
                                 : 'text-white/50 hover:text-white hover:bg-white/5'
@@ -48,11 +52,21 @@ const Sidebar: React.FC = () => {
                             name={item.icon}
                             type={item.lucide ? 'lucide' : 'material'}
                             size={22}
-                            className={`transition-transform group-hover:scale-110 ${isActive(item.path) ? 'text-primary' : ''}`}
+                            className={`transition-transform z-10 ${isNavigatingTo(item.path) ? 'animate-pulse' : 'group-hover:scale-110'} ${isActive(item.path) ? 'text-primary' : ''}`}
                         />
-                        <span className="font-semibold text-sm tracking-wide">{item.name}</span>
+                        <span className="font-semibold text-sm tracking-wide z-10">{item.name}</span>
                         {isActive(item.path) && (
-                            <div className="ml-auto size-1.5 rounded-full bg-primary shadow-[0_0_10px_rgba(236,19,146,0.5)]" />
+                            <div className="ml-auto size-1.5 rounded-full bg-primary shadow-[0_0_10px_rgba(236,19,146,0.5)] z-10" />
+                        )}
+                        
+                        {isNavigatingTo(item.path) && (
+                            <motion.div 
+                                layoutId="sidebar-nav-loading"
+                                className="absolute inset-0 bg-primary/20 animate-pulse blur-xl"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                            />
                         )}
                     </button>
                 ))}
