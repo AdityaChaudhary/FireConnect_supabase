@@ -366,12 +366,12 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
                         const blurUrl = blurredViewableUrls[idx];
 
                         return (
-                            <div key={img.id || idx} className="relative flex-shrink-0 w-full h-full">
+                            <div key={img.id || idx} className="relative flex-shrink-0 w-full h-full overflow-hidden">
                                 {blurUrl && (showImgSpyMode || !viewUrl) && (
-                                    <div
-                                        className="absolute inset-0 bg-cover bg-center blur-2xl scale-110"
-                                        style={{ backgroundImage: `url("${blurUrl}")` }}
-                                    ></div>
+                                <div
+                                    className="absolute inset-0 bg-cover bg-center blur-sm scale-110"
+                                    style={{ backgroundImage: `url("${blurUrl}")` }}
+                                ></div>
                                 )}
                                 {viewUrl && (
                                     <div
@@ -381,7 +381,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
                                 )}
                                 {showImgSpyMode && (
                                     <div
-                                        className="absolute inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center cursor-pointer z-40"
+                                        className="absolute inset-0 bg-black/40 backdrop-[blur:2px] flex items-center justify-center cursor-pointer z-40"
                                         onClick={handleSpyClick}
                                         onPointerDown={(e) => e.stopPropagation()}
                                     >

@@ -465,7 +465,7 @@ const ProfilePreview: React.FC = () => {
                                                 path={img.blurred_url || img.url}
                                                 gender={user.gender}
                                                 seed={targetUserId}
-                                                className="absolute inset-0 bg-cover bg-center blur-2xl scale-110"
+                                                className="absolute inset-0 bg-cover bg-center blur-sm scale-110"
                                                 useAsBackground
                                                 showSpinner={true}
                                             />
@@ -473,7 +473,7 @@ const ProfilePreview: React.FC = () => {
 
                                         {showImgSpyMode && (
                                             <div
-                                                className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-md z-10 group-hover:bg-black/30 transition-colors"
+                                                className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-[blur:2px] z-10 group-hover:bg-black/30 transition-colors"
                                                 onClick={handleRevealClick}
                                             >
                                                 <div className="size-12 rounded-full bg-white/10 flex items-center justify-center border border-white/20 shadow-xl group-hover:scale-110 transition-transform">
@@ -884,12 +884,12 @@ const ProfilePreview: React.FC = () => {
                                                             path={img.blurred_url || img.url}
                                                             gender={user.gender}
                                                             seed={targetUserId}
-                                                            className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-50"
+                                                            className="absolute inset-0 w-full h-full object-cover blur-sm opacity-50"
                                                             useAsBackground
                                                             showSpinner={true}
                                                         />
                                                         <div
-                                                            className="z-10 flex flex-col items-center gap-4 p-8 rounded-3xl bg-black/40 backdrop-blur-xl border border-white/10"
+                                                            className="z-10 flex flex-col items-center gap-4 p-8 rounded-3xl bg-black/40 backdrop-[blur:2px] border border-white/10"
                                                             onClick={handleRevealClick}
                                                         >
                                                             <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center border border-primary/30 animate-pulse">
