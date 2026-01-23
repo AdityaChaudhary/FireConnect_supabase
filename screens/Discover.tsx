@@ -158,22 +158,16 @@ const Discover: React.FC = () => {
 
     // Scroll Position Persistence
     const scrollKey = `discover_scroll_${authUser?.id}`;
+    const hasRestoredInitialScroll = React.useRef(false);
 
-    React.useEffect(() => {
+    React.useLayoutEffect(() => {
         const savedScroll = localStorage.getItem(scrollKey);
-        if (savedScroll && users.length > 0 && mainRef.current) {
-            // Wait for items to be rendered
-            const timer = setTimeout(() => {
-                if (mainRef.current) {
-                    const top = parseInt(savedScroll);
-                    mainRef.current.scrollTo({
-                        top,
-                        behavior: 'auto'
-                    });
-                    lastScrollY.current = top;
-                }
-            }, 100);
-            return () => clearTimeout(timer);
+        if (savedScroll && users.length > 0 && mainRef.current && !hasRestoredInitialScroll.current) {
+            const top = parseInt(savedScroll);
+            mainRef.current.scrollTop = top;
+            lastScrollY.current = top;
+            hasRestoredInitialScroll.current = true;
+            console.log("Scroll restored to:", top);
         }
     }, [users.length, scrollKey]);
 
