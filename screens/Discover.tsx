@@ -114,6 +114,14 @@ const Discover: React.FC = () => {
         setIsPulling(false);
     };
 
+    const headerVisible = useMotionValue(1); // 1 = visible, 0 = hidden
+    const lastScrollY = React.useRef(0);
+    const scrollUpDistance = React.useRef(0);
+    const SHOW_HEADER_THRESHOLD = 50; // Distance to scroll up before showing header
+
+    const headerY = useTransform(headerVisible, [0, 1], ["-100%", "0%"]);
+    const headerOpacity = useTransform(headerVisible, [0, 1], [0, 1]);
+
     const {
         data,
         isLoading: loading,
@@ -157,10 +165,12 @@ const Discover: React.FC = () => {
             // Wait for items to be rendered
             const timer = setTimeout(() => {
                 if (mainRef.current) {
+                    const top = parseInt(savedScroll);
                     mainRef.current.scrollTo({
-                        top: parseInt(savedScroll),
+                        top,
                         behavior: 'auto'
                     });
+                    lastScrollY.current = top;
                 }
             }, 100);
             return () => clearTimeout(timer);
@@ -172,13 +182,34 @@ const Discover: React.FC = () => {
         if (!container) return;
 
         const handleScroll = () => {
+            const latest = container.scrollTop;
+            const diff = latest - lastScrollY.current;
+            
+            // Header hide logic (downward scroll)
+            if (diff > 2 && latest > 20) {
+                if (headerVisible.get() === 1) {
+                    animate(headerVisible, 0, { duration: 0.2 });
+                }
+                scrollUpDistance.current = 0;
+            } 
+            // Header show logic (upward scroll)
+            else if (diff < -2) {
+                scrollUpDistance.current += Math.abs(diff);
+                if (scrollUpDistance.current > SHOW_HEADER_THRESHOLD || latest < 10) {
+                    if (headerVisible.get() === 0) {
+                        animate(headerVisible, 1, { duration: 0.2 });
+                    }
+                }
+            }
+
+            lastScrollY.current = latest;
             // Save scroll position
-            localStorage.setItem(scrollKey, container.scrollTop.toString());
+            localStorage.setItem(scrollKey, latest.toString());
         };
 
         container.addEventListener('scroll', handleScroll, { passive: true });
         return () => container.removeEventListener('scroll', handleScroll);
-    }, [scrollKey]);
+    }, [scrollKey, headerVisible]);
 
     if (loading && users.length === 0) {
         return (
@@ -191,7 +222,10 @@ const Discover: React.FC = () => {
     return (
         <div className="flex flex-col h-screen bg-background-dark overflow-hidden">
             {/* Header (Desktop: Hidden or integrated into sidebar/top, Mobile: Sticky) */}
-            <header className="sticky top-0 z-50 flex items-center justify-between p-4 bg-background-dark/95 backdrop-blur-md border-b border-white/5 lg:bg-transparent lg:border-none lg:p-6 lg:static">
+            <motion.header 
+                style={{ y: headerY, opacity: headerOpacity }}
+                className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-4 bg-background-dark/95 backdrop-blur-md border-b border-white/5 lg:bg-transparent lg:border-none lg:p-6 lg:static"
+            >
                 <div className="flex items-center lg:hidden">
                     <div className="relative group cursor-pointer z-0" onClick={() => safeNavigate('/profile')}>
                         <CdnImage
@@ -246,14 +280,11 @@ const Discover: React.FC = () => {
                     </button>
                     <NotificationIcon />
                 </div>
-            </header>
-
-            {/* Mobile spacing */}
-            <div className="h-4 lg:hidden"></div>
+            </motion.header>
 
             <main
                 ref={mainRef}
-                className="flex-1 overflow-y-auto hide-scrollbar relative overscroll-behavior-y-none"
+                className="flex-1 overflow-y-auto hide-scrollbar relative overscroll-behavior-y-none pt-[88px] lg:pt-0"
                 style={{ overscrollBehaviorY: 'none' }}
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
@@ -275,7 +306,7 @@ const Discover: React.FC = () => {
                     </div>
                 </motion.div>
 
-                <section className="flex flex-col gap-8 pb-24 px-4 lg:px-6 lg:pb-12 lg:max-w-4xl lg:mx-auto lg:pt-4">
+                <section className="flex flex-col gap-8 pb-24 px-4 lg:px-6 lg:pb-12 lg:max-w-4xl lg:mx-auto">
                     {users.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-20 text-white/50">
                             <Icon name="person_off" className="text-[48px] mb-4" />
