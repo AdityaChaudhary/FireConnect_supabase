@@ -182,23 +182,30 @@ const Discover: React.FC = () => {
         if (!container) return;
 
         const handleScroll = () => {
+            if (!container) return;
+            //console.log("Scrolling Discover list...");
             const latest = container.scrollTop;
             const diff = latest - lastScrollY.current;
             
             // Header hide logic (downward scroll)
-            if (diff > 2 && latest > 20) {
+            // Even a small positive diff should hide if we are past the very top
+            if (diff > 0.5 && latest > 15) {
                 if (headerVisible.get() === 1) {
-                    animate(headerVisible, 0, { duration: 0.2 });
+                    animate(headerVisible, 0, { duration: 0.2, ease: "easeInOut" });
+                    console.log("Header hidden");
                 }
                 scrollUpDistance.current = 0;
             } 
             // Header show logic (upward scroll)
-            else if (diff < -2) {
+            else if (diff < -0.5) {
                 scrollUpDistance.current += Math.abs(diff);
+                // Show if we've scrolled up enough or reached the top
                 if (scrollUpDistance.current > SHOW_HEADER_THRESHOLD || latest < 10) {
                     if (headerVisible.get() === 0) {
-                        animate(headerVisible, 1, { duration: 0.2 });
+                        animate(headerVisible, 1, { duration: 0.2, ease: "easeInOut" });
+                        console.log("Header shown");
                     }
+                    scrollUpDistance.current = 0; // Reset after showing
                 }
             }
 
@@ -209,7 +216,7 @@ const Discover: React.FC = () => {
 
         container.addEventListener('scroll', handleScroll, { passive: true });
         return () => container.removeEventListener('scroll', handleScroll);
-    }, [scrollKey, headerVisible]);
+    }, [scrollKey, headerVisible, loading, users.length]);
 
     if (loading && users.length === 0) {
         return (
@@ -284,7 +291,7 @@ const Discover: React.FC = () => {
 
             <main
                 ref={mainRef}
-                className="flex-1 overflow-y-auto hide-scrollbar relative overscroll-behavior-y-none pt-[88px] lg:pt-0"
+                className="flex-1 overflow-y-auto hide-scrollbar relative overscroll-behavior-y-none pt-[110px] lg:pt-0"
                 style={{ overscrollBehaviorY: 'none' }}
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
