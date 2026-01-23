@@ -56,13 +56,14 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect, onClose }) => 
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
             transition={{ type: "spring", damping: 25, stiffness: 400 }}
-            className="absolute bottom-24 right-4 w-[280px] bg-surface-dark/95 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 overflow-hidden flex flex-col"
+            className="w-[280px] bg-surface-dark/95 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 overflow-hidden flex flex-col"
         >
             {/* Header / Tabs */}
             <div className="flex items-center justify-between px-2 py-2 border-b border-white/5 bg-white/5">
                 {EMOJI_CATEGORIES.map((category, index) => (
                     <button
                         key={category.name}
+                        type="button"
                         onClick={() => setActiveCategory(index)}
                         className={`flex-1 flex items-center justify-center p-2 rounded-xl transition-all ${activeCategory === index ? 'bg-primary text-white' : 'text-white/40 hover:text-white/60 hover:bg-white/5'}`}
                     >
@@ -76,6 +77,7 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect, onClose }) => 
                 {EMOJI_CATEGORIES[activeCategory].emojis.map((emoji, index) => (
                     <button
                         key={index}
+                        type="button"
                         onClick={() => onEmojiSelect(emoji)}
                         className="flex items-center justify-center text-2xl p-1 rounded-lg hover:bg-white/10 active:scale-90 transition-all"
                     >
@@ -88,6 +90,7 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect, onClose }) => 
             <div className="px-4 py-2 border-t border-white/5 bg-white/5 flex items-center justify-between">
                 <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">{EMOJI_CATEGORIES[activeCategory].name}</span>
                 <button 
+                    type="button"
                     onClick={onClose}
                     className="text-[10px] font-bold text-primary uppercase tracking-widest"
                 >

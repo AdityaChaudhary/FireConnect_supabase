@@ -645,7 +645,7 @@ const ChatDetail: React.FC = () => {
 
         const newText = before + emoji + after;
         setNewMessage(newText);
-        setShowEmojiPicker(false); // Close on selection
+        // setShowEmojiPicker(false); // keep open for multiple emojis
 
         // Update height
         setTimeout(() => {
@@ -1001,7 +1001,7 @@ const ChatDetail: React.FC = () => {
                                         {/* Emoji Picker Overlay */}
                                         <AnimatePresence>
                                             {showEmojiPicker && (
-                                                <div className="absolute bottom-full left-0 mb-4 z-50">
+                                                <div className="absolute bottom-full right-0 mb-4 z-50">
                                                     <EmojiPicker 
                                                         onEmojiSelect={handleEmojiSelect} 
                                                         onClose={() => setShowEmojiPicker(false)}
