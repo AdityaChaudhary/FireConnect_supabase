@@ -11,6 +11,7 @@ import type { Route } from "./+types/root";
 import type { MetaFunction } from "react-router";
 import { Analytics } from "@vercel/analytics/react";
 import { createSupabaseServerClient } from "../lib/supabase.server";
+import "./tailwind.css";
 
 export const meta: MetaFunction = () => {
   return [
@@ -143,103 +144,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
             href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
             rel="stylesheet"
         />
-        <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries,typography"></script>
-        <script dangerouslySetInnerHTML={{ __html: `
-            tailwind.config = {
-                darkMode: "class",
-                theme: {
-                    extend: {
-                        colors: {
-                            "primary": "rgba(var(--primary-rgb), <alpha-value>)",
-                            "neon-purple": "#bc13ec",
-                            "fire-pink": "#ff0055",
-                            "charcoal": "#0f0f11",
-                            "charcoal-light": "#1a1a1d",
-                            "glass": "rgba(255, 255, 255, 0.03)",
-                            "background-light": "#f8f6f7",
-                            "background-dark": "rgba(var(--background-dark-rgb), <alpha-value>)",
-                            "surface-dark": "rgba(var(--surface-dark-rgb), <alpha-value>)",
-                            "bubble-incoming": "#2a2a2a",
-                            "text-secondary": "#c992b2",
-                        },
-                        fontFamily: {
-                            "sans": ["var(--font-sans)", "sans-serif"],
-                            "display": ["var(--font-display)", "sans-serif"],
-                        },
-                        borderRadius: {
-                            "DEFAULT": "1rem",
-                            "lg": "1.5rem",
-                            "xl": "2rem",
-                            "2xl": "3rem",
-                            "4xl": "2.5rem",
-                            "5xl": "3rem",
-                            "super": "40px",
-                            "full": "9999px",
-                        },
-                        backgroundImage: {
-                            "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
-                        },
-                        animation: {
-                            "scan": "scan 3s ease-in-out infinite",
-                            "pulse-slow": "pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite",
-                        },
-                        keyframes: {
-                            scan: {
-                                "0%, 100%": { top: "0%" },
-                                "50%": { top: "100%" },
-                            },
-                        },
-                    },
-                },
-            };
-        `}} />
-        <style dangerouslySetInnerHTML={{ __html: `
-            :root {
-                scrollbar-gutter: stable;
-                --primary: #ec1392;
-                --background-dark: #22101a;
-                --surface-dark: #2d1623;
-                --font-sans: "Plus Jakarta Sans";
-                --font-display: "Plus Jakarta Sans";
-                --primary-rgb: 236, 19, 146;
-                --background-dark-rgb: 34, 16, 26;
-                --surface-dark-rgb: 45, 22, 35;
-            }
-
-            .landing-theme {
-                --primary: #a413ec;
-                --background-dark: #0f0f11;
-                --surface-dark: #1a1a1d;
-                --font-sans: "Outfit";
-                --font-display: "Outfit";
-                --primary-rgb: 164, 19, 236;
-                --background-dark-rgb: 15, 15, 17;
-                --surface-dark-rgb: 26, 26, 29;
-            }
-
-            body {
-                font-family: var(--font-sans), sans-serif;
-                background-color: var(--background-dark);
-                color: white;
-                min-height: 100vh;
-            }
-
-            .text-glow { text-shadow: 0 0 20px rgba(var(--primary-rgb), 0.6); }
-            .text-glow-pink { text-shadow: 0 0 20px rgba(255, 0, 85, 0.6); }
-            .btn-glow { box-shadow: 0 0 20px rgba(var(--primary-rgb), 0.4); transition: all 0.3s ease; }
-            .btn-glow:hover { box-shadow: 0 0 30px rgba(var(--primary-rgb), 0.7); transform: translateY(-2px); }
-            .glass-card { background: rgba(30, 30, 35, 0.4); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); }
-            .glass-panel { background: linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.05); }
-            .hide-scrollbar::-webkit-scrollbar { display: none; }
-            .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-            ::-webkit-scrollbar { width: 6px; height: 6px; }
-            ::-webkit-scrollbar-track { background: transparent; }
-            ::-webkit-scrollbar-thumb { background: linear-gradient(to bottom, var(--primary), #ff0055); border-radius: 10px; opacity: 0.5; }
-            ::-webkit-scrollbar-thumb:hover { background: linear-gradient(to bottom, var(--primary), #ff0055); opacity: 1; }
-            * { scrollbar-width: thin; scrollbar-color: var(--primary) transparent; }
-            .glass-nav { background: rgba(var(--background-dark-rgb), 0.8); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
-            .material-symbols-outlined.filled { font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24; }
-        `}} />
       </head>
       <body>
         <NavigationProgress />
