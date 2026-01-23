@@ -67,6 +67,32 @@ const Settings: React.FC = () => {
 
             <main className="flex-1 flex flex-col px-4 pt-6 gap-6 w-full max-w-md mx-auto">
                 
+                {/* Account Info Section */}
+                <div className="flex flex-col gap-2">
+                    <h3 className="text-white/50 text-[10px] font-black uppercase tracking-[0.2em] px-2 mb-1">Account Info</h3>
+                    <div className="flex flex-col rounded-[24px] bg-surface-dark overflow-hidden border border-white/5 shadow-xl">
+                        <div className="flex items-center gap-3 p-4 px-5">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-white/60">
+                                <Icon name="person" />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-xs text-white/40 font-black uppercase tracking-widest leading-none mb-1">Username</span>
+                                <span className="text-sm font-bold">{profile?.username || '—'}</span>
+                            </div>
+                        </div>
+                        <div className="h-px w-full bg-white/5 mx-5"></div>
+                        <div className="flex items-center gap-3 p-4 px-5">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-white/60">
+                                <Icon name="mail" />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-xs text-white/40 font-black uppercase tracking-widest leading-none mb-1">Email</span>
+                                <span className="text-sm font-bold">{profile?.email || '—'}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Statistics Section */}
                 {stats && (
                     <div className="flex flex-col gap-2">

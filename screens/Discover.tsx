@@ -291,7 +291,7 @@ const Discover: React.FC = () => {
 
             <main
                 ref={mainRef}
-                className="flex-1 overflow-y-auto hide-scrollbar relative overscroll-behavior-y-none pt-[110px] lg:pt-0"
+                className="flex-1 overflow-y-auto hide-scrollbar relative overscroll-behavior-y-none pt-[95px] lg:pt-0"
                 style={{ overscrollBehaviorY: 'none' }}
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
