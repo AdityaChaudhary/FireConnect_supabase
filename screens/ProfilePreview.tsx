@@ -869,44 +869,47 @@ const ProfilePreview: React.FC = () => {
                                         return (
                                             <div className="relative w-full h-full flex items-center justify-center">
                                                 {/* Main Image */}
-                                                <CdnImage
-                                                    path={img.url}
-                                                    gender={user.gender}
-                                                    seed={targetUserId}
-                                                    className={`max-h-full max-w-full object-contain rounded-xl shadow-2xl transition-opacity duration-300 ${showImgSpyMode ? 'opacity-0' : 'opacity-100'}`}
-                                                    showSpinner={true}
-                                                />
+                                                {!showImgSpyMode && (
+                                                    <CdnImage
+                                                        path={img.url}
+                                                        gender={user.gender}
+                                                        seed={targetUserId}
+                                                        className="max-h-full max-w-full object-contain rounded-xl shadow-2xl transition-opacity duration-300 opacity-100"
+                                                        showSpinner={true}
+                                                    />
+                                                )}
 
                                                 {/* Blurred Placeholder & Spy Overlay */}
                                                 {showImgSpyMode && (
-                                                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-6">
+                                                    <>
                                                         <CdnImage
-                                                            path={img.blurred_url || img.url}
+                                                            path={img.blurred_url}
                                                             gender={user.gender}
                                                             seed={targetUserId}
-                                                            className="absolute inset-0 w-full h-full object-cover blur-sm opacity-50"
-                                                            useAsBackground
+                                                            className="max-h-full max-w-full object-contain blur-sm opacity-100"
                                                             showSpinner={true}
                                                         />
-                                                        <div
-                                                            className="z-10 flex flex-col items-center gap-4 p-8 rounded-3xl bg-black/40 backdrop-[blur:2px] border border-white/10"
-                                                            onClick={handleRevealClick}
-                                                        >
-                                                            <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center border border-primary/30 animate-pulse">
-                                                                <Icon name="visibility_off" className="text-4xl text-primary" />
-                                                            </div>
-                                                            <div className="text-center">
-                                                                <h4 className="text-xl font-bold text-white mb-1">{isSpying ? 'Unlocking...' : 'Private Photo'}</h4>
-                                                                <p className="text-white/60 text-sm">{isSpying ? 'Please wait' : 'Tap to reveal this media'}</p>
-                                                            </div>
-                                                            {stripeRole === 'PRO' && !isSpying && (
-                                                                <div className="mt-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 flex items-center gap-2">
-                                                                    <Icon name="stars" className="text-primary text-sm" />
-                                                                    <span className="text-xs font-bold text-primary">{myProfile?.spy_credits || 0} Credits Left</span>
+                                                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-6">
+                                                            <div
+                                                                className="z-10 flex flex-col items-center gap-4 p-8 rounded-3xl bg-black/40 backdrop-[blur:2px] border border-white/10"
+                                                                onClick={handleRevealClick}
+                                                            >
+                                                                <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center border border-primary/30 animate-pulse">
+                                                                    <Icon name="visibility_off" className="text-4xl text-primary" />
                                                                 </div>
-                                                            )}
+                                                                <div className="text-center">
+                                                                    <h4 className="text-xl font-bold text-white mb-1">{isSpying ? 'Unlocking...' : 'Private Photo'}</h4>
+                                                                    <p className="text-white/60 text-sm">{isSpying ? 'Please wait' : 'Tap to reveal this media'}</p>
+                                                                </div>
+                                                                {stripeRole === 'PRO' && !isSpying && (
+                                                                    <div className="mt-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 flex items-center gap-2">
+                                                                        <Icon name="stars" className="text-primary text-sm" />
+                                                                        <span className="text-xs font-bold text-primary">{myProfile?.spy_credits || 0} Credits Left</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                    </div>
+                                                    </>
                                                 )}
 
                                                 {/* Visibility Badge */}
