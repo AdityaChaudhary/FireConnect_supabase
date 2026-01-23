@@ -56,7 +56,11 @@ const Discover: React.FC = () => {
         setDiscoverySeed(newSeed);
         // Reset scroll position on refresh
         localStorage.removeItem(scrollKey);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (mainRef.current) {
+            mainRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
         // Invalidate queries to fetch fresh data
         await queryClient.invalidateQueries({ queryKey: ['discovery-users'] });
     };
@@ -71,11 +75,9 @@ const Discover: React.FC = () => {
     const threshold = 80;
 
     const handleTouchStart = (e: React.TouchEvent) => {
-        const currentScroll = window.innerWidth >= 1024 
-            ? mainRef.current?.scrollTop 
-            : window.scrollY;
+        const currentScroll = mainRef.current?.scrollTop ?? 0;
 
-        if (currentScroll === 0) {
+        if (currentScroll <= 0) {
             startY.current = e.touches[0].clientY;
             setIsPulling(true);
         }
@@ -151,26 +153,31 @@ const Discover: React.FC = () => {
 
     React.useEffect(() => {
         const savedScroll = localStorage.getItem(scrollKey);
-        if (savedScroll && users.length > 0) {
+        if (savedScroll && users.length > 0 && mainRef.current) {
             // Wait for items to be rendered
             const timer = setTimeout(() => {
-                window.scrollTo({
-                    top: parseInt(savedScroll),
-                    behavior: 'auto'
-                });
+                if (mainRef.current) {
+                    mainRef.current.scrollTo({
+                        top: parseInt(savedScroll),
+                        behavior: 'auto'
+                    });
+                }
             }, 100);
             return () => clearTimeout(timer);
         }
     }, [users.length, scrollKey]);
 
     React.useEffect(() => {
+        const container = mainRef.current;
+        if (!container) return;
+
         const handleScroll = () => {
             // Save scroll position
-            localStorage.setItem(scrollKey, window.scrollY.toString());
+            localStorage.setItem(scrollKey, container.scrollTop.toString());
         };
 
-        window.addEventListener('scroll', handleScroll, { passive: true });
-        return () => window.removeEventListener('scroll', handleScroll);
+        container.addEventListener('scroll', handleScroll, { passive: true });
+        return () => container.removeEventListener('scroll', handleScroll);
     }, [scrollKey]);
 
     if (loading && users.length === 0) {
@@ -182,7 +189,7 @@ const Discover: React.FC = () => {
     }
 
     return (
-        <div className="flex flex-col min-h-screen bg-background-dark lg:h-screen lg:overflow-hidden lg:pb-0">
+        <div className="flex flex-col h-screen bg-background-dark overflow-hidden">
             {/* Header (Desktop: Hidden or integrated into sidebar/top, Mobile: Sticky) */}
             <header className="sticky top-0 z-50 flex items-center justify-between p-4 bg-background-dark/95 backdrop-blur-md border-b border-white/5 lg:bg-transparent lg:border-none lg:p-6 lg:static">
                 <div className="flex items-center lg:hidden">
@@ -246,7 +253,8 @@ const Discover: React.FC = () => {
 
             <main
                 ref={mainRef}
-                className="flex-1 lg:overflow-y-auto lg:hide-scrollbar relative"
+                className="flex-1 overflow-y-auto hide-scrollbar relative overscroll-behavior-y-none"
+                style={{ overscrollBehaviorY: 'none' }}
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
