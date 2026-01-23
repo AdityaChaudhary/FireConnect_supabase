@@ -574,7 +574,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
                                 className="flex flex-wrap gap-2 overflow-hidden"
                             >
                                 {user.interests.slice(0, 3).map((interest: string, idx: number) => (
-                                    <div key={idx} className="bg-white/10 backdrop-blur-md border border-white/5 px-3 py-1 rounded-full flex items-center">
+                                    <div key={idx} className="bg-black/25 backdrop-blur-md border border-white/5 px-3 py-1 rounded-full flex items-center">
                                         <span className="text-white/90 text-[10px] font-bold leading-none">#{interest.replace(/\s+/g, '')}</span>
                                     </div>
                                 ))}
@@ -588,7 +588,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
                     <button
                         onClick={(e) => { e.stopPropagation(); safeNavigate(`/profile/${user.id}`); }}
                         onPointerDown={(e) => e.stopPropagation()}
-                        className="size-14 shrink-0 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all active:scale-90"
+                        className="size-14 shrink-0 rounded-full bg-black/25 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:bg-black/40 transition-all active:scale-90"
                     >
                         <Icon name="account_circle" className="text-2xl" filled />
                     </button>
@@ -599,7 +599,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
                             onClick={handleSpyClick}
                             onPointerDown={(e) => e.stopPropagation()}
                             disabled={isSpying}
-                            className={`size-14 shrink-0 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center transition-all active:scale-90 disabled:opacity-50 relative ${isSpied ? 'text-primary border-primary/20 bg-primary/5' : 'text-white/40 hover:text-white hover:bg-white/10'}`}
+                            className={`size-14 shrink-0 rounded-full bg-black/25 backdrop-blur-md border border-white/10 flex items-center justify-center transition-all active:scale-90 disabled:opacity-50 relative ${isSpied ? 'text-primary border-primary/20' : 'text-white/40 hover:text-white hover:bg-black/40'}`}
                         >
                             {isSpying ? (
                                 <div className="size-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></div>
@@ -619,7 +619,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
                     <button
                         onClick={(e) => { e.stopPropagation(); safeNavigate(`/chat/${user.id}`); }}
                         onPointerDown={(e) => e.stopPropagation()}
-                        className="flex-1 h-14 rounded-full bg-white/10 backdrop-blur-md border border-white/10 flex items-center justify-center gap-2 text-white hover:bg-white/20 transition-all active:scale-95"
+                        className="flex-1 h-14 rounded-full bg-black/25 backdrop-blur-md border border-white/10 flex items-center justify-center gap-2 text-white hover:bg-black/40 transition-all active:scale-95"
                     >
                         <Icon name="favorite" className="text-xl text-primary" filled />
                         <span className="font-bold tracking-wide">Connect</span>
