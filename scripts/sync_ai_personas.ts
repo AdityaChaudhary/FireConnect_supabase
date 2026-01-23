@@ -81,6 +81,45 @@ async function askQuestion(query: string): Promise<string> {
     }));
 }
 
+// Step 0: Validate Usernames
+async function validateUsernames(users: Record<string, AIUserRecord>) {
+    console.log("\n--- [Step 0] Validating Username Uniqueness ---");
+    const seenUsernames = new Map<string, number>();
+    let fixCount = 0;
+
+    // Use a two-pass or simple one-pass with increment?
+    // One-pass is fine if we just want them unique.
+    for (const record of Object.values(users)) {
+        const originalUsername = record.username;
+        let currentUsername = record.username;
+        
+        if (seenUsernames.has(currentUsername.toLowerCase())) {
+            let count = seenUsernames.get(currentUsername.toLowerCase())! + 1;
+            let newUsername = `${currentUsername}_${count}`;
+            
+            while (seenUsernames.has(newUsername.toLowerCase())) {
+                count++;
+                newUsername = `${originalUsername}_${count}`;
+            }
+            
+            record.username = newUsername;
+            seenUsernames.set(originalUsername.toLowerCase(), count);
+            seenUsernames.set(newUsername.toLowerCase(), 1);
+            fixCount++;
+            console.log(`  - Fixed: ${originalUsername} -> ${newUsername}`);
+        } else {
+            seenUsernames.set(currentUsername.toLowerCase(), 1);
+        }
+    }
+
+    if (fixCount > 0) {
+        saveAIUsers(users);
+        console.log(`\n✅ Fixed ${fixCount} duplicate usernames.`);
+    } else {
+        console.log("\n✅ All usernames are unique.");
+    }
+}
+
 // Step 1: Auth Sync
 async function syncAuth(users: Record<string, AIUserRecord>) {
     console.log("\n--- [Step 1] Syncing to Supabase Auth ---");
@@ -327,6 +366,7 @@ async function resetMetadata(users: Record<string, AIUserRecord>) {
     for (const record of Object.values(users)) {
         delete record.uid;
         delete record.profilePictureUrl;
+        delete record.email;
     }
     saveAIUsers(users);
     console.log("✅ Metadata reset complete in ai-users.json");
@@ -343,6 +383,7 @@ async function main() {
     }
 
     console.log("\n--- Select Operation ---");
+    console.log("0. Validate Usernames");
     console.log("1. Sync ALL (Auth -> Media -> DB -> Seed)");
     console.log("2. Sync Auth only");
     console.log("3. Sync Media only");
@@ -350,10 +391,11 @@ async function main() {
     console.log("5. Generate Seed SQL only");
     console.log("6. Reset Metadata (Clear UIDs & Paths)");
 
-    const choice = await askQuestion("\nSelect an option (1-6): ");
+    const choice = await askQuestion("\nSelect an option (0-6): ");
 
     try {
         switch (choice) {
+            case '0': await validateUsernames(users); break;
             case '1':
                 await syncAuth(users);
                 await syncMedia(users);

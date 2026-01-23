@@ -117,8 +117,8 @@ async function generatePersona(hint: string) {
         ${AVAILABLE_INTERESTS.join(', ')}
 
         Provide:
-        1. username: a creative sexy username, single word, without space or special characters
-        2. displayName: a beautiful display name
+        1. username: a creative sexy username, single word, without space or special characters. Be super creative with this.
+        2. displayName: a beautiful display name. Make it similar to username.
         3. bio: a seductive bio reflecting her personality and openness to adult adventures. Bio should not mention that the user is AI.
         4. persona: a detailed internal persona description for the AI to follow
         5. gender: Always female
@@ -151,7 +151,7 @@ async function regenerateAIUserData(existingUsers: Record<string, AIUserRecord>,
         const hint = folder.split('_')[0] || folder;
         try {
             // Add a base delay between requests to avoid hitting limits immediately
-            await delay(500);
+            //await delay(500);
 
             const response = await callAIWithRetry({
                 prompt: `Regenerate specific fields for a female AI character. 

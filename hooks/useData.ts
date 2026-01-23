@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase.client';
+import { getProcessedStripeProducts } from '../lib/stripe-utils';
 
 /**
  * Hook to fetch users for the discovery feed.
@@ -239,18 +240,7 @@ export const useStripeProducts = (initialData?: any[]) => {
     return useQuery({
         queryKey: ['stripe-products'],
         queryFn: async () => {
-            // For now, we use the RPC we defined in SQL migration
-            const { data, error } = await supabase.rpc('get_active_plans');
-            if (error) throw error;
-
-            const fetched = (data as any[]) || [];
-            return fetched
-                .filter(p => p.prices && p.prices.length > 0 && p.name !== 'Spy Credits')
-                .sort((a, b) => {
-                    const aPrice = a.prices[0]?.unit_amount || 0;
-                    const bPrice = b.prices[0]?.unit_amount || 0;
-                    return aPrice - bPrice;
-                });
+            return await getProcessedStripeProducts();
         },
         staleTime: 60 * 60 * 1000, // 1 hour
         initialData: initialData,

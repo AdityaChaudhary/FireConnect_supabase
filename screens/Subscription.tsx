@@ -2,43 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLoaderData } from 'react-router';
 import Icon from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
-import { getStripeProducts, startStripeCheckout, redirectToCustomerPortal } from '../lib/stripe-utils';
-import { PLAN_THEMES, PLAN_DESCRIPTIONS, PLAN_FEATURES } from '../config/plans';
 import { useStripeProducts } from '../hooks/useData';
+import { getProcessedStripeProducts, startStripeCheckout, redirectToCustomerPortal, type Plan } from '../lib/stripe-utils';
 import { createSupabaseServerClient } from '../lib/supabase.server';
 import type { Route } from './+types/Subscription';
 
 export async function loader({ request }: Route.LoaderArgs) {
     const { supabase } = createSupabaseServerClient(request);
-    const data = await getStripeProducts(supabase);
-    return { stripeProducts: data || [] };
-}
-
-interface Plan {
-    id: string;
-    name: string;
-    price: string;
-    period: string;
-    description: string;
-    features: { text: string; included: boolean; subtext?: string }[];
-    theme: string;
-    buttonTheme: string;
-    accent: string;
-    // Store original product/price IDs for checkout
-    priceId?: string;
+    const plans = await getProcessedStripeProducts(supabase);
+    return { plans: plans || [] };
 }
 
 
-interface StripeProduct {
-    id: string;
-    name: string;
-    description: string;
-    metadata: any;
-    price_id: string;
-    price_amount: number;
-    price_currency: string;
-    interval: string;
-}
+// Data is now processed in the hook/loader, so we don't need redundant effects
 
 const Subscription: React.FC = () => {
     const { stripeRole, refreshProfile } = useAuth();
@@ -46,114 +22,9 @@ const Subscription: React.FC = () => {
     const navigate = useNavigate();
     const [updating, setUpdating] = useState(false);
     const [portalLoading, setPortalLoading] = useState(false);
-    const [plans, setPlans] = useState<Plan[]>([]);
-    const [error, setError] = useState<string | null>(null);
+    const { data: plans = [], isLoading: loadingProducts } = useStripeProducts(loaderData?.plans);
 
-    const { data: stripeProducts = [], isLoading: loadingProducts } = useStripeProducts(loaderData?.stripeProducts);
-
-    const mapProductToPlan = (product: StripeProduct): Plan => {
-        const metadata = product.metadata || {};
-        const roleFromMetadata = (metadata.role as string || '').toUpperCase();
-        const roleFromName = product.name.toUpperCase();
-
-        let themeKey: keyof typeof PLAN_THEMES = 'PRO';
-        if (roleFromMetadata.includes('MAX') || roleFromName.includes('MAX') || roleFromName.includes('ULTIMATE')) themeKey = 'MAX';
-        else if (roleFromMetadata.includes('PRO') || roleFromName.includes('PRO')) themeKey = 'PRO';
-        else if (roleFromMetadata.includes('FREE') || roleFromMetadata.includes('LITE') || roleFromName.includes('FREE') || roleFromName.includes('LITE')) themeKey = 'FREE';
-
-        const role = themeKey;
-        const theme = PLAN_THEMES[themeKey as keyof typeof PLAN_THEMES] || PLAN_THEMES.PRO;
-
-        const formattedPrice = product.price_amount
-            ? (product.price_amount / 100).toLocaleString('en-US', {
-                style: 'currency',
-                currency: product.price_currency?.toUpperCase() || 'USD',
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 2
-            })
-            : '$0';
-
-        const period = product.interval ? `/ ${product.interval === 'month' ? 'mo' : product.interval}` : '';
-
-        let features = PLAN_FEATURES[role as keyof typeof PLAN_FEATURES] || [{ text: 'Included Feature', included: true }];
-        if (metadata.features) {
-            const featuresList = (metadata.features as string).split(',').filter(f => f.trim().length > 0);
-            features = featuresList.map(f => ({
-                text: f.trim(),
-                included: true
-            }));
-        }
-
-        return {
-            id: role, // This serves as the Plan ID (FREE, PRO, MAX)
-            name: product.name,
-            price: formattedPrice,
-            period: period,
-            description: product.description || PLAN_DESCRIPTIONS[role] || '',
-            features: features,
-            ...theme,
-            priceId: product.price_id
-        };
-    };
-
-    useEffect(() => {
-        if (!stripeProducts) return;
-        
-        setError(null);
-        try {
-            const validProducts = (stripeProducts as StripeProduct[]).filter(p => {
-                const name = p.name.toUpperCase();
-                return !name.includes('CREDIT') && !name.includes('SPY');
-            });
-
-            if (validProducts.length > 0) {
-                const mappedPlans = validProducts.map(mapProductToPlan);
-
-                const roleOrder = { FREE: 0, PRO: 1, MAX: 2 };
-                mappedPlans.sort((a, b) => {
-                    const rA = roleOrder[a.id as keyof typeof roleOrder] ?? 1;
-                    const rB = roleOrder[b.id as keyof typeof roleOrder] ?? 1;
-                    return rA - rB;
-                });
-
-                if (!mappedPlans.find(p => p.id === 'FREE')) {
-                    mappedPlans.unshift({
-                        id: 'FREE',
-                        name: 'LITE',
-                        price: '$0',
-                        period: '/ mo',
-                        description: PLAN_DESCRIPTIONS.FREE,
-                        features: PLAN_FEATURES.FREE,
-                        ...PLAN_THEMES.FREE
-                    });
-                }
-
-                const uniquePlans: Plan[] = [];
-                const seen = new Set();
-                mappedPlans.forEach(p => {
-                    if (!seen.has(p.id)) {
-                        uniquePlans.push(p);
-                        seen.add(p.id);
-                    }
-                });
-
-                setPlans(uniquePlans);
-            } else {
-                setPlans([{
-                    id: 'FREE',
-                    name: 'LITE',
-                    price: '$0',
-                    period: '/ mo',
-                    description: PLAN_DESCRIPTIONS.FREE,
-                    features: PLAN_FEATURES.FREE,
-                    ...PLAN_THEMES.FREE
-                }]);
-            }
-        } catch (err: any) {
-            console.error("Failed to process plans:", err);
-            setError(err.message || "Failed to load subscription plans.");
-        }
-    }, [stripeProducts]);
+    // Data is now processed in the hook/loader, so we don't need redundant effects
 
 
     const currentSubscriptionLevel = stripeRole ? stripeRole.toUpperCase() : 'FREE';
@@ -247,23 +118,6 @@ const Subscription: React.FC = () => {
         );
     }
 
-    if (error) {
-        return (
-            <div className="flex-1 flex flex-col items-center justify-center p-6 bg-background-dark min-h-screen gap-4">
-                <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-2">
-                    <Icon name="error_outline" className="text-3xl text-red-500" />
-                </div>
-                <h3 className="text-xl font-bold text-white">Connection Error</h3>
-                <p className="text-white/60 text-center max-w-xs">{error}</p>
-                <button
-                    onClick={() => {}} // Hook handles retry since it's now integrated
-                    className="mt-4 px-8 py-3 bg-white/10 hover:bg-white/20 rounded-full text-white font-semibold transition-all active:scale-95"
-                >
-                    Retry Connection
-                </button>
-            </div>
-        );
-    }
 
     if (plans.length === 0) return null;
 
@@ -333,7 +187,7 @@ const Subscription: React.FC = () => {
                             </div>
 
                             <div className="flex flex-col gap-6">
-                                {plans[activePlanIndex].features.map((feature, idx) => (
+                                {plans[activePlanIndex].features.map((feature: any, idx: number) => (
                                     <div key={idx} className="flex gap-4 items-start">
                                         <div className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${feature.included ? 'bg-primary text-white' : 'bg-white/5 text-white/20'}`}>
                                             <Icon name={feature.included ? "check" : "lock"} className="text-[16px]" filled={feature.included} />

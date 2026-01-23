@@ -49,6 +49,8 @@ const EditProfile: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [locating, setLocating] = useState(false);
+    const [suggestions, setSuggestions] = useState<any[]>([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
 
     // Avatar Selection state
     const [isUsingGeneratedAvatar, setIsUsingGeneratedAvatar] = useState(false);
@@ -68,6 +70,41 @@ const EditProfile: React.FC = () => {
             setIsUsingGeneratedAvatar(false);
         }
     }, [profile, user]);
+
+    const fetchCitySuggestions = async (query: string) => {
+        if (query.length < 2) {
+            setSuggestions([]);
+            return;
+        }
+        try {
+            const response = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&osm_tag=place:city&limit=5`);
+            const data = await response.json();
+            setSuggestions(data.features || []);
+        } catch (err) {
+            console.error("City suggestions error:", err);
+        }
+    };
+
+    const handleLocationInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!isPro) return;
+        const val = e.target.value;
+        setLocation(val);
+        setShowSuggestions(true);
+        fetchCitySuggestions(val);
+    };
+
+    const handleSelectSuggestion = (suggestion: any) => {
+        const { properties, geometry } = suggestion;
+        const city = properties.name;
+        const country = properties.country;
+        const formatted = country ? `${city}, ${country}` : city;
+
+        setLocation(formatted);
+        setLatitude(geometry.coordinates[1]);
+        setLongitude(geometry.coordinates[0]);
+        setSuggestions([]);
+        setShowSuggestions(false);
+    };
 
     const handleGetLocation = () => {
         if (!isPro) return;
@@ -306,29 +343,53 @@ const EditProfile: React.FC = () => {
                                 <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Pro Only</span>
                             )}
                         </div>
-                        <div className="flex gap-2">
-                            <input
-                                type="text"
-                                value={location}
-                                readOnly
-                                className="flex-1 bg-surface-dark border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none transition-opacity"
-                                placeholder={isPro ? "Click to get location" : "Upgrade to Pro to change location"}
-                            />
-                            <button
-                                type="button"
-                                onClick={handleGetLocation}
-                                disabled={!isPro || locating}
-                                className={`p-3 rounded-xl transition-all border flex items-center justify-center min-w-[50px] ${isPro
-                                    ? 'bg-primary/20 hover:bg-primary/30 text-primary border-primary/20'
-                                    : 'bg-white/5 text-white/20 border-white/5 cursor-not-allowed'
-                                    }`}
-                            >
-                                {locating ? (
-                                    <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></div>
-                                ) : (
-                                    <Icon name="my_location" />
-                                )}
-                            </button>
+                        <div className="flex flex-col gap-2 relative">
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    value={location}
+                                    autoComplete="off"
+                                    onChange={handleLocationInputChange}
+                                    onFocus={() => {
+                                        if (isPro) setShowSuggestions(true);
+                                    }}
+                                    readOnly={!isPro}
+                                    className={`flex-1 bg-surface-dark border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary/50 transition-colors ${!isPro ? 'cursor-not-allowed opacity-60' : ''}`}
+                                    placeholder={isPro ? "Search for your city..." : "Upgrade to Pro to change location"}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={handleGetLocation}
+                                    disabled={!isPro || locating}
+                                    className={`p-3 rounded-xl transition-all border flex items-center justify-center min-w-[50px] ${isPro
+                                        ? 'bg-primary/20 hover:bg-primary/30 text-primary border-primary/20'
+                                        : 'bg-white/5 text-white/20 border-white/5 cursor-not-allowed'
+                                        }`}
+                                >
+                                    {locating ? (
+                                        <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                                    ) : (
+                                        <Icon name="my_location" />
+                                    )}
+                                </button>
+                            </div>
+
+                            {isPro && showSuggestions && suggestions.length > 0 && (
+                                <div className="absolute top-full left-0 right-0 mt-1 bg-surface-dark border border-white/10 rounded-xl overflow-hidden shadow-2xl z-50">
+                                    {suggestions.map((s, i) => (
+                                        <button
+                                            key={i}
+                                            type="button"
+                                            onClick={() => handleSelectSuggestion(s)}
+                                            className="w-full text-left px-4 py-3 text-sm text-white/80 hover:bg-white/5 border-b border-white/5 last:border-0"
+                                        >
+                                            <span className="font-medium text-white">{s.properties.name}</span>
+                                            {s.properties.state && <span className="text-white/40">, {s.properties.state}</span>}
+                                            {s.properties.country && <span className="text-white/40">, {s.properties.country}</span>}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
