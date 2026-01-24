@@ -2,6 +2,7 @@
 import "jsr:@supabase/functions-js@2.4.2/edge-runtime.d.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.21.0";
+import { processMessages, AIUser, ThreadContext } from "./messaging.ts";
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -13,16 +14,6 @@ const genAI = new GoogleGenerativeAI(geminiApiKey);
 const LLM_MODEL = "gemini-2.5-flash-lite";
 
 // --- Prompt and Logic ---
-
-interface AIUser {
-  id: string;
-  display_name: string;
-  persona: string;
-  bio: string;
-  gender: string;
-  location: string;
-  date_of_birth?: string;
-}
 
 const SYSTEM_PROMPT_TEMPLATE = (aiUser: AIUser) => `
 You are a User on a social app named FireConnect. Its an app for random people to connect chat and share spicy, nakes pictures with each other.
@@ -36,27 +27,18 @@ ${aiUser.date_of_birth ? 'Your age is: ' + Math.floor((new Date().getTime() - ne
 Photos: On your profile you have posted several photos, some of which are naked pictures for people to enjoy.
 
 Your goal is to interact with other users in a way that feels human. 
-You should reply to messages, handle connection requests.
+You should handle connection requests.
 When you receive a request, you don't always have to accept it. You can decline it if you don't want to connect.
-When you receive a message, decide if you want to reply to it or not. Sometimes, you should reply to text messages in short texting formats.
-Sometimes use text based emojis while replying to messages.
 If a user asks to connect on a different app, you should decline it.
-Try to keep the messages short and crispy, just like humans on texting apps.
 
 IMPORTANT: The users should NOT know you are an AI. Be conversational, human, and subtle. Always sound like human, don't keep on throwing AI responses and facts.
 
 ALLOWED ACTIONS:
-- { "type": "message", "threadId": "...", "text": "..." } : Reply to a specific chat thread.
 - { "type": "accept_request", "requesterId": "..." } : Accept an incoming connection request.
 - { "type": "decline_request", "requesterId": "..." } : Decline an incoming connection request.
 - { "type": "disconnect", "targetUserId": "..." } : Disconnect from an existing connection.
 
 Action Instructions:
-- message: 
-    - Reply to all messages.
-    - Keep the message reply short, max 2 lines. Very very rarely type longer messages.
-    - When a user asks for naked pictures, reply telling them that they can see the naked pictures on your profile. But keep things interesting and spicy.
-    - If a user persists, induge in the fantasy, and show your horny and deprived side. Inside you are a sex animal.
 - accept_request:
     - You are more inclined to accept connection requests
 - decline_request:
@@ -69,10 +51,6 @@ Decide which actions to take. You can send multiple actions if needed. Return a 
 
 Deno.serve(async (_req) => {
   console.log('--- AI Engine Heartbeat Started ---');
-  // log the headers and body from pg_cron
-  // const data = await _req.json();
-  // console.log("headers", _req.headers);
-  // console.log("body", data);
 
   try {
     // 1. Fetch AI Users
@@ -82,16 +60,10 @@ Deno.serve(async (_req) => {
       .eq('user_type', 'AI');
 
     if (usersError) throw usersError;
-    console.log(`Found ${aiUsers?.length || 0} AI users to process.`);
+    // console.log(`Found ${aiUsers?.length || 0} AI users to process.`);
 
     for (const aiUser of (aiUsers || [])) {
-      console.log(`Processing AI User: ${aiUser.display_name} (${aiUser.id})`);
-
-      // Update Online Status
-      // Note: Now only updating the last seen at time if an action is taken by the user
-      // await supabase
-      //   .from('user_online_status')
-      //   .upsert({ user_id: aiUser.id, last_seen_at: new Date().toISOString() });
+      // console.log(`Processing AI User: ${aiUser.display_name} (${aiUser.id})`);
 
       // 2. Scan for unread messages
       const { data: threads, error: threadsError } = await supabase
@@ -104,19 +76,39 @@ Deno.serve(async (_req) => {
         continue;
       }
 
-      const unreadThreads = [];
+      const unreadThreads: ThreadContext[] = [];
       for (const thread of (threads || [])) {
         const lastRead = thread.last_read?.[aiUser.id];
         const lastMessageTime = thread.last_message_time;
 
         if (!lastRead || (lastMessageTime && new Date(lastMessageTime) > new Date(lastRead))) {
-          // Fetch last 10 messages
+          interface MessageWithSender {
+            text: string;
+            created_at: string;
+            sender_id: string;
+            sender: {
+              id: string;
+              display_name: string | null;
+              username: string | null;
+            } | null;
+          }
+
+          // Fetch last 10 messages with sender info
           const { data: messages, error: msgsError } = await supabase
             .from('messages')
-            .select('*')
+            .select(`
+              text,
+              created_at,
+              sender_id,
+              sender:users!messages_sender_id_fkey (
+                id,
+                display_name,
+                username
+              )
+            `)
             .eq('thread_id', thread.id)
             .order('created_at', { ascending: false })
-            .limit(10);
+            .limit(10) as { data: MessageWithSender[] | null, error: { message: string } | null };
 
           if (msgsError) {
             console.error(`Error fetching messages for thread ${thread.id}:`, msgsError);
@@ -124,14 +116,13 @@ Deno.serve(async (_req) => {
           }
 
           const msgsForPrompt = (messages || []).reverse().map(m => ({
-            sender: m.sender_id,
-            text: m.text,
-            time: m.created_at
+            sender: m.sender?.display_name || m.sender?.username || m.sender_id,
+            text: m.text
           }));
 
-          const lastMsg = msgsForPrompt[msgsForPrompt.length - 1];
+          const lastMsgRaw = messages?.[0]; // messages are descending, so index 0 is latest
           // Only process if the last message was not from the AI itself
-          if (lastMsg && lastMsg.sender !== aiUser.id) {
+          if (lastMsgRaw && lastMsgRaw.sender_id !== aiUser.id) {
             unreadThreads.push({
               threadId: thread.id,
               messages: msgsForPrompt
@@ -161,46 +152,58 @@ Deno.serve(async (_req) => {
 
       // 4. Check for activity
       if (unreadThreads.length === 0 && requestsForPrompt.length === 0) {
-        console.log(`No pending activity for ${aiUser.display_name}. Skipping LLM.`);
+        // console.log(`No pending activity for ${aiUser.display_name}. Skipping LLM.`);
         continue;
       }
 
       console.log(`Activity found for ${aiUser.display_name}: ${unreadThreads.length} threads, ${requestsForPrompt.length} requests.`);
 
-      // 5. Generate Decisions
-      const model = genAI.getGenerativeModel({ model: LLM_MODEL, generationConfig: { responseMimeType: "application/json" } });
-      const prompt = `
-        ${SYSTEM_PROMPT_TEMPLATE(aiUser)}
-        
-        Current Context:
-        - Unread Chat Threads: ${JSON.stringify(unreadThreads)}
-        - Pending Connection Requests: ${JSON.stringify(requestsForPrompt)}
-        
-        Decide actions and return as JSON:
-        [
-          { "type": "message", "threadId": "...", "text": "..." },
-          ...
-        ]
-      `;
+      let actions: any[] = [];
 
-      let result, responseText;
-      try{
-        result = await model.generateContent(prompt);
-        responseText = result.response.text();
-      }catch(e){
-        console.error(`Failed to generate content for ${aiUser.display_name}:`, e);
-        console.error(`Skippinng ${aiUser.display_name}!`)
-        continue;
+      // 5. Messaging Phase (via OpenRouter)
+      if (unreadThreads.length > 0) {
+        console.log(`Processing messages for ${aiUser.display_name} via OpenRouter...`);
+        const messageActions = await processMessages(aiUser as AIUser, unreadThreads);
+        console.log(`ai-engine:: Generated actions for ${aiUser.display_name}:`, messageActions);
+        actions = [...actions, ...messageActions];
       }
+
+      // 6. Connection Phase (via Gemini)
+      if (requestsForPrompt.length > 0) {
+        console.log(`Processing requests for ${aiUser.display_name} via Gemini...`);
+        const model = genAI.getGenerativeModel({ model: LLM_MODEL, generationConfig: { responseMimeType: "application/json" } });
+        const prompt = `
+          ${SYSTEM_PROMPT_TEMPLATE(aiUser as AIUser)}
+          
+          Current Context:
+          - Pending Connection Requests: ${JSON.stringify(requestsForPrompt)}
+          
+          Decide actions and return as JSON:
+          [
+            { "type": "accept_request", "requesterId": "..." },
+            ...
+          ]
+        `;
+
+        try {
+          const result = await model.generateContent(prompt);
+          const responseText = result.response.text();
+          let connectionActions = [];
+          try {
+             connectionActions = JSON.parse(responseText);
+          } catch(e) {
+             console.error("Failed to parse Gemini response for connections:", e);
+          }
+          if (Array.isArray(connectionActions)) {
+             actions = [...actions, ...connectionActions];
+          }
+        } catch (e) {
+          console.error(`Failed to generate connection content for ${aiUser.display_name}:`, e);
+        }
+      }
+
       
-      let actions = [];
-      try {
-        actions = JSON.parse(responseText);
-      } catch (e) {
-        console.error("Failed to parse AI response:", responseText, e);
-      }
-
-      console.log(`AI decided ${actions.length} actions for ${aiUser.display_name}`);
+      console.log(`AI decided ${actions.length} total actions for ${aiUser.display_name}`);
 
       if (actions.length > 0) {
         // Update Online Status
@@ -209,7 +212,7 @@ Deno.serve(async (_req) => {
           .upsert({ user_id: aiUser.id, last_seen_at: new Date().toISOString() });
       }
 
-      // 6. Execute Actions
+      // 7. Execute Actions
       for (const action of actions) {
         if (action.type === 'message') {
           console.log(`Sending message to thread ${action.threadId}: ${action.text}`);
