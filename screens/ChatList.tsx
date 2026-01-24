@@ -18,7 +18,10 @@ export const meta: MetaFunction = () => {
 
 export async function loader({ request }: Route.LoaderArgs) {
     const { supabase } = createSupabaseServerClient(request);
-    const { data: { user } } = await supabase.auth.getUser();
+    // Optimization: Use getSession() to get the user ID from the cookie without an extra API call.
+    // The RPC call below is protected by RLS, so if the token is invalid, the RPC will fail/return empty, ensuring security.
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
 
     if (!user) return { connections: null, threads: null };
 

@@ -41,15 +41,13 @@ export async function loader({ request }: Route.LoaderArgs) {
   let authSession = null;
 
   try {
-    const [
-      { data: { user } },
-      { data: { session } }
-    ] = await Promise.all([
-      supabase.auth.getUser(),
-      supabase.auth.getSession()
-    ]);
+    // Optimization: Only call getUser() which validates the token on the server.
+    // getSession() is redundant if we have getUser(), and getUser is more secure suitable for SSR protection.
+    const { data: { user } } = await supabase.auth.getUser();
     authUser = user;
-    authSession = session;
+    
+    // We don't strictly need the full session object here for the loader data 
+    // if the client SDK handles session recovery, but for hydration we can pass the user.
   } catch (e) {
     console.warn("Root loader: Auth check failed", e);
   }

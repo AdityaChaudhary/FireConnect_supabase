@@ -29,7 +29,9 @@ export async function loader({ request }: Route.LoaderArgs) {
     const { supabase } = createSupabaseServerClient(request);
     
     // Check auth status
-    const { data: { user } } = await supabase.auth.getUser();
+    // Optimization: Use getSession() to avoid external API call.
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
 
     const url = new URL(request.url);
     const isAuthCallback = url.searchParams.has('code');
