@@ -1030,10 +1030,18 @@ const ChatDetail: React.FC = () => {
                                         <div className="flex flex-col gap-1">
                                             <p className="text-white text-lg font-black tracking-tight">Messaging Restricted</p>
                                             <p className="text-white/40 text-[13px] font-medium max-w-xs mx-auto">
+                                            {/* If ongoingStatus is PENDING, show message "Awaiting for {displayName} to accept the connection."
+                                            If 
+                                             */}
                                                 {(outgoingStatus === 'PENDING' || isConnected)
-                                                    ? `Awaiting for ${displayName} to initiate the conversation.`
+                                                    ? (!isConnected) ? `Awaiting for ${displayName} to accept the connection.` : `Awaiting for ${displayName} to initiate the conversation.`
                                                     : `You must connect with ${displayName} before you can start messaging.`
                                                 }
+
+                                                {/* {(outgoingStatus === 'PENDING' || isConnected)
+                                                    ? `Awaiting for ${displayName} to initiate the conversation.`
+                                                    : `You must connect with ${displayName} before you can start messaging.`
+                                                } */}
                                             </p>
                                         </div>
                                         <div className="flex gap-3 w-full max-w-sm mt-2">

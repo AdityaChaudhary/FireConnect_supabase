@@ -183,8 +183,16 @@ Deno.serve(async (_req) => {
         ]
       `;
 
-      const result = await model.generateContent(prompt);
-      const responseText = result.response.text();
+      let result, responseText;
+      try{
+        result = await model.generateContent(prompt);
+        responseText = result.response.text();
+      }catch(e){
+        console.error(`Failed to generate content for ${aiUser.display_name}:`, e);
+        console.error(`Skippinng ${aiUser.display_name}!`)
+        continue;
+      }
+      
       let actions = [];
       try {
         actions = JSON.parse(responseText);
