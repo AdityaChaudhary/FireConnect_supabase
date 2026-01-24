@@ -31,6 +31,9 @@ export async function loader({ request }: Route.LoaderArgs) {
     // Check auth status
     const { data: { user } } = await supabase.auth.getUser();
 
+    const url = new URL(request.url);
+    const isAuthCallback = url.searchParams.has('code');
+
     if (!user) {
         // Fetch plans and AI users in parallel for SSR Landing page
         // Fetch landing page data via RPC
@@ -42,7 +45,8 @@ export async function loader({ request }: Route.LoaderArgs) {
             return {
                 user: null,
                 initialProducts: [],
-                initialAiUsers: []
+                initialAiUsers: [],
+                isAuthCallback
             };
         }
 
@@ -50,7 +54,8 @@ export async function loader({ request }: Route.LoaderArgs) {
         return {
             user: null,
             initialProducts: viewData.products || [],
-            initialAiUsers: viewData.ai_users || []
+            initialAiUsers: viewData.ai_users || [],
+            isAuthCallback
         };
     }
 
@@ -58,7 +63,8 @@ export async function loader({ request }: Route.LoaderArgs) {
     return {
         user,
         initialProducts: [],
-        initialAiUsers: []
+        initialAiUsers: [],
+        isAuthCallback
     };
 }
 
@@ -68,13 +74,16 @@ const Home: React.FC = () => {
     // While initializing session, show nothing or a minimal splash
     // (root.tsx already has a loading state in AppContent)
     // Also check for code in URL to avoid Landing flicker during hydration
-    const hasCode = typeof window !== 'undefined' && window.location.search.includes('code=');
+    const data = useLoaderData<typeof loader>();
 
-    if (loading || hasCode) {
+    // While initializing session, show nothing or a minimal splash
+    // (root.tsx already has a loading state in AppContent)
+    // We check for code in URL via loader data to ensure hydration match
+    // This prevents the Landing page from flashing before auth completes
+
+    if (loading || (!user && data?.isAuthCallback)) {
         return null;
     }
-
-    const data = useLoaderData<typeof loader>();
 
     if (user && profile) {
         return <Discover />;

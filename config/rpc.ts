@@ -35,6 +35,7 @@ export interface NotificationsViewData {
     incoming_requests: ConnectionWithUser[];
     accepted_connections: (ConnectionWithUser & { actor: UserProfile })[]; // outgoing
     spied_alerts: (Database['public']['Tables']['spied_profiles']['Row'] & { user: UserProfile })[];
+    last_checked_at: string | null;
 }
 
 export interface ProfilePreviewData {

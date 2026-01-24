@@ -1,66 +1,24 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import Icon from './Icon';
-import { supabase } from '../lib/supabase.client';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../hooks/useData';
 
 const NotificationIcon: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
-    const [hasNew, setHasNew] = useState(false);
+    const { data } = useNotifications(user?.id);
+    const { notifications = [], lastCheckedAt } = data || {};
 
-    useEffect(() => {
-        if (!user) {
-            console.log("NotificationIcon: No user, stopping poller.");
-            return;
-        }
-
-        const checkNotifications = async () => {
-            if (!user) return; // Guard for async execution after logout
-            try {
-                const [notifRes, checkRes] = await Promise.all([
-                    supabase
-                        .from('connections')
-                        .select('created_at, updated_at')
-                        .eq('recipient_id', user.id)
-                        .order('updated_at', { ascending: false })
-                        .limit(50),
-                    supabase
-                        .from('notification_check')
-                        .select('last_checked_at')
-                        .eq('user_id', user.id)
-                        .single()
-                ]);
-
-                const lastCheckedAt = checkRes.data?.last_checked_at
-                    ? new Date(checkRes.data.last_checked_at).getTime()
-                    : 0;
-
-                const latestNotificationTime = (notifRes.data || []).reduce((max, n) => {
-                    const time = new Date(n.updated_at || n.created_at).getTime();
-                    return Math.max(max, time);
-                }, 0);
-
-                setHasNew(latestNotificationTime > lastCheckedAt);
-            } catch (error) {
-                console.error("Error checking notifications:", error);
-            }
-        };
-
-        let currentInterval = 30000; // Start at 30s
-        let timeoutId: NodeJS.Timeout;
-
-        const poll = async () => {
-            if (!user) return; // Stop polling loop if user logged out
-            await checkNotifications();
-            currentInterval = Math.min(currentInterval + 10000, 300000); // +10s, max 5m
-            timeoutId = setTimeout(poll, currentInterval);
-        };
-
-        poll();
-        return () => clearTimeout(timeoutId);
-    }, [user]);
+    const hasNew = React.useMemo(() => {
+        if (!lastCheckedAt) return notifications.length > 0;
+        const lastCheckedTime = new Date(lastCheckedAt).getTime();
+        return notifications.some((n: any) => {
+            const time = new Date(n.updated_at || n.created_at).getTime();
+            return time > lastCheckedTime;
+        });
+    }, [notifications, lastCheckedAt]);
 
     const handleClick = () => {
         navigate('/notifications');

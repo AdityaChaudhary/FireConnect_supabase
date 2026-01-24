@@ -676,7 +676,7 @@ const ChatDetail: React.FC = () => {
                 )}
 
                 <div className={`flex flex-col gap-0.5 ${isMe ? 'items-end' : 'items-start'}`}>
-                    <div className={`relative shadow-md transition-all duration-300 overflow-hidden ${
+                    <div className={`relative shadow-md transition-all duration-300 overflow-hidden select-none ${
                         isImage ? 'p-0 bg-transparent' : 'px-4 py-2.5'
                     } ${isMe
                         ? `rounded-[20px] rounded-br-[4px] ${isImage ? '' : 'bg-gradient-to-tr from-primary to-pink-500 text-white shadow-primary/20'}`
@@ -684,7 +684,7 @@ const ChatDetail: React.FC = () => {
                     }`}>
 
                         {msg.type === 'text' && (
-                            <p className="text-[15px] font-medium leading-relaxed tracking-tight">{msg.text}</p>
+                            <p className="text-[15px] font-medium leading-relaxed tracking-tight select-text cursor-default">{msg.text}</p>
                         )}
 
                         {msg.type === 'image' && msg.media_url && (
@@ -943,7 +943,7 @@ const ChatDetail: React.FC = () => {
                                                 }
                                             }}
                                             placeholder="Type a message..."
-                                            className="flex-1 bg-transparent border-none focus:ring-0 text-white text-[15px] py-3 resize-none max-h-[150px] min-h-[44px] placeholder-white/20"
+                                            className="flex-1 bg-transparent border-none focus:ring-0 focus:outline-none text-white text-[15px] py-3 resize-none max-h-[150px] min-h-[44px] placeholder-white/20"
                                         />
                                         <div className="flex items-center gap-1 shrink-0 px-1">
                                             <button

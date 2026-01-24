@@ -151,31 +151,24 @@ export const useConnections = (userId?: string, initialData?: any) => {
 /**
  * Hook to fetch combined notifications.
  */
-export const useNotifications = (userId?: string, initialData?: any[]) => {
+export const useNotifications = (userId?: string, initialData?: any) => {
     return useQuery({
         queryKey: ['notifications', userId],
         queryFn: async () => {
-            const [incomingRes, outgoingRes, spiedRes] = await Promise.all([
-                supabase
-                    .from('connections')
-                    .select('*, requester:users!connections_requester_id_fkey(*)')
-                    .eq('recipient_id', userId)
-                    .eq('status', 'PENDING')
-                    .order('created_at', { ascending: false }),
-                supabase
-                    .from('connections')
-                    .select('*, actor:users!connections_recipient_id_fkey(*)')
-                    .eq('requester_id', userId)
-                    .eq('status', 'CONNECTED')
-                    .order('updated_at', { ascending: false }),
-                supabase
-                    .from('spied_profiles')
-                    .select('*, user:users!spied_profiles_user_id_fkey(*)')
-                    .eq('target_user_id', userId)
-                    .order('created_at', { ascending: false })
-            ]);
+            if (!userId) return { notifications: [], lastCheckedAt: null };
 
-            const received = (incomingRes.data || []).map((n: any) => ({
+            const { data: rpcData, error } = await supabase.rpc('get_notifications_view_data', {
+                p_user_id: userId
+            });
+
+            if (error) {
+                console.error("useNotifications: RPC Error:", error);
+                throw error;
+            }
+
+            const viewData = rpcData as unknown as import('../config/rpc').NotificationsViewData;
+
+            const received = (viewData.incoming_requests || []).map((n: any) => ({
                 ...n,
                 type: 'CONNECTION_REQUEST',
                 actor: n.requester,
@@ -183,7 +176,7 @@ export const useNotifications = (userId?: string, initialData?: any[]) => {
                 time: new Date(n.created_at).getTime()
             }));
 
-            const accepted = (outgoingRes.data || []).map((n: any) => ({
+            const accepted = (viewData.accepted_connections || []).map((n: any) => ({
                 ...n,
                 type: 'CONNECTION_ACCEPTED',
                 actor: n.actor,
@@ -191,7 +184,7 @@ export const useNotifications = (userId?: string, initialData?: any[]) => {
                 time: new Date(n.updated_at || n.created_at).getTime()
             }));
 
-            const spied = (spiedRes.data || []).map((n: any) => ({
+            const spied = (viewData.spied_alerts || []).map((n: any) => ({
                 ...n,
                 type: 'SPIED',
                 actor: n.user,
@@ -199,9 +192,14 @@ export const useNotifications = (userId?: string, initialData?: any[]) => {
                 time: new Date(n.created_at).getTime()
             }));
 
-            return [...received, ...accepted, ...spied].sort((a, b) => b.time - a.time);
+            const notifications = [...received, ...accepted, ...spied].sort((a, b) => b.time - a.time);
+            return {
+                notifications,
+                lastCheckedAt: viewData.last_checked_at
+            };
         },
         staleTime: 10 * 1000,
+        refetchInterval: 30000, // Fetch every 30s to keep it "automatic"
         enabled: !!userId,
         initialData: initialData,
     });

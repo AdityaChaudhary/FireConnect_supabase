@@ -3,6 +3,7 @@ import { useLoaderData, useNavigate } from 'react-router';
 import { motion } from 'framer-motion';
 import Icon from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNotifications } from '../hooks/useData';
 import CdnImage from '../components/CdnImage';
 import { supabase } from '../lib/supabase.client';
@@ -51,26 +52,33 @@ export async function loader({ request }: LoaderFunctionArgs) {
     }));
 
     const notifications = [...received, ...accepted, ...spied].sort((a, b) => b.time - a.time);
-    return { notifications };
+    return { 
+        notifications,
+        lastCheckedAt: viewData.last_checked_at 
+    };
 }
 
 const Notifications: React.FC = () => {
-    const { notifications: initialNotifications } = useLoaderData<typeof loader>();
+    const initialData = useLoaderData<typeof loader>();
     const { user: authUser } = useAuth();
     const navigate = useNavigate();
-    const { data: notifications = [], isLoading: loading } = useNotifications(authUser?.id, initialNotifications);
+    const queryClient = useQueryClient();
+    const { data, isLoading: loading } = useNotifications(authUser?.id, initialData);
+    const { notifications = [], lastCheckedAt } = data || {};
 
     React.useEffect(() => {
         if (!authUser) return;
 
         const markAsRead = async () => {
-            const { error } = await supabase
-                .from('notification_check')
-                .update({ last_checked_at: new Date().toISOString() })
-                .eq('user_id', authUser.id);
+            const { error } = await supabase.rpc('mark_notifications_as_read', { 
+                p_user_id: authUser.id 
+            });
             
             if (error) {
                 console.error("Error updating notification check time:", error);
+            } else {
+                // Invalidate the query to refresh lastCheckedAt across the app
+                queryClient.invalidateQueries({ queryKey: ['notifications', authUser.id] });
             }
         };
 
@@ -190,6 +198,8 @@ const Notifications: React.FC = () => {
                     <div className="flex flex-col gap-4">
                         {notifications.map((notification: any, index: number) => {
                             const content = getNotificationContent(notification);
+                            const isNew = lastCheckedAt ? new Date(notification.updated_at || notification.created_at).getTime() > new Date(lastCheckedAt).getTime() : false;
+
                             return (
                                 <motion.div
                                     initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -202,8 +212,20 @@ const Notifications: React.FC = () => {
                                     }}
                                     key={notification.id}
                                     onClick={() => navigate(content.link)}
-                                    className="group relative flex items-start gap-5 p-5 rounded-[28px] bg-surface-dark/40 backdrop-blur-xl border border-white/5 hover:border-primary/20 hover:bg-surface-dark/60 transition-all duration-300 cursor-pointer shadow-xl shadow-black/5 active:scale-[0.98]"
+                                    className={`group relative flex items-start gap-5 p-5 rounded-[28px] backdrop-blur-xl border transition-all duration-300 cursor-pointer shadow-xl shadow-black/5 active:scale-[0.98] ${
+                                        isNew 
+                                            ? 'bg-primary/5 border-primary/20 hover:bg-primary/10 hover:border-primary/30' 
+                                            : 'bg-surface-dark/40 border-white/5 hover:border-primary/20 hover:bg-surface-dark/60'
+                                    }`}
                                 >
+                                    {/* New Indicator Pulse */}
+                                    {isNew && (
+                                        <div className="absolute top-6 right-6 flex items-center gap-2">
+                                            <span className="size-2 bg-primary rounded-full animate-pulse shadow-[0_0_8px_rgba(236,19,146,0.6)]"></span>
+                                            <span className="text-[10px] font-black text-primary uppercase tracking-widest">New</span>
+                                        </div>
+                                    )}
+
                                     {/* Action Hover Background */}
                                     <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/[0.02] to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity rounded-[28px]"></div>
 
