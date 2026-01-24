@@ -22,5 +22,17 @@ export default defineConfig(({ mode }) => {
     build: {
       chunkSizeWarningLimit: 1000,
     },
+    optimizeDeps: {
+      include: [
+        'react',
+        'react-dom',
+        'react-router',
+        'react-router-dom',
+        'canvas-confetti',
+        'framer-motion',
+        '@supabase/supabase-js',
+        '@supabase/ssr',
+      ],
+    },
   };
 });
