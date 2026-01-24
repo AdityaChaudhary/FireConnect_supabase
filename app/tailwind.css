@@ -136,3 +136,129 @@
         animation: loader-glow 2s ease-in-out infinite;
     }
 }
+
+/* 
+  Driver.js Customization - Redefined for Mobile & Premium UX 
+  Placed outside @layer to ensure highest priority
+*/
+.driver-popover.driverjs-theme {
+    background: rgba(45, 22, 35, 0.95) !important;
+    backdrop-filter: blur(24px) !important;
+    -webkit-backdrop-filter: blur(24px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 32px !important;
+    color: white !important;
+    padding: 30px !important;
+    box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.9) !important;
+    max-width: 350px !important;
+}
+
+.driver-popover.driverjs-theme .driver-popover-title {
+    font-family: var(--font-sans) !important;
+    font-weight: 900 !important;
+    font-size: 24px !important;
+    color: white !important;
+    line-height: 1.1 !important;
+    margin-bottom: 14px !important;
+    letter-spacing: -0.03em !important;
+}
+
+.driver-popover.driverjs-theme .driver-popover-description {
+    font-family: var(--font-sans) !important;
+    color: rgba(255, 255, 255, 0.7) !important;
+    font-size: 16px !important;
+    line-height: 1.6 !important;
+}
+
+.driver-popover.driverjs-theme .driver-popover-footer {
+    margin-top: 30px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 12px !important;
+}
+
+/* Common Button Base - Extremely aggressive overrides */
+.driver-popover.driverjs-theme .driver-popover-btn {
+    all: unset !important;
+    box-sizing: border-box !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 56px !important;
+    padding: 0 32px !important;
+    border-radius: 100px !important; /* Pill shape */
+    font-family: var(--font-sans) !important;
+    font-weight: 800 !important;
+    font-size: 16px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    cursor: pointer !important;
+    transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1) !important;
+    min-width: 120px !important;
+    text-align: center !important;
+    user-select: none !important;
+}
+
+/* Prev Button (Glassy) */
+.driver-popover.driverjs-theme .driver-popover-prev-btn {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.driver-popover.driverjs-theme .driver-popover-prev-btn:hover {
+    background: rgba(255, 255, 255, 0.12) !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
+    color: white !important;
+    transform: scale(1.02) !important;
+}
+
+/* Next/Done Button (Signature Gradient) */
+.driver-popover.driverjs-theme .driver-popover-next-btn {
+    background: linear-gradient(135deg, #ec1392, #bc13ec) !important;
+    color: white !important;
+    border: none !important;
+    box-shadow: 0 8px 20px rgba(236, 19, 146, 0.4) !important;
+}
+
+.driver-popover.driverjs-theme .driver-popover-next-btn:hover {
+    transform: translateY(-2px) scale(1.02) !important;
+    box-shadow: 0 12px 28px rgba(236, 19, 146, 0.6) !important;
+    filter: brightness(1.1) !important;
+}
+
+.driver-popover.driverjs-theme .driver-popover-next-btn:active {
+    transform: translateY(0px) scale(0.98) !important;
+}
+
+/* Progress Text */
+.driver-popover.driverjs-theme .driver-popover-progress-text {
+    color: rgba(255, 255, 255, 0.4) !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    margin-right: auto !important;
+    padding-left: 4px !important;
+}
+
+/* Close Button */
+.driver-popover.driverjs-theme .driver-popover-close-btn {
+    position: absolute !important;
+    top: 20px !important;
+    right: 20px !important;
+    color: rgba(255, 255, 255, 0.3) !important;
+    transition: all 0.2s ease !important;
+    font-size: 24px !important;
+    line-height: 1 !important;
+    cursor: pointer !important;
+}
+
+.driver-popover.driverjs-theme .driver-popover-close-btn:hover {
+    color: #ff3b3b !important;
+    transform: rotate(90deg) !important;
+}
+
+/* Arrow Sync */
+.driver-popover.driverjs-theme .driver-popover-arrow {
+    border-color: rgba(45, 22, 35, 0.95) !important;
+}

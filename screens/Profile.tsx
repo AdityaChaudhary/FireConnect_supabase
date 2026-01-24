@@ -313,6 +313,7 @@ const Profile: React.FC = () => {
 
                 <div className="flex w-full justify-center gap-3">
                     <div
+                        id="tour-spy-list"
                         onClick={() => navigate('/spy-list')}
                         className="flex w-[140px] flex-col items-center justify-center gap-1 rounded-xl bg-surface-dark border border-white/5 p-3 active:scale-95 transition-transform cursor-pointer"
                     >
@@ -320,6 +321,7 @@ const Profile: React.FC = () => {
                         <p className="text-white/50 text-xs font-medium uppercase tracking-wide">Spy List</p>
                     </div>
                     <div
+                        id="tour-spy-credits"
                         onClick={() => navigate('/purchase-credits')}
                         className="flex w-[140px] flex-col items-center justify-center gap-1 rounded-xl bg-gradient-to-br from-primary/20 to-purple-600/20 border border-primary/30 p-3 active:scale-95 transition-transform cursor-pointer group"
                     >
@@ -365,7 +367,7 @@ const Profile: React.FC = () => {
 
                 <div className="w-full h-px bg-white/5 my-2"></div>
 
-                <div className="flex w-full flex-col gap-4 mb-4">
+                <div id="tour-shared-media" className="flex w-full flex-col gap-4 mb-4">
                     <div className="flex items-center justify-between w-full">
                         <h3 className="text-white text-base font-bold">Shared Media</h3>
                         <div className="flex bg-surface-dark rounded-full p-1 border border-white/5">

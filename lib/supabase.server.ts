@@ -18,7 +18,7 @@ export function createSupabaseServerClient(request: Request) {
       },
       setAll(cookiesToSet) {
         cookiesToSet.forEach(({ name, value, options }) =>
-          responseHeaders.append('Set-Cookie', serializeCookieHeader(name, value, options))
+          responseHeaders.append('Set-Cookie', serializeCookieHeader(name, value, { ...options, path: '/' }))
         )
       },
     },

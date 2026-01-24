@@ -37,13 +37,22 @@ export async function loader({ request }: Route.LoaderArgs) {
   const { supabase, responseHeaders } = createSupabaseServerClient(request);
   
   // Get both user and session for robust hydration
-  const [
-    { data: { user: authUser } },
-    { data: { session: authSession } }
-  ] = await Promise.all([
-    supabase.auth.getUser(),
-    supabase.auth.getSession()
-  ]);
+  let authUser = null;
+  let authSession = null;
+
+  try {
+    const [
+      { data: { user } },
+      { data: { session } }
+    ] = await Promise.all([
+      supabase.auth.getUser(),
+      supabase.auth.getSession()
+    ]);
+    authUser = user;
+    authSession = session;
+  } catch (e) {
+    console.warn("Root loader: Auth check failed", e);
+  }
   
   let profile = null;
 
@@ -121,10 +130,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
+import { useAppTour } from "../hooks/useAppTour";
+ 
 function AppContent() {
   const { user, profile, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  useAppTour();
 
   console.log("AppContent: Render", { 
     path: location.pathname, 
@@ -173,6 +185,7 @@ function AppContent() {
       const justOnboarded = localStorage.getItem('just_onboarded');
       if (justOnboarded === 'true') {
         localStorage.removeItem('just_onboarded');
+        localStorage.setItem('app_tour_step', 'profile_pending');
         navigate('/profile');
         return;
       }

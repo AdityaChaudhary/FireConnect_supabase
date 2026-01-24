@@ -179,6 +179,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, initialSes
                 if (isMounted) {
                     console.log("AuthContext: Setting loading to false.");
                     setLoading(false);
+
+                    // Clean up URL if it contains auth params
+                    const url = new URL(window.location.href);
+                    if (url.searchParams.has('code') || url.searchParams.has('error')) {
+                        console.log("AuthContext: Cleaning auth params from URL");
+                        url.searchParams.delete('code');
+                        url.searchParams.delete('error');
+                        url.searchParams.delete('error_code');
+                        url.searchParams.delete('error_description');
+                        window.history.replaceState({}, document.title, url.pathname + url.search);
+                    }
                 }
             }
         };
@@ -218,11 +229,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, initialSes
             if (currentSession?.user) {
                 // For SIGNED_IN, we want to be sure we have the latest user data
                 if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-                    const { data: { user: verifiedUser } } = await supabase.auth.getUser();
-                    const finalUser = verifiedUser ?? currentSession.user;
-                    setUser(finalUser);
-                    refreshProfile(finalUser);
-                    trackEvent(EVENTS.LOGIN, { method: 'signed_in', user_id: finalUser.id });
+                    // Only fetch if we don't already have the verified user (prevents refresh loop)
+                    if (!user || user.id !== currentSession.user.id) {
+                        const { data: { user: verifiedUser } } = await supabase.auth.getUser();
+                        const finalUser = verifiedUser ?? currentSession.user;
+                        setUser(finalUser);
+                        refreshProfile(finalUser);
+                        trackEvent(EVENTS.LOGIN, { method: 'signed_in', user_id: finalUser.id });
+                    }
                 } else {
                     setUser(currentSession.user);
                 }

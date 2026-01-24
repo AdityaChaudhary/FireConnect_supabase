@@ -346,7 +346,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
             </AnimatePresence>
 
             {/* Main Image Swipe Area */}
-            <div className="absolute inset-0 z-10 group/card">
+            <div id="tour-card-image" className="absolute inset-0 z-10 group/card">
                 <div
                     className="flex h-full transition-transform duration-500 ease-out"
                     style={{ transform: `translateX(-${currentImageIndex * 100}%)` }}
@@ -425,6 +425,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
 
                 {/* Left/Right Click Nav & Desktop Arrows */}
                 <div
+                    id="tour-card-nav"
                     className="absolute inset-y-0 left-0 w-1/4 z-30 flex items-center justify-start pl-4 cursor-pointer"
                     onClick={handlePrevImage}
                     onPointerDown={(e) => e.stopPropagation()}
@@ -577,7 +578,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
                                     <div key={idx} className="bg-black/25 backdrop-blur-md border border-white/5 px-3 py-1 rounded-full flex items-center">
                                         <span className="text-white/90 text-[10px] font-bold leading-none">#{interest.replace(/\s+/g, '')}</span>
                                     </div>
-                                ))}
+                                )) }
                             </motion.div>
                         )}
                     </AnimatePresence>
@@ -586,7 +587,8 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
                 {/* Bottom Actions */}
                 <div className="flex items-center justify-between gap-3 pt-2">
                     <button
-                        onClick={(e) => { e.stopPropagation(); safeNavigate(`/profile/${user.id}`); }}
+                        id="tour-card-profile"
+                        onClick={(e) => { e.stopPropagation(); safeNavigate(`/profile/${user.id}`); } }
                         onPointerDown={(e) => e.stopPropagation()}
                         className="size-14 shrink-0 rounded-full bg-black/25 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:bg-black/40 transition-all active:scale-90"
                     >
@@ -596,6 +598,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
                     {/* Spy Button - Theme Highlighted */}
                     {images.some(img => img.visibility === 'PRIVATE') && (
                         <button
+                            id="tour-card-spy"
                             onClick={handleSpyClick}
                             onPointerDown={(e) => e.stopPropagation()}
                             disabled={isSpying}
@@ -617,7 +620,8 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
                     )}
 
                     <button
-                        onClick={(e) => { e.stopPropagation(); safeNavigate(`/chat/${user.id}`); }}
+                        id="tour-card-connect"
+                        onClick={(e) => { e.stopPropagation(); safeNavigate(`/chat/${user.id}`); } }
                         onPointerDown={(e) => e.stopPropagation()}
                         className="flex-1 h-14 rounded-full bg-black/25 backdrop-blur-md border border-white/10 flex items-center justify-center gap-2 text-white hover:bg-black/40 transition-all active:scale-95"
                     >

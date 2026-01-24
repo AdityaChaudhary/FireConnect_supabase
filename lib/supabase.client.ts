@@ -8,7 +8,11 @@ export function createSupabaseBrowserClient() {
     throw new Error('Missing Supabase environment variables')
   }
 
-  return createBrowserClient(supabaseUrl, supabaseAnonKey)
+  return createBrowserClient(supabaseUrl, supabaseAnonKey, {
+    cookieOptions: {
+      path: '/',
+    }
+  })
 }
 
 export const supabase = createSupabaseBrowserClient()

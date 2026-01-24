@@ -194,7 +194,7 @@ const Settings: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Support Section */}
+                {/* Support Section */ }
                 <div className="flex flex-col gap-2">
                     <h3 className="text-white/50 text-[10px] font-black uppercase tracking-[0.2em] px-2 mb-1">Support</h3>
                     <div className="flex flex-col rounded-[24px] bg-surface-dark overflow-hidden border border-white/5 shadow-xl">
@@ -209,6 +209,33 @@ const Settings: React.FC = () => {
                                 <span className="text-sm font-bold">Help Center</span>
                             </div>
                             <Icon name="chevron_right" className="text-white/20" />
+                        </button>
+                    </div>
+                </div>
+
+                {/* App Guide Section */}
+                <div className="flex flex-col gap-2">
+                    <h3 className="text-white/50 text-[10px] font-black uppercase tracking-[0.2em] px-2 mb-1">App Guide</h3>
+                    <div className="flex flex-col rounded-[24px] bg-surface-dark overflow-hidden border border-white/5 shadow-xl">
+                        <button
+                            onClick={() => {
+                                localStorage.setItem('app_tour_step', 'profile_pending');
+                                safeNavigate('/profile');
+                            }}
+                            className="flex w-full items-center justify-between p-4 px-5 active:bg-white/5 transition-colors text-left group"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-white/60 group-hover:text-primary transition-colors">
+                                    <Icon name="explore" />
+                                </div>
+                                <span className="text-sm font-bold">Restart App Demo</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black bg-white/5 text-white/40 px-3 py-1 rounded-full uppercase tracking-widest">
+                                    Guided Tour
+                                </span>
+                                <Icon name="play_arrow" className="text-white/20" />
+                            </div>
                         </button>
                     </div>
                 </div>
