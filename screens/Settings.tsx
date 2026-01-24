@@ -216,10 +216,13 @@ const Settings: React.FC = () => {
                 {/* Sign Out Button */}
                 <button
                     onClick={async () => {
+                        console.log('isLoggingOut', isLoggingOut);
                         if (isLoggingOut) return;
+                        console.log('Logging out...');
                         setIsLoggingOut(true);
                         try {
                             await logout();
+                            console.log('Logged out successfully');
                             safeNavigate('/');
                         } catch (error) {
                             console.error('Logout failed:', error);

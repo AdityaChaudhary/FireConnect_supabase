@@ -18,7 +18,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 // Data is now processed in the hook/loader, so we don't need redundant effects
 
 const Subscription: React.FC = () => {
-    const { stripeRole, refreshProfile } = useAuth();
+    const { stripeRole, refreshProfile, session } = useAuth();
     const loaderData = useLoaderData<typeof loader>();
     const navigate = useNavigate();
     const [updating, setUpdating] = useState(false);
@@ -99,7 +99,7 @@ const Subscription: React.FC = () => {
 
         setUpdating(true);
         try {
-            await startStripeCheckout(plan.priceId, 'subscription', { planId: plan.id });
+            await startStripeCheckout(plan.priceId, 'subscription', { planId: plan.id, authToken: session?.access_token });
         } catch (error: any) {
             console.error("Error starting checkout:", error);
             setNotification("Could not initiate checkout. Please try again!");
@@ -110,7 +110,7 @@ const Subscription: React.FC = () => {
     const handleManageSubscription = async () => {
         setPortalLoading(true);
         try {
-            await redirectToCustomerPortal();
+            await redirectToCustomerPortal(session?.access_token);
         } catch (error: any) {
             console.error("Error redirecting to customer portal:", error);
             setNotification(error?.message || "Failed to open subscription management.");

@@ -25,7 +25,7 @@ interface CreditPrice {
 }
 
 const PurchaseCredits: React.FC = () => {
-    const { profile, stripeRole } = useAuth();
+    const { profile, stripeRole, session } = useAuth();
     const navigate = useNavigate();
     const [loadingPriceId, setLoadingPriceId] = useState<string | null>(null);
     const [prices, setPrices] = useState<CreditPrice[]>([]);
@@ -87,7 +87,8 @@ const PurchaseCredits: React.FC = () => {
             console.log('Starting checkout for priceId: ', priceId);
             await startStripeCheckout(priceId, 'payment', {
                 credits,
-                oldBalance: profile?.spy_credits || 0
+                oldBalance: profile?.spy_credits || 0,
+                authToken: session?.access_token
             });
         } catch (error: any) {
             console.error("Error starting checkout:", error);

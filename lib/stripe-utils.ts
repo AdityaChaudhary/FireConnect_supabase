@@ -167,7 +167,7 @@ export const getProcessedStripeProducts = async (customSupabase?: any): Promise<
 };
 
 
-export const startStripeCheckout = async (priceId: string, mode: 'payment' | 'subscription' = 'subscription', options?: { planId?: string, credits?: number, oldBalance?: number }) => {
+export const startStripeCheckout = async (priceId: string, mode: 'payment' | 'subscription' = 'subscription', options?: { planId?: string, credits?: number, oldBalance?: number, authToken?: string | null }) => {
     let successPath = '/';
     console.log('Starting checkout for priceId: ', priceId);
 
@@ -177,12 +177,18 @@ export const startStripeCheckout = async (priceId: string, mode: 'payment' | 'su
         successPath = `/credits-welcome?credits=${options?.credits || 0}&oldBalance=${options?.oldBalance || 0}&session_id={CHECKOUT_SESSION_ID}`;
     }
 
-    // Get current session explicitly to ensure valid auth header
-    const { data: { session } } = await supabase.auth.getSession();
+    let token = options?.authToken;
+
+    // If no token provided, try to get it from current session
+    if (!token) {
+        // Get current session explicitly to ensure valid auth header
+        const { data: { session } } = await supabase.auth.getSession();
+        token = session?.access_token;
+    }
     
     // Call Edge Function to create checkout session
     const { data, error } = await supabase.functions.invoke('stripe-checkout', {
-        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
 
         body: {
             priceId,
@@ -200,12 +206,17 @@ export const startStripeCheckout = async (priceId: string, mode: 'payment' | 'su
     window.location.assign(data.url);
 };
 
-export const redirectToCustomerPortal = async () => {
-    // Get current session explicitly to ensure valid auth header
-    const { data: { session } } = await supabase.auth.getSession();
+export const redirectToCustomerPortal = async (authToken?: string | null) => {
+    let token = authToken;
+    
+    if (!token) {
+        // Get current session explicitly to ensure valid auth header
+        const { data: { session } } = await supabase.auth.getSession();
+        token = session?.access_token;
+    }
 
     const { data, error } = await supabase.functions.invoke('stripe-portal', {
-        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         body: {
             returnUrl: window.location.origin + "/subscription"
         }

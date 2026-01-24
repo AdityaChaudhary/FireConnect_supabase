@@ -199,6 +199,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, initialSes
 
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+            // Ignore token refresh events to prevent unnecessary profile re-fetching
+            if (event === 'TOKEN_REFRESHED') {
+                console.log("AuthContext: Token refreshed, skipping profile refresh.");
+                if (currentSession) setSession(currentSession);
+                return;
+            }
+            
             console.log("AuthContext: onAuthStateChange event:", event, currentSession ? "Session active" : "No session");
 
             if (!isMounted) return;
@@ -206,9 +213,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, initialSes
             setSession(currentSession);
             // Validation step for security: double check user if event is SIGNED_IN or INITIAL_SESSION
             if (currentSession?.user) {
-                const { data: { user: verifiedUser } } = await supabase.auth.getUser();
-                setUser(verifiedUser ?? currentSession.user);
-                refreshProfile(verifiedUser ?? currentSession.user);
+                // For SIGNED_IN, we want to be sure we have the latest user data
+                if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+                    const { data: { user: verifiedUser } } = await supabase.auth.getUser();
+                    setUser(verifiedUser ?? currentSession.user);
+                    refreshProfile(verifiedUser ?? currentSession.user);
+                } else {
+                    setUser(currentSession.user);
+                }
             } else {
                 setUser(null);
                 setProfile(null);
@@ -234,16 +246,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, initialSes
     };
 
     const logout = async () => {
-        // Fire global signout in background
+        console.log("AuthContext: Logging out...");
+
+        // Fire global signout in background (best effort)
         supabase.auth.signOut({ scope: 'global' }).catch(err => {
             console.error("AuthContext: Global signout background error:", err);
         });
 
-        // Resolve immediately with local scope
-        const { error } = await supabase.auth.signOut({ scope: 'local' });
-        if (error) throw error;
-        
-        // No hard redirect here, components handle navigation
+        // Race condition: specific local signout vs timeout
+        // This prevents the button from spinning forever if the network/client is unresponsive
+        const localSignOutPromise = supabase.auth.signOut({ scope: 'local' });
+        const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve({ error: null, timeout: true }), 2000));
+
+        try {
+            await Promise.race([localSignOutPromise, timeoutPromise]);
+            console.log("AuthContext: Logout completed (or timed out).");
+        } catch (error) {
+            console.error("AuthContext: Logout error:", error);
+        } finally {
+            // Force clear state regardless of what happened
+            setUser(null);
+            setSession(null);
+            setProfile(null);
+            setStripeRole(null);
+            setSubscription(null);
+            // Optional: force reload to clear any lingering in-memory state if needed
+            // window.location.reload(); 
+        }
     };
 
     return (
