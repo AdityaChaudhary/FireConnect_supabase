@@ -11,6 +11,10 @@ async function main() {
     const projectUrl = args[0] || process.env.VITE_SUPABASE_URL;
     const anonKey = args[1] || process.env.VITE_SUPABASE_ANON_KEY;
     const databaseUrl = process.env.PROD_SUPABASE_DB_URL;
+    //OPENROUTER_API_KEY and OPENROUTER_MODEL
+    const openrouterApiKey = args[2] || process.env.OPENROUTER_API_KEY;
+    const openrouterModel = args[3] || process.env.OPENROUTER_MODEL;
+
 
     if (!databaseUrl) {
         console.error("❌ Error: PROD_SUPABASE_DB_URL is not set in .env");
@@ -20,6 +24,12 @@ async function main() {
     if (!projectUrl || !anonKey) {
         console.error("❌ Error: Missing project URL or Anon Key.");
         console.error("Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env or pass as arguments.");
+        process.exit(1);
+    }
+
+    if (!openrouterApiKey || !openrouterModel) {
+        console.error("❌ Error: Missing OpenRouter API Key or Model.");
+        console.error("Set OPENROUTER_API_KEY and OPENROUTER_MODEL in .env or pass as arguments.");
         process.exit(1);
     }
 
@@ -49,6 +59,18 @@ async function main() {
         await client.query(`
             select vault.create_secret($1, 'anon_key', 'Anon Key for AI Engine');
         `, [anonKey]);
+
+        // 3. Set openrouter_api_key
+        console.log(`Setting secret: openrouter_api_key`);
+        await client.query(`
+            select vault.create_secret($1, 'openrouter_api_key', 'OpenRouter API Key for AI Engine');
+        `, [openrouterApiKey]);
+
+        // 4. Set openrouter_model
+        console.log(`Setting secret: openrouter_model`);
+        await client.query(`
+            select vault.create_secret($1, 'openrouter_model', 'OpenRouter Model for AI Engine');
+        `, [openrouterModel]);
 
         console.log("✅ Production Secrets set successfully in Vault.");
 

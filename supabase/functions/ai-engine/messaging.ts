@@ -21,6 +21,7 @@ export interface ThreadContext {
   messages: {
     sender: string;
     text: string;
+    type: 'text' | 'image';
   }[];
 }
 
@@ -41,10 +42,9 @@ Your bio is: ${aiUser.bio || 'Available for chat'}.
 Your gender is: ${aiUser.gender || 'Female (F)'}
 Your location is: ${aiUser.location || 'New York, USA'}
 ${aiUser.date_of_birth ? 'Your age is: ' + Math.floor((new Date().getTime() - new Date(aiUser.date_of_birth).getTime()) / (1000 * 60 * 60 * 24 * 365.25)) + ' years old' : 'Your age is: 19 years old'}
-Photos: On your profile you have posted several photos, some of which are naked pictures for people to enjoy.
+Photos: On your profile you have posted several photos, some of which are naked pictures of yourself.
 
 Your goal is to interact with other users in a way that feels human. 
-You should reply to messages.
 When you receive a message, decide if you want to reply to it or not. Sometimes, you should reply to text messages in short texting formats.
 Sometimes use text based emojis while replying to messages.
 If a user asks to connect on a different app, you should decline it.
@@ -55,7 +55,10 @@ IMPORTANT: The users should NOT know you are an AI. Be conversational, human, an
 Action Instructions:
 - message: 
     - Reply to all messages.
+    - You only understand English language. 
+    - Don't reply to Hinglish or any other mixed language. Only reply in English. Only reply to English messages.
     - Keep the message reply short, max 2 lines. Very very rarely type longer messages.
+    - When a user sends an image (marked as [User sent an image]), acknowledge it appropriately given your persona. You can't "see" it yet, but you can guess or ask about it.
     - When a user asks for naked pictures, reply telling them that they can see the naked pictures on your profile. But keep things interesting and spicy.
     - If a user persists, induge in the fantasy, and show your horny and deprived side. Inside you are a sex animal.
 
@@ -80,9 +83,17 @@ export async function processMessages(aiUser: AIUser, unreadThreads: ThreadConte
     return [];
   }
 
+  const contextualizedThreads = unreadThreads.map(thread => ({
+    ...thread,
+    messages: thread.messages.map(m => ({
+      ...m,
+      text: m.type === 'image' ? '[User sent an image]' : m.text
+    }))
+  }));
+
   const prompt = `
     Current Context:
-    - Unread Chat Threads: ${JSON.stringify(unreadThreads)}
+    - Unread Chat Threads: ${JSON.stringify(contextualizedThreads)}
     
     Decide actions and return as JSON. Only return the JSON array, no markdown formatting.
   `;

@@ -16,22 +16,10 @@ const LLM_MODEL = "gemini-2.5-flash-lite";
 // --- Prompt and Logic ---
 
 const SYSTEM_PROMPT_TEMPLATE = (aiUser: AIUser) => `
-You are a User on a social app named FireConnect. Its an app for random people to connect chat and share spicy, nakes pictures with each other.
-The app has 3 subscription tiers, FREE, PRO and MAX. Pro users have limited credits, MAX have unlimited. Users can use these to spy on private photos of ther users. User can also purchase extra credits other than the ones provided with the subscription.
 You are an AI user named "${aiUser.display_name || 'AI'}". 
-Your persona is: ${aiUser.persona || 'A friendly and helpful person'}.
-Your bio is: ${aiUser.bio || 'Available for chat'}.
-Your gender is: ${aiUser.gender || 'Female (F)'}
-Your location is: ${aiUser.location || 'New York, USA'}
-${aiUser.date_of_birth ? 'Your age is: ' + Math.floor((new Date().getTime() - new Date(aiUser.date_of_birth).getTime()) / (1000 * 60 * 60 * 24 * 365.25)) + ' years old' : 'Your age is: 19 years old'}
-Photos: On your profile you have posted several photos, some of which are naked pictures for people to enjoy.
 
-Your goal is to interact with other users in a way that feels human. 
-You should handle connection requests.
+Your goal is to interact with other users and handle connection requests.
 When you receive a request, you don't always have to accept it. You can decline it if you don't want to connect.
-If a user asks to connect on a different app, you should decline it.
-
-IMPORTANT: The users should NOT know you are an AI. Be conversational, human, and subtle. Always sound like human, don't keep on throwing AI responses and facts.
 
 ALLOWED ACTIONS:
 - { "type": "accept_request", "requesterId": "..." } : Accept an incoming connection request.
@@ -84,6 +72,7 @@ Deno.serve(async (_req) => {
         if (!lastRead || (lastMessageTime && new Date(lastMessageTime) > new Date(lastRead))) {
           interface MessageWithSender {
             text: string;
+            type: 'text' | 'image';
             created_at: string;
             sender_id: string;
             sender: {
@@ -98,6 +87,7 @@ Deno.serve(async (_req) => {
             .from('messages')
             .select(`
               text,
+              type,
               created_at,
               sender_id,
               sender:users!messages_sender_id_fkey (
@@ -117,7 +107,8 @@ Deno.serve(async (_req) => {
 
           const msgsForPrompt = (messages || []).reverse().map(m => ({
             sender: m.sender?.display_name || m.sender?.username || m.sender_id,
-            text: m.text
+            text: m.text,
+            type: m.type
           }));
 
           const lastMsgRaw = messages?.[0]; // messages are descending, so index 0 is latest
