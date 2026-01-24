@@ -7,6 +7,7 @@ import { useStripeProducts } from '../hooks/useData';
 import { getProcessedStripeProducts, startStripeCheckout, redirectToCustomerPortal, type Plan } from '../lib/stripe-utils';
 import { createSupabaseServerClient } from '../lib/supabase.server';
 import type { Route } from './+types/Subscription';
+import { trackEvent, EVENTS } from '../app/lib/analytics';
 
 export async function loader({ request }: Route.LoaderArgs) {
     const { supabase } = createSupabaseServerClient(request);
@@ -34,6 +35,10 @@ const Subscription: React.FC = () => {
     }, [notification]);
 
     // Data is now processed in the hook/loader, so we don't need redundant effects
+
+    useEffect(() => {
+        trackEvent(EVENTS.VIEW_SUBSCRIPTION_PAGE);
+    }, []);
 
 
     const currentSubscriptionLevel = stripeRole ? stripeRole.toUpperCase() : 'FREE';
@@ -66,14 +71,30 @@ const Subscription: React.FC = () => {
         const isLeftSwipe = distance > minSwipeDistance;
         const isRightSwipe = distance < -minSwipeDistance;
         if (isLeftSwipe) {
-            setActivePlanIndex(prev => (prev + 1) % plans.length);
+            setActivePlanIndex(prev => {
+                const next = (prev + 1) % plans.length;
+                trackEvent(EVENTS.SELECT_PLAN, { plan_id: plans[next].id, source: 'swipe' });
+                return next;
+            });
         } else if (isRightSwipe) {
-            setActivePlanIndex(prev => (prev - 1 + plans.length) % plans.length);
+            setActivePlanIndex(prev => {
+                const next = (prev - 1 + plans.length) % plans.length;
+                trackEvent(EVENTS.SELECT_PLAN, { plan_id: plans[next].id, source: 'swipe' });
+                return next;
+            });
         }
     };
 
-    const nextPlan = () => setActivePlanIndex(prev => (prev + 1) % plans.length);
-    const prevPlan = () => setActivePlanIndex(prev => (prev - 1 + plans.length) % plans.length);
+    const nextPlan = () => setActivePlanIndex(prev => {
+        const next = (prev + 1) % plans.length;
+        trackEvent(EVENTS.SELECT_PLAN, { plan_id: plans[next].id, source: 'arrow' });
+        return next;
+    });
+    const prevPlan = () => setActivePlanIndex(prev => {
+        const next = (prev - 1 + plans.length) % plans.length;
+        trackEvent(EVENTS.SELECT_PLAN, { plan_id: plans[next].id, source: 'arrow' });
+        return next;
+    });
 
     const handleSubscribe = async (plan: Plan) => {
         if (plan.id === currentPlanId) return;
@@ -99,6 +120,11 @@ const Subscription: React.FC = () => {
 
         setUpdating(true);
         try {
+            trackEvent(EVENTS.BEGIN_CHECKOUT, { 
+                plan_id: plan.id, 
+                price: plan.price, 
+                currency: 'USD' // Assuming USD or extract from plan
+            });
             await startStripeCheckout(plan.priceId, 'subscription', { planId: plan.id, authToken: session?.access_token });
         } catch (error: any) {
             console.error("Error starting checkout:", error);
@@ -109,6 +135,7 @@ const Subscription: React.FC = () => {
 
     const handleManageSubscription = async () => {
         setPortalLoading(true);
+        trackEvent(EVENTS.MANAGE_SUBSCRIPTION);
         try {
             await redirectToCustomerPortal(session?.access_token);
         } catch (error: any) {
@@ -254,7 +281,10 @@ const Subscription: React.FC = () => {
                         {plans.map((_, idx) => (
                             <button
                                 key={idx}
-                                onClick={() => setActivePlanIndex(idx)}
+                                onClick={() => {
+                                    setActivePlanIndex(idx);
+                                    trackEvent(EVENTS.SELECT_PLAN, { plan_id: plans[idx].id, source: 'dot' });
+                                }}
                                 className={`h-2.5 rounded-full transition-all duration-300 ${activePlanIndex === idx ? 'w-8 bg-primary' : 'w-2.5 bg-white/10'}`}
                             />
                         ))}

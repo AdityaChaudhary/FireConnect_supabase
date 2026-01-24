@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Icon from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
 import { getStripeProducts, startStripeCheckout } from '../lib/stripe-utils';
+import { trackEvent, EVENTS } from '../app/lib/analytics';
 
 interface StripeProduct {
     id: string;
@@ -31,6 +32,10 @@ const PurchaseCredits: React.FC = () => {
     const [prices, setPrices] = useState<CreditPrice[]>([]);
     const [loadingProducts, setLoadingProducts] = useState(true);
     const [notification, setNotification] = useState<string | null>(null);
+
+    useEffect(() => {
+        trackEvent(EVENTS.VIEW_CREDITS_PAGE);
+    }, []);
 
     useEffect(() => {
         if (notification) {
@@ -85,6 +90,12 @@ const PurchaseCredits: React.FC = () => {
         setLoadingPriceId(priceId);
         try {
             console.log('Starting checkout for priceId: ', priceId);
+            trackEvent(EVENTS.BEGIN_CREDIT_PURCHASE, {
+                credits,
+                price_id: priceId,
+                // price: Need to look up price if needed, or pass it in.
+                // Assuming unit_amount is passed or retrieved
+            });
             await startStripeCheckout(priceId, 'payment', {
                 credits,
                 oldBalance: profile?.spy_credits || 0,

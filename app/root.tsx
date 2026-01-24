@@ -11,6 +11,7 @@ import type { Route } from "./+types/root";
 import type { MetaFunction } from "react-router";
 import { Analytics } from "@vercel/analytics/react";
 import { createSupabaseServerClient } from "../lib/supabase.server";
+import { trackEvent, EVENTS } from "./lib/analytics";
 import "./tailwind.css";
 
 export const meta: MetaFunction = () => {
@@ -144,6 +145,9 @@ function AppContent() {
 
   useEffect(() => {
     if (loading) return;
+
+    // Track page views
+    trackEvent(EVENTS.PAGE_VIEW, { path: location.pathname });
 
     // Handle session intent and redirection for authenticated users
     if (user && isProfileComplete) {

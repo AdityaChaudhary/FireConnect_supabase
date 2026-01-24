@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase.client';
 import type { User, Session } from '@supabase/supabase-js';
+import { trackEvent, EVENTS } from '../app/lib/analytics';
 
 export interface Profile {
     id: string;
@@ -166,6 +167,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, initialSes
 
                     console.log("AuthContext: Initial session found, refreshing profile...");
                     await refreshProfile(initialSession.user);
+                    // Track login (initial session)
+                    trackEvent(EVENTS.LOGIN, { method: 'session_init', user_id: initialSession.user.id });
                     console.log("AuthContext: Profile refreshed.");
                 } else {
                     console.log("AuthContext: No initial session found.");
@@ -216,8 +219,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, initialSes
                 // For SIGNED_IN, we want to be sure we have the latest user data
                 if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
                     const { data: { user: verifiedUser } } = await supabase.auth.getUser();
-                    setUser(verifiedUser ?? currentSession.user);
-                    refreshProfile(verifiedUser ?? currentSession.user);
+                    const finalUser = verifiedUser ?? currentSession.user;
+                    setUser(finalUser);
+                    refreshProfile(finalUser);
+                    trackEvent(EVENTS.LOGIN, { method: 'signed_in', user_id: finalUser.id });
                 } else {
                     setUser(currentSession.user);
                 }
@@ -260,6 +265,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, initialSes
 
         try {
             await Promise.race([localSignOutPromise, timeoutPromise]);
+            trackEvent(EVENTS.LOGOUT);
             console.log("AuthContext: Logout completed (or timed out).");
         } catch (error) {
             console.error("AuthContext: Logout error:", error);
