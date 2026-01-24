@@ -35,35 +35,16 @@ export async function loader({ request }: Route.LoaderArgs) {
     const isAuthCallback = url.searchParams.has('code');
 
     if (!user) {
-        // Fetch plans and AI users in parallel for SSR Landing page
-        // Fetch landing page data via RPC
-        const { data: rpcData, error } = await supabase.rpc('get_landing_page_data');
-        
-        if (error) {
-            console.error("RPC Error:", error);
-            // Fallback empty
-            return {
-                user: null,
-                initialProducts: [],
-                initialAiUsers: [],
-                isAuthCallback
-            };
-        }
-
-        const viewData = rpcData as unknown as import('../config/rpc').LandingPageData;
+        // Fetch plans and AI users on client side only for better SSR performance
         return {
             user: null,
-            initialProducts: viewData.products || [],
-            initialAiUsers: viewData.ai_users || [],
             isAuthCallback
         };
     }
 
-    // If logged in, we return the user and empty landing data
+    // If logged in, we return the user
     return {
         user,
-        initialProducts: [],
-        initialAiUsers: [],
         isAuthCallback
     };
 }
@@ -89,7 +70,7 @@ const Home: React.FC = () => {
         return <Discover />;
     }
 
-    return <Landing initialProducts={data.initialProducts} initialAiUsers={data.initialAiUsers} />;
+    return <Landing />;
 };
 
 export default Home;

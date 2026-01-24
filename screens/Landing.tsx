@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase.client';
-import { getStripeProducts, fetchWithRetry } from '../lib/stripe-utils';
-import { PLAN_THEMES, PLAN_DESCRIPTIONS, PLAN_FEATURES } from '../config/plans';
+import { getProcessedStripeProducts, fetchWithRetry } from '../lib/stripe-utils';
 import CdnImage from '../components/CdnImage';
 import { getDefaultAvatar } from '../lib/image-utils';
 
@@ -20,69 +19,10 @@ interface Plan {
     accent: string;
 }
 
-interface LandingProps {
-    initialProducts?: any[];
-    initialAiUsers?: any[];
-}
 
-const Landing: React.FC<LandingProps> = ({ initialProducts = [], initialAiUsers = [] }) => {
+
+const Landing: React.FC = () => {
     const { signInWithGoogle } = useAuth();
-
-    const mapPlans = (products: any[]) => {
-        const activePlans = products.filter(p => !p.name.includes('Spy Credits'));
-        return activePlans.map((product: any) => {
-            const metadata = product.metadata || {};
-            const role = (metadata.role || product.name || 'PRO').toUpperCase();
-
-            let themeKey = 'PRO';
-            if (role.includes('MAX')) themeKey = 'MAX';
-            else if (role.includes('PRO')) themeKey = 'PRO';
-            else if (role.includes('LITE') || role.includes('FREE')) themeKey = 'FREE';
-
-            const theme = PLAN_THEMES[themeKey] || PLAN_THEMES.PRO;
-
-            const unitAmount = product.price_amount;
-            const currency = product.price_currency || 'USD';
-            const interval = product.interval;
-
-            const formattedPrice = unitAmount
-                ? (unitAmount / 100).toLocaleString('en-US', {
-                    style: 'currency',
-                    currency: currency.toUpperCase(),
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 2
-                })
-                : '$0';
-
-            const period = interval ? `/ ${interval === 'month' ? 'mo' : interval}` : '';
-
-            let features = PLAN_FEATURES[themeKey] || [];
-            if (metadata.features) {
-                try {
-                    const featuresList = (metadata.features as string).split(',').filter(f => f.trim().length > 0);
-                    features = featuresList.map(f => ({
-                        text: f.trim(),
-                        included: true
-                    }));
-                } catch (e) {
-                    console.warn('Failed to parse plan features', e);
-                }
-            }
-
-            return {
-                id: themeKey,
-                name: product.name,
-                price: formattedPrice,
-                period: period,
-                description: product.description || PLAN_DESCRIPTIONS[themeKey] || '',
-                features: features,
-                ...theme
-            };
-        }).sort((a: any, b: any) => {
-            const order = { 'FREE': 0, 'PRO': 1, 'MAX': 2 };
-            return (order[a.id as keyof typeof order] || 0) - (order[b.id as keyof typeof order] || 0);
-        });
-    };
 
     const handleAuth = async (intent?: string | { type: string, id?: string } | React.MouseEvent) => {
         try {
@@ -97,116 +37,21 @@ const Landing: React.FC<LandingProps> = ({ initialProducts = [], initialAiUsers 
         }
     };
 
-    const initialPlans = mapPlans((initialProducts || []) as any[]);
-    
-    // Shuffle initial AI users
-    const getShuffledAiUsers = (users: any[]) => {
-        const shuffled = [...(users || [])];
-        for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-        }
-        return shuffled.slice(0, 10);
-    };
-
-    const [plans, setPlans] = useState<Plan[]>(initialPlans);
-    const [loadingProducts, setLoadingProducts] = useState(initialPlans.length === 0);
-    const [aiUsers, setAiUsers] = useState<any[]>(Math.random() > -1 ? (initialAiUsers || []).slice(0, 10) : []); // Hack to avoid TS issues if it thinks it's not array
-    const [loadingAIUsers, setLoadingAIUsers] = useState((initialAiUsers || []).length === 0);
+    const [plans, setPlans] = useState<Plan[]>([]);
+    const [loadingProducts, setLoadingProducts] = useState(true);
+    const [aiUsers, setAiUsers] = useState<any[]>([]);
+    const [loadingAIUsers, setLoadingAIUsers] = useState(true);
     const scrollRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        // Only shuffle on the client after initial hydration
-        if (initialAiUsers.length > 0) {
-            setAiUsers(getShuffledAiUsers(initialAiUsers));
-        }
-    }, [initialAiUsers]);
+    // Data fetching moved to useEffect below to favor client-side for SSR performance
 
     useEffect(() => {
         const fetchPlans = async () => {
             try {
-                // Use the wrapper function for consistency
-                const products = await getStripeProducts() as any[];
-
-                // Filter out Spy Credits and map
-                const activePlans = products.filter(p => !p.name.includes('Spy Credits'));
-
-                if (activePlans && Array.isArray(activePlans)) {
-                    const mappedPlans = activePlans.map((product: any) => {
-                        const metadata = product.metadata || {};
-                        const role = (metadata.role || product.name || 'PRO').toUpperCase();
-
-                        let themeKey = 'PRO';
-                        if (role.includes('MAX')) themeKey = 'MAX';
-                        else if (role.includes('PRO')) themeKey = 'PRO';
-                        else if (role.includes('LITE') || role.includes('FREE')) themeKey = 'FREE';
-
-                        const theme = PLAN_THEMES[themeKey] || PLAN_THEMES.PRO;
-
-                        // Handle price from the flat view returned by RPC or the nested structure if different
-                        // The RPC returns specific fields: price_amount, price_currency, interval
-                        // But getStripeProducts returns the usage of get_active_plans which returns:
-                        // id, name, description, price_id, price_amount, price_currency, interval, metadata
-
-                        const unitAmount = product.price_amount;
-                        const currency = product.price_currency || 'USD';
-                        const interval = product.interval;
-
-                        const formattedPrice = unitAmount
-                            ? (unitAmount / 100).toLocaleString('en-US', {
-                                style: 'currency',
-                                currency: currency.toUpperCase(),
-                                minimumFractionDigits: 0,
-                                maximumFractionDigits: 2
-                            })
-                            : '$0';
-
-                        const period = interval ? `/ ${interval === 'month' ? 'mo' : interval}` : '';
-
-                        // Feature mapping logic from Subscription.tsx/Source
-                        let features = PLAN_FEATURES[themeKey] || [];
-                        if (metadata.features) {
-                            try {
-                                const featuresList = (metadata.features as string).split(',').filter(f => f.trim().length > 0);
-                                features = featuresList.map(f => ({
-                                    text: f.trim(),
-                                    included: true
-                                }));
-                            } catch (e) {
-                                console.warn('Failed to parse plan features', e);
-                            }
-                        }
-
-                        return {
-                            id: themeKey,
-                            name: product.name,
-                            price: formattedPrice,
-                            period: period,
-                            description: product.description || PLAN_DESCRIPTIONS[themeKey] || '',
-                            features: features,
-                            ...theme
-                        };
-                    });
-
-                    setPlans(mappedPlans.sort((a, b) => {
-                        const order = { 'FREE': 0, 'PRO': 1, 'MAX': 2 };
-                        return (order[a.id as keyof typeof order] || 0) - (order[b.id as keyof typeof order] || 0);
-                    }));
-                }
+                const processedPlans = await getProcessedStripeProducts();
+                setPlans(processedPlans);
             } catch (error) {
                 console.error("Error fetching plans:", error);
-                // Fallback
-                setPlans([
-                    {
-                        id: 'FREE',
-                        name: 'LITE',
-                        price: '$0',
-                        period: '/ mo',
-                        description: PLAN_DESCRIPTIONS.FREE,
-                        features: PLAN_FEATURES.FREE,
-                        ...PLAN_THEMES.FREE
-                    }
-                ]);
             } finally {
                 setLoadingProducts(false);
             }
@@ -222,13 +67,15 @@ const Landing: React.FC<LandingProps> = ({ initialProducts = [], initialAiUsers 
                         .limit(20)
                 );
 
-                // Shuffle logic
-                const shuffled = [...(data || [])];
-                for (let i = shuffled.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                if (data) {
+                    // Shuffle logic
+                    const shuffled = [...(data || [])];
+                    for (let i = shuffled.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                    }
+                    setAiUsers(shuffled.slice(0, 10));
                 }
-                setAiUsers(shuffled.slice(0, 10));
             } catch (error) {
                 console.error("Error fetching AI users:", error);
             } finally {
@@ -236,13 +83,9 @@ const Landing: React.FC<LandingProps> = ({ initialProducts = [], initialAiUsers 
             }
         };
 
-        if (initialPlans.length === 0) {
-            fetchPlans();
-        }
-        if (initialAiUsers.length === 0) {
-            fetchAIUsers();
-        }
-    }, [initialAiUsers, initialPlans.length]);
+        fetchPlans();
+        fetchAIUsers();
+    }, []);
 
     // Set initial scroll position to middle
     useEffect(() => {
