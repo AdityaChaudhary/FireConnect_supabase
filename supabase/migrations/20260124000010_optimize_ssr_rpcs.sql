@@ -22,16 +22,16 @@ BEGIN
             'requester', (SELECT json_build_object(
                 'id', u.id, 'username', u.username, 'display_name', u.display_name, 
                 'profile_picture_url', u.profile_picture_url, 'gender', u.gender, 'user_type', u.user_type, 'stripe_role', u.stripe_role,
-                'user_online_status', (SELECT json_agg(uos.*) FROM user_online_status uos WHERE uos.user_id = u.id)
-            ) FROM users u WHERE u.id = c.requester_id),
+                'user_online_status', (SELECT json_agg(uos.*) FROM public.user_online_status uos WHERE uos.user_id = u.id)
+            ) FROM public.users u WHERE u.id = c.requester_id),
             'recipient', (SELECT json_build_object(
                 'id', u.id, 'username', u.username, 'display_name', u.display_name, 
                 'profile_picture_url', u.profile_picture_url, 'gender', u.gender, 'user_type', u.user_type, 'stripe_role', u.stripe_role,
-                 'user_online_status', (SELECT json_agg(uos.*) FROM user_online_status uos WHERE uos.user_id = u.id)
-            ) FROM users u WHERE u.id = c.recipient_id)
+                 'user_online_status', (SELECT json_agg(uos.*) FROM public.user_online_status uos WHERE uos.user_id = u.id)
+            ) FROM public.users u WHERE u.id = c.recipient_id)
         )
     ) INTO connections_data
-    FROM connections c
+    FROM public.connections c
     WHERE c.requester_id = p_user_id OR c.recipient_id = p_user_id;
 
     -- 2. Get Threads
@@ -71,10 +71,10 @@ BEGIN
                 'gender', u.gender,
                 'user_type', u.user_type,
                 'stripe_role', u.stripe_role,
-                'user_online_status', (SELECT json_agg(uos.*) FROM user_online_status uos WHERE uos.user_id = u.id)
+                'user_online_status', (SELECT json_agg(uos.*) FROM public.user_online_status uos WHERE uos.user_id = u.id)
             )
         ) INTO participants_data
-        FROM users u
+        FROM public.users u
         WHERE u.id = ANY(all_participant_ids);
     ELSE
         participants_data := '{}'::json;
@@ -147,23 +147,25 @@ BEGIN
     SELECT json_agg(p) INTO products_data FROM get_active_plans() p;
 
     -- 2. Get AI Users
-    SELECT json_agg(
-        json_build_object(
-            'id', u.id,
-            'username', u.username,
-            'display_name', u.display_name,
-            'profile_picture_url', u.profile_picture_url,
-            'gender', u.gender,
-            'user_type', u.user_type,
-            'interests', u.interests,
-            'location', u.location,
-            'user_online_status', (SELECT json_agg(uos.*) FROM user_online_status uos WHERE uos.user_id = u.id)
-        )
-    ) INTO ai_users_data
-    FROM users u
-    WHERE u.user_type = 'AI'
-    ORDER BY u.created_at DESC
-    LIMIT 20;
+    SELECT json_agg(sub.u_json) INTO ai_users_data
+    FROM (
+        SELECT 
+            json_build_object(
+                'id', u.id,
+                'username', u.username,
+                'display_name', u.display_name,
+                'profile_picture_url', u.profile_picture_url,
+                'gender', u.gender,
+                'user_type', u.user_type,
+                'interests', u.interests,
+                'location', u.location,
+                'user_online_status', (SELECT json_agg(uos.*) FROM public.user_online_status uos WHERE uos.user_id = u.id)
+            ) as u_json
+        FROM public.users u
+        WHERE u.user_type = 'AI'
+        ORDER BY u.created_at DESC
+        LIMIT 20
+    ) sub;
 
     result := json_build_object(
         'products', COALESCE(products_data, '[]'::json),

@@ -5,7 +5,6 @@ import { useLoaderData } from 'react-router';
 import Landing from './Landing';
 import Discover from './Discover';
 import { createSupabaseServerClient } from '../lib/supabase.server';
-import { processRawStripeProducts } from '../lib/stripe-utils';
 import type { Route } from './+types/Home';
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
@@ -48,11 +47,9 @@ export async function loader({ request }: Route.LoaderArgs) {
         }
 
         const viewData = rpcData as unknown as import('../config/rpc').LandingPageData;
-        const products = processRawStripeProducts(viewData.products as any[] || []);
-
         return {
             user: null,
-            initialProducts: products,
+            initialProducts: viewData.products || [],
             initialAiUsers: viewData.ai_users || []
         };
     }
