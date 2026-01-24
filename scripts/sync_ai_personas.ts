@@ -178,8 +178,8 @@ async function syncAuth(users: Record<string, AIUserRecord>) {
 }
 
 // Step 2 & 3: Image Processing & Storage Sync
-async function syncMedia(users: Record<string, AIUserRecord>) {
-    console.log("\n--- [Step 2 & 3] Processing & Uploading Media ---");
+async function syncMedia(users: Record<string, AIUserRecord>, force: boolean = false) {
+    console.log(`\n--- [Step 2 & 3] Processing & Uploading Media ${force ? '(FORCE)' : ''} ---`);
     if (!existsSync(PROCESSED_IMAGES_DIR)) mkdirSync(PROCESSED_IMAGES_DIR, { recursive: true });
 
     const userList = Object.values(users).filter(u => u.uid);
@@ -229,7 +229,7 @@ async function syncMedia(users: Record<string, AIUserRecord>) {
 
                 // 1. Process and Upload Main Image
                 const currentList = visibility === 'PUBLIC' ? existingPublicShared : existingPrivateShared;
-                if (!currentList.includes(sanitizedFileName)) {
+                if (force || !currentList.includes(sanitizedFileName)) {
                     const processed = await sharp(fileBuffer)
                         .resize({ width: 1920, height: 1920, fit: 'inside', withoutEnlargement: true })
                         .jpeg({ quality: IMAGE_QUALITY })
@@ -244,7 +244,7 @@ async function syncMedia(users: Record<string, AIUserRecord>) {
                     const blurredFileName = `blurred_${sanitizedFileName}`;
                     const blurredPath = `users/${uid}/shared/PUBLIC/blurred/${blurredFileName}`;
                     
-                    if (!existingBlurred.includes(blurredFileName)) {
+                    if (force || !existingBlurred.includes(blurredFileName)) {
                         const blurred = await sharp(fileBuffer)
                             .blur(IMAGE_BLUR)
                             .jpeg({ quality: IMAGE_BLURRED_QUALITY })
@@ -256,7 +256,7 @@ async function syncMedia(users: Record<string, AIUserRecord>) {
 
                 // 3. Avatar for first image
                 if (isProfile) {
-                    if (!existingAvatars.includes(sanitizedFileName)) {
+                    if (force || !existingAvatars.includes(sanitizedFileName)) {
                         const avatar = await sharp(fileBuffer)
                             .resize({ width: 512, height: 512, fit: 'cover' })
                             .jpeg({ quality: IMAGE_AVATAR_QUALITY })
@@ -396,14 +396,20 @@ async function main() {
     try {
         switch (choice) {
             case '0': await validateUsernames(users); break;
-            case '1':
+            case '1': {
+                const force = (await askQuestion("Force re-upload all media? (y/N): ")).toLowerCase() === 'y';
                 await syncAuth(users);
-                await syncMedia(users);
+                await syncMedia(users, force);
                 await syncDatabase(users);
                 // await generateSeedData(users);
                 break;
+            }
             case '2': await syncAuth(users); break;
-            case '3': await syncMedia(users); break;
+            case '3': {
+                const force = (await askQuestion("Force re-upload all media? (y/N): ")).toLowerCase() === 'y';
+                await syncMedia(users, force);
+                break;
+            }
             case '4': await syncDatabase(users); break;
             // case '5': await generateSeedData(users); break;
             case '6': await resetMetadata(users); break;

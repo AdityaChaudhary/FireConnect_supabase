@@ -276,6 +276,15 @@ export const useUserDetail = (userId: string, initialData?: any) => {
  * Hook to fetch connection status between two users.
  */
 export const useUserConnection = (targetUserId: string, authUserId?: string, initialData?: any) => {
+    const queryClient = useQueryClient();
+
+    // Sync initialData to cache when available to ensure fresh data on navigation
+    useEffect(() => {
+        if (initialData && targetUserId && authUserId) {
+            queryClient.setQueryData(['user-connection', targetUserId, authUserId], initialData);
+        }
+    }, [initialData, targetUserId, authUserId, queryClient]);
+
     return useQuery({
         queryKey: ['user-connection', targetUserId, authUserId],
         queryFn: async () => {
