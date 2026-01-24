@@ -258,7 +258,7 @@ const Notifications: React.FC = () => {
                                     </div>
 
                                     {/* Arrow hint on hover */}
-                                    <div className="shrink-0 flex items-center justify-center size-8 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all duration-300">
+                                    <div className="shrink-0 self-center flex items-center justify-center size-8 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all duration-300">
                                         <Icon name="chevron_right" className="text-primary text-xl" />
                                     </div>
                                 </motion.div>
