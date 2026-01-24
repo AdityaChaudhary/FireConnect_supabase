@@ -113,7 +113,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
 
             const promises = images.map(async (img, idx) => {
                 const isPrivate = img.visibility === 'PRIVATE' || (img.url && (img.url.includes('/PRIVATE/') || img.url.includes('private-media/')));
-                const canFetchPrivate = normalizedRole === 'MAX' || (normalizedRole === 'PRO' && isSpied);
+                const canFetchPrivate = (normalizedRole === 'MAX' || normalizedRole === 'PRO') && isSpied;
 
                 // Resolution logic:
                 // 1. If public, always resolve if not in viewableUrls
