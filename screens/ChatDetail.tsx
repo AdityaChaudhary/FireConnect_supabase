@@ -127,7 +127,7 @@ const ChatDetail: React.FC = () => {
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
     const [notification, setNotification] = useState<string | null>(null);
-    const [currentTime, setCurrentTime] = useState(Date.now());
+    const [currentTime, setCurrentTime] = useState(0);
     const [showDisconnectModal, setShowDisconnectModal] = useState(false);
     const [requesting, setRequesting] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -145,7 +145,7 @@ const ChatDetail: React.FC = () => {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const { data: otherUser, isLoading: userLoading } = useUserDetail(otherUserId || '', loaderData?.otherUser);
-    const { data: connData, refetch: refetchConn } = useUserConnection(otherUserId || '', authUser?.id, loaderData?.connection);
+    const { data: connData } = useUserConnection(otherUserId || '', authUser?.id, loaderData?.connection);
     const { data: threadId, isLoading: threadLoading } = useThreadId(authUser?.id, otherUserId, loaderData?.threadId);
     const { data: messages = [] } = useMessages(threadId || undefined, loaderData?.messages);
     const { data: hasReceivedMessage } = useHasReceivedMessage(otherUserId || '', authUser?.id, loaderData?.hasReceivedMessage);
@@ -189,6 +189,7 @@ const ChatDetail: React.FC = () => {
     };
 
     useEffect(() => {
+        setCurrentTime(Date.now());
         const intervalId = setInterval(() => {
             setCurrentTime(Date.now());
         }, 10000); // Update every 10 seconds
@@ -339,7 +340,13 @@ const ChatDetail: React.FC = () => {
                     status: 'PENDING'
                 });
             if (error) throw error;
-            refetchConn();
+            
+            // Invalidate queries to update connection status across the app
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['user-connection', otherUserId, authUser.id] }),
+                queryClient.invalidateQueries({ queryKey: ['connections', authUser.id] })
+            ]);
+
             setNotification("Connection request sent!");
         } catch (error) {
             console.error("Error sending connection request:", error);
@@ -362,7 +369,13 @@ const ChatDetail: React.FC = () => {
                 .eq('requester_id', otherUserId)
                 .eq('recipient_id', authUser.id);
             if (error) throw error;
-            refetchConn();
+
+            // Invalidate queries to update connection status across the app
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['user-connection', otherUserId, authUser.id] }),
+                queryClient.invalidateQueries({ queryKey: ['connections', authUser.id] })
+            ]);
+
             setNotification("Connection accepted!");
         } catch (error) {
             console.error("Error accepting connection request:", error);
@@ -382,7 +395,13 @@ const ChatDetail: React.FC = () => {
                 .eq('requester_id', authUser.id)
                 .eq('recipient_id', otherUserId);
             if (error) throw error;
-            refetchConn();
+
+            // Invalidate queries to update connection status across the app
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['user-connection', otherUserId, authUser.id] }),
+                queryClient.invalidateQueries({ queryKey: ['connections', authUser.id] })
+            ]);
+
             setNotification("Request cancelled.");
         } catch (error) {
             console.error("Error cancelling request:", error);
@@ -401,7 +420,13 @@ const ChatDetail: React.FC = () => {
                 .or(`and(requester_id.eq.${authUser.id},recipient_id.eq.${otherUserId}),and(requester_id.eq.${otherUserId},recipient_id.eq.${authUser.id})`);
             
             if (error) throw error;
-            refetchConn();
+
+            // Invalidate queries to update connection status across the app
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['user-connection', otherUserId, authUser.id] }),
+                queryClient.invalidateQueries({ queryKey: ['connections', authUser.id] })
+            ]);
+
             setShowDisconnectModal(false);
             setNotification("Disconnected successfully.");
         } catch (error) {
@@ -1002,9 +1027,12 @@ const ChatDetail: React.FC = () => {
                                             {!isConnected && outgoingStatus !== 'PENDING' && (
                                                 <button
                                                     onClick={handleSendRequest}
-                                                    className="flex-1 h-14 rounded-2xl bg-primary font-black text-xs uppercase tracking-widest text-white shadow-xl shadow-primary/30 btn-glow"
+                                                    disabled={requesting}
+                                                    className="flex-1 h-14 rounded-2xl bg-primary font-black text-xs uppercase tracking-widest text-white shadow-xl shadow-primary/30 btn-glow disabled:opacity-50 flex items-center justify-center gap-2"
                                                 >
-                                                    Connect Now
+                                                    {requesting ? (
+                                                        <div className="size-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                                                    ) : "Connect Now"}
                                                 </button>
                                             )}
                                         </div>
@@ -1213,9 +1241,12 @@ const ChatDetail: React.FC = () => {
                                     <div className="flex flex-col gap-3">
                                         <button
                                             onClick={handleDisconnect}
-                                            className="w-full h-14 rounded-2xl bg-red-500 text-white font-black text-xs uppercase tracking-widest shadow-xl shadow-red-500/20 active:scale-95 transition-all"
+                                            disabled={requesting}
+                                            className="w-full h-14 rounded-2xl bg-red-500 text-white font-black text-xs uppercase tracking-widest shadow-xl shadow-red-500/20 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                                         >
-                                            Yes, Disconnect
+                                            {requesting ? (
+                                                <div className="size-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                                            ) : "Yes, Disconnect"}
                                         </button>
                                         <button
                                             onClick={() => setShowDisconnectModal(false)}

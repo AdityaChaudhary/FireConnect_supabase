@@ -87,7 +87,7 @@ const ProfilePreview: React.FC = () => {
     // React Query Hooks
     const targetUserId = id || '';
     const { data: user, isLoading: userLoading } = useUserDetail(targetUserId, initialData.user);
-    const { data: connData, isLoading: connLoading, refetch: refetchConn } = useUserConnection(targetUserId, authUser?.id, initialData.connection);
+    const { data: connData, isLoading: connLoading } = useUserConnection(targetUserId, authUser?.id, initialData.connection);
     const { data: images = [], isLoading: imagesLoading } = useProfileImages(targetUserId, initialData.images);
     const { data: initialSpied, isLoading: spiedLoading } = useSpiedStatus(targetUserId, authUser?.id, initialData.isSpied);
     const { data: receivedMsg, isLoading: msgLoading } = useHasReceivedMessage(targetUserId, authUser?.id, initialData.hasReceivedMessage);
@@ -159,7 +159,13 @@ const ProfilePreview: React.FC = () => {
                     status: 'PENDING'
                 });
             if (error) throw error;
-            refetchConn();
+            
+            // Invalidate queries to update connection status across the app
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['user-connection', targetUserId, authUser.id] }),
+                queryClient.invalidateQueries({ queryKey: ['connections', authUser.id] })
+            ]);
+
             setNotification("Connection request sent!");
         } catch (error) {
             console.error("Error sending connection request:", error);
@@ -182,7 +188,13 @@ const ProfilePreview: React.FC = () => {
                 .eq('requester_id', id)
                 .eq('recipient_id', authUser.id);
             if (error) throw error;
-            refetchConn();
+
+            // Invalidate queries to update connection status across the app
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['user-connection', targetUserId, authUser.id] }),
+                queryClient.invalidateQueries({ queryKey: ['connections', authUser.id] })
+            ]);
+
             setNotification("Connection accepted!");
         } catch (error) {
             console.error("Error accepting connection request:", error);
@@ -202,7 +214,13 @@ const ProfilePreview: React.FC = () => {
                 .eq('requester_id', authUser.id)
                 .eq('recipient_id', id);
             if (error) throw error;
-            refetchConn();
+
+            // Invalidate queries to update connection status across the app
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['user-connection', targetUserId, authUser.id] }),
+                queryClient.invalidateQueries({ queryKey: ['connections', authUser.id] })
+            ]);
+
             setNotification("Request cancelled.");
         } catch (error) {
             console.error("Error cancelling request:", error);
@@ -219,10 +237,15 @@ const ProfilePreview: React.FC = () => {
                 .from('connections')
                 .delete()
                 .or(`and(requester_id.eq.${authUser.id},recipient_id.eq.${id}),and(requester_id.eq.${id},recipient_id.eq.${authUser.id})`);
-
+            
             if (error) throw error;
 
-            refetchConn();
+            // Invalidate queries to update connection status across the app
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['user-connection', targetUserId, authUser.id] }),
+                queryClient.invalidateQueries({ queryKey: ['connections', authUser.id] })
+            ]);
+
             setShowDisconnectModal(false);
             setNotification("Disconnected successfully.");
         } catch (error) {
@@ -570,10 +593,16 @@ const ProfilePreview: React.FC = () => {
                                                             exit={{ opacity: 0, scale: 0.9 }}
                                                             onClick={handleAcceptRequest}
                                                             disabled={requesting}
-                                                            className="h-16 w-full rounded-2xl bg-primary shadow-xl shadow-primary/30 flex items-center justify-center gap-3 font-black text-sm uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all text-white btn-glow"
+                                                            className="h-16 w-full rounded-2xl bg-primary shadow-xl shadow-primary/30 flex items-center justify-center gap-3 font-black text-sm uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all text-white btn-glow disabled:opacity-50"
                                                         >
-                                                            <Icon name="person_add" className="text-xl" />
-                                                            {requesting ? 'Processing...' : 'Accept Request'}
+                                                            {requesting ? (
+                                                                <div className="size-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                                                            ) : (
+                                                                <>
+                                                                    <Icon name="person_add" className="text-xl" />
+                                                                    Accept Request
+                                                                </>
+                                                            )}
                                                         </motion.button>
                                                     ) : connectionStatus === 'PENDING' ? (
                                                         <motion.button
@@ -583,10 +612,16 @@ const ProfilePreview: React.FC = () => {
                                                             exit={{ opacity: 0, scale: 0.9 }}
                                                             onClick={handleCancelRequest}
                                                             disabled={requesting}
-                                                            className="h-16 w-full rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 flex items-center justify-center gap-3 font-black text-sm uppercase tracking-widest text-white/40 active:scale-95 transition-all"
+                                                            className="h-16 w-full rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 flex items-center justify-center gap-3 font-black text-sm uppercase tracking-widest text-white/40 active:scale-95 transition-all disabled:opacity-50"
                                                         >
-                                                            <Icon name="hourglass_empty" className="text-xl animate-pulse" />
-                                                            {requesting ? 'Cancelling...' : 'Request Sent'}
+                                                            {requesting ? (
+                                                                <div className="size-5 border-2 border-white/10 border-t-white/40 rounded-full animate-spin"></div>
+                                                            ) : (
+                                                                <>
+                                                                    <Icon name="hourglass_empty" className="text-xl animate-pulse" />
+                                                                    Request Sent
+                                                                </>
+                                                            )}
                                                         </motion.button>
                                                     ) : (
                                                         <motion.button
@@ -596,10 +631,16 @@ const ProfilePreview: React.FC = () => {
                                                             exit={{ opacity: 0, scale: 0.9 }}
                                                             onClick={handleSendRequest}
                                                             disabled={requesting}
-                                                            className="h-16 w-full rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 hover:border-primary/40 hover:bg-primary/10 flex items-center justify-center gap-3 font-black text-sm uppercase tracking-widest text-white hover:text-primary transition-all active:scale-95 group"
+                                                            className="h-16 w-full rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 hover:border-primary/40 hover:bg-primary/10 flex items-center justify-center gap-3 font-black text-sm uppercase tracking-widest text-white hover:text-primary transition-all active:scale-95 group disabled:opacity-50"
                                                         >
-                                                            <Icon name="person_add" className="text-xl group-hover:scale-110 transition-transform" />
-                                                            {requesting ? 'Sending...' : 'Send Request'}
+                                                            {requesting ? (
+                                                                <div className="size-5 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+                                                            ) : (
+                                                                <>
+                                                                    <Icon name="person_add" className="text-xl group-hover:scale-110 transition-transform" />
+                                                                    Send Request
+                                                                </>
+                                                            )}
                                                         </motion.button>
                                                     )}
                                                 </div>
@@ -658,10 +699,16 @@ const ProfilePreview: React.FC = () => {
                                                 exit={{ opacity: 0, scale: 0.9 }}
                                                 onClick={handleAcceptRequest}
                                                 disabled={requesting}
-                                                className="h-16 w-full rounded-2xl bg-primary shadow-xl shadow-primary/30 flex items-center justify-center gap-3 font-black text-sm uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all text-white btn-glow"
+                                                className="h-16 w-full rounded-2xl bg-primary shadow-xl shadow-primary/30 flex items-center justify-center gap-3 font-black text-sm uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all text-white btn-glow disabled:opacity-50"
                                             >
-                                                <Icon name="person_add" className="text-xl" />
-                                                {requesting ? 'Processing...' : 'Accept Request'}
+                                                {requesting ? (
+                                                    <div className="size-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                                                ) : (
+                                                    <>
+                                                        <Icon name="person_add" className="text-xl" />
+                                                        Accept Request
+                                                    </>
+                                                )}
                                             </motion.button>
                                         ) : connectionStatus === 'PENDING' ? (
                                             <motion.button
@@ -671,10 +718,16 @@ const ProfilePreview: React.FC = () => {
                                                 exit={{ opacity: 0, scale: 0.9 }}
                                                 onClick={handleCancelRequest}
                                                 disabled={requesting}
-                                                className="h-16 w-full rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 flex items-center justify-center gap-3 font-black text-sm uppercase tracking-widest text-white/40 active:scale-95 transition-all"
+                                                className="h-16 w-full rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 flex items-center justify-center gap-3 font-black text-sm uppercase tracking-widest text-white/40 active:scale-95 transition-all disabled:opacity-50"
                                             >
-                                                <Icon name="hourglass_empty" className="text-xl animate-pulse" />
-                                                {requesting ? 'Cancelling...' : 'Request Sent'}
+                                                {requesting ? (
+                                                    <div className="size-5 border-2 border-white/10 border-t-white/40 rounded-full animate-spin"></div>
+                                                ) : (
+                                                    <>
+                                                        <Icon name="hourglass_empty" className="text-xl animate-pulse" />
+                                                        Request Sent
+                                                    </>
+                                                )}
                                             </motion.button>
                                         ) : (
                                             <motion.button
@@ -684,10 +737,16 @@ const ProfilePreview: React.FC = () => {
                                                 exit={{ opacity: 0, scale: 0.9 }}
                                                 onClick={handleSendRequest}
                                                 disabled={requesting}
-                                                className="h-16 w-full rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 hover:border-primary/40 hover:bg-primary/10 flex items-center justify-center gap-3 font-black text-sm uppercase tracking-widest text-white hover:text-primary transition-all active:scale-95 group"
+                                                className="h-16 w-full rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 hover:border-primary/40 hover:bg-primary/10 flex items-center justify-center gap-3 font-black text-sm uppercase tracking-widest text-white hover:text-primary transition-all active:scale-95 group disabled:opacity-50"
                                             >
-                                                <Icon name="person_add" className="text-xl group-hover:scale-110 transition-transform" />
-                                                {requesting ? 'Sending...' : 'Send Request'}
+                                                {requesting ? (
+                                                    <div className="size-5 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+                                                ) : (
+                                                    <>
+                                                        <Icon name="person_add" className="text-xl group-hover:scale-110 transition-transform" />
+                                                        Send Request
+                                                    </>
+                                                )}
                                             </motion.button>
                                         )}
                                     </div>
@@ -748,9 +807,11 @@ const ProfilePreview: React.FC = () => {
                                     <button
                                         onClick={handleDisconnect}
                                         disabled={requesting}
-                                        className="w-full h-14 rounded-2xl bg-red-500 text-white font-bold shadow-lg shadow-red-500/20 active:scale-95 transition-all"
+                                        className="w-full h-14 rounded-2xl bg-red-500 text-white font-bold shadow-lg shadow-red-500/20 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                                     >
-                                        {requesting ? 'Disconnecting...' : 'Yes, Disconnect'}
+                                        {requesting ? (
+                                            <div className="size-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                                        ) : 'Yes, Disconnect'}
                                     </button>
                                     <button
                                         onClick={() => setShowDisconnectModal(false)}

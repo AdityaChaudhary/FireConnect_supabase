@@ -231,7 +231,10 @@ const Subscription: React.FC = () => {
                             >
                                 <div className="flex flex-col items-center justify-center h-full">
                                     {updating ? (
-                                        <span className="text-white/60">Updating...</span>
+                                        <div className="flex items-center gap-2">
+                                            <div className="size-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                                            <span className="text-white/60">Updating...</span>
+                                        </div>
                                     ) : currentPlanId === plans[activePlanIndex].id ? (
                                         <span>Current Plan</span>
                                     ) : (
