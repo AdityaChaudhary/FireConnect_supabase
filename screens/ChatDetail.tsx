@@ -147,7 +147,10 @@ const ChatDetail: React.FC = () => {
     const { data: otherUser, isLoading: userLoading } = useUserDetail(otherUserId || '', loaderData?.otherUser);
     const { data: connData } = useUserConnection(otherUserId || '', authUser?.id, loaderData?.connection);
     const { data: threadId, isLoading: threadLoading } = useThreadId(authUser?.id, otherUserId, loaderData?.threadId);
-    const { data: messages = [] } = useMessages(threadId || undefined, loaderData?.messages);
+    
+    // Only use initial data if the thread IDs match (SSR vs Client)
+    const initialMessages = (loaderData?.threadId && threadId === loaderData.threadId) ? loaderData.messages : undefined;
+    const { data: messages = [] } = useMessages(threadId || undefined, initialMessages);
     const { data: hasReceivedMessage } = useHasReceivedMessage(otherUserId || '', authUser?.id, loaderData?.hasReceivedMessage);
     const { data: images = [] } = useProfileImages(otherUserId || '');
     const { data: initialSpied } = useSpiedStatus(otherUserId || '', authUser?.id);
@@ -306,6 +309,7 @@ const ChatDetail: React.FC = () => {
                 if (!error) {
                     // Invalidate threads query so ChatList updates immediately
                     queryClient.invalidateQueries({ queryKey: ['threads'] });
+                    queryClient.invalidateQueries({ queryKey: ['unread-badge', authUser.id] });
                 }
             }
         };
@@ -594,8 +598,12 @@ const ChatDetail: React.FC = () => {
         setIsSending(true);
 
         try {
-            // 1. Insert message
-            const { error: msgError } = await supabase
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Request timed out')), 10000)
+            );
+
+            // 1. Insert message with timeout
+            const insertPromise = supabase
                 .from('messages')
                 .insert({
                     thread_id: threadId,
@@ -604,9 +612,11 @@ const ChatDetail: React.FC = () => {
                     type: 'text'
                 });
 
+            const { error: msgError } = await Promise.race([insertPromise, timeoutPromise]) as any;
+
             if (msgError) throw msgError;
 
-            // 2. Update thread
+            // 2. Update thread - don't block UI on this strict timeout, let it happen
             await supabase
                 .from('threads')
                 .update({
@@ -619,8 +629,9 @@ const ChatDetail: React.FC = () => {
             // 3. Manually invalidate queries for immediate feedback
             queryClient.invalidateQueries({ queryKey: ['messages', threadId] });
             queryClient.invalidateQueries({ queryKey: ['threads'] });
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error sending message:", error);
+            setNotification(error.message || "Failed to send message");
         } finally {
             setIsSending(false);
         }
