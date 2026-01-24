@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useResolvedImage } from '../hooks/useResolvedImage';
 import { getDefaultAvatar } from '../lib/image-utils';
 
@@ -14,6 +14,7 @@ interface CdnImageProps {
     gender?: string | null;
     seed?: string;
     showSpinner?: boolean;
+    onLoad?: () => void;
 }
 
 /**
@@ -32,16 +33,19 @@ const CdnImage: React.FC<CdnImageProps> = ({
     placeholder,
     gender,
     seed,
-    showSpinner = false
+    showSpinner = false,
+    onLoad
 }) => {
     const { url, loading } = useResolvedImage(path);
 
     const [error, setError] = useState(false);
+    const [assetLoaded, setAssetLoaded] = useState(false);
 
-    // Reset error state when path changes
-    React.useEffect(() => {
+    // Reset error and assetLoaded state when path changes
+    useEffect(() => {
         setError(false);
-    }, [path]);
+        setAssetLoaded(false);
+    }, [path, url]);
 
     // If we have a placeholder and no URL yet (including loading state), use it
     // If no path and no placeholder, use Dicebear fallback
@@ -58,11 +62,25 @@ const CdnImage: React.FC<CdnImageProps> = ({
                 }}
                 onClick={onClick}
             >
-                {loading && showSpinner && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/10 backdrop-blur-[2px]">
-                        <div className="size-8 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
-                    </div>
+                {displayUrl && (
+                    <img 
+                        src={displayUrl} 
+                        style={{ display: 'none' }} 
+                        onLoad={() => {
+                            setAssetLoaded(true);
+                            onLoad?.();
+                        }}
+                        onError={() => setError(true)}
+                        alt=""
+                    />
                 )}
+                {loading || (displayUrl && !assetLoaded) ? (
+                    showSpinner && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/10 backdrop-blur-[2px]">
+                            <div className="size-8 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                        </div>
+                    )
+                ) : null}
                 {/* We don't want to hide children while loading if we have a background image */}
                 {children}
             </div>
@@ -86,12 +104,20 @@ const CdnImage: React.FC<CdnImageProps> = ({
                 src={displayUrl || placeholder}
                 alt={alt}
                 crossOrigin="anonymous"
-                className={`${className} ${loading && !url ? 'opacity-0' : 'opacity-100 transition-opacity duration-300'}`}
+                className={`${className} ${(loading || !assetLoaded) && !url ? 'opacity-0' : 'opacity-100 transition-opacity duration-300'}`}
                 style={style}
                 onClick={onClick}
+                onLoad={() => {
+                    setAssetLoaded(true);
+                    onLoad?.();
+                }}
                 onError={() => setError(true)}
             />
-            {loading && showSpinner && url && (
+            {/* Show spinner if strictly loading, OR if we have a URL but asset hasn't loaded yet.
+                We wait for `url` to be present before showing the "asset not loaded" spinner to avoid
+                double spinners or flashing content. But if `loading` is true (resolving URL), we MUST show spinner.
+             */}
+            {(loading || (url && !assetLoaded)) && showSpinner && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/10 backdrop-blur-[2px]">
                     <div className="size-8 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
                 </div>

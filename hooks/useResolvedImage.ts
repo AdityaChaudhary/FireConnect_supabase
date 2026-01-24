@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { resolveImageUrl } from '../lib/image-resolver';
 import { supabase } from '../lib/supabase.client';
 
@@ -10,66 +10,40 @@ import { supabase } from '../lib/supabase.client';
  * @returns { url: string, loading: boolean }
  */
 export function useResolvedImage(path: string | undefined | null) {
-    const [url, setUrl] = useState<string | undefined>(undefined);
-    const [loading, setLoading] = useState(!!path);
+    const { data: url, isLoading } = useQuery({
+        queryKey: ['resolved-image', path],
+        queryFn: async () => {
+            if (!path) return undefined;
 
-    useEffect(() => {
-        if (!path) {
-            setUrl(undefined);
-            setLoading(false);
-            return;
-        }
-
-        let isMounted = true;
-        setLoading(true);
-
-        // Fast path for absolute URLs and local blobs
-        if (path.startsWith('http') || path.startsWith('blob:')) {
-            setUrl(path);
-            setLoading(false);
-            return;
-        }
-
-        const resolve = async () => {
-            try {
-                // If it's private, we need a signed URL
-                const isPrivate = path.includes('/PRIVATE/') || path.includes('private-media/');
-                
-                if (isPrivate) {
-                    const cleanPath = path
-                        .replace(/^(private-media)\//, '')
-                        .replace(/^\//, ''); // Remove leading slash if any
-
-                    const { data, error } = await supabase.storage
-                        .from('private-media')
-                        .createSignedUrl(cleanPath, 3600); // 1 hour expiry
-
-                    if (error) throw error;
-                    if (isMounted) {
-                        setUrl(data.signedUrl);
-                        setLoading(false);
-                    }
-                } else {
-                    const resolvedUrl = resolveImageUrl(path);
-                    if (isMounted) {
-                        setUrl(resolvedUrl);
-                        setLoading(false);
-                    }
-                }
-            } catch (error) {
-                console.error('Error resolving image:', error);
-                if (isMounted) {
-                    setLoading(false);
-                }
+            // Fast path for absolute URLs and local blobs
+            if (path.startsWith('http') || path.startsWith('blob:')) {
+                return path;
             }
-        };
 
-        resolve();
+            // If it's private, we need a signed URL
+            const isPrivate = path.includes('/PRIVATE/') || path.includes('private-media/');
+            
+            if (isPrivate) {
+                const cleanPath = path
+                    .replace(/^(private-media)\//, '')
+                    .replace(/^\//, ''); // Remove leading slash if any
 
-        return () => {
-            isMounted = false;
-        };
-    }, [path]);
+                const { data, error } = await supabase.storage
+                    .from('private-media')
+                    .createSignedUrl(cleanPath, 3600); // 1 hour expiry
 
-    return { url, loading };
+                if (error) throw error;
+                return data.signedUrl;
+            } else {
+                return resolveImageUrl(path);
+            }
+        },
+        enabled: !!path,
+        staleTime: Infinity, // Or a large number. Manual invalidation on reveal will override this.
+    });
+
+    return { 
+        url, 
+        loading: !!path && isLoading 
+    };
 }

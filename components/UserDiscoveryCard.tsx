@@ -56,6 +56,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
     const [viewableUrls, setViewableUrls] = useState<Record<number, string>>(initialVUrls);
     const [blurredViewableUrls, setBlurredViewableUrls] = useState<Record<number, string>>(initialBUrls);
     const [loading, setLoading] = useState(initialImages.length === 0);
+    const [loadedAssets, setLoadedAssets] = useState<Record<number, boolean>>({});
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
     const normalizedRole = (stripeRole || 'free').toUpperCase();
@@ -90,6 +91,7 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
         const { vUrls, bUrls } = resolvePublicSync(newImages);
         setViewableUrls(prev => ({ ...prev, ...vUrls }));
         setBlurredViewableUrls(prev => ({ ...prev, ...bUrls }));
+        setLoadedAssets({}); // Reset loaded assets when images change
     }, [user.profile_images, user.profile_picture_url]);
 
     useEffect(() => {
@@ -219,6 +221,9 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
                     if (!previousIds.includes(user.id)) {
                         queryClient.setQueryData<string[]>(queryKey, [...previousIds, user.id]);
                     }
+                    
+                    // Force refresh of all resolved image URLs for this user
+                    queryClient.invalidateQueries({ queryKey: ['resolved-image'] });
                 }
 
                 setIsRevealed(true);
@@ -406,7 +411,15 @@ const UserDiscoveryCard: React.FC<UserDiscoveryCardProps> = ({ user, isSpiedInit
                                         </div>
                                     </div>
                                 )}
-                                {((loading || (isSpying && !showImgSpyMode)) || (isSpied && !viewUrl && isImgPrivate)) && currentImageIndex === idx && (
+                                {viewUrl && (
+                                    <img 
+                                        src={viewUrl} 
+                                        style={{ display: 'none' }} 
+                                        onLoad={() => setLoadedAssets(prev => ({ ...prev, [idx]: true }))}
+                                        alt=""
+                                    />
+                                )}
+                                {((loading || (isSpying && !showImgSpyMode)) || (isSpied && (!viewUrl || !loadedAssets[idx]) && isImgPrivate)) && currentImageIndex === idx && (
                                     <div className="absolute inset-0 flex items-center justify-center z-20 bg-black/20 backdrop-blur-sm">
                                         <div className="flex flex-col items-center gap-4 -mt-24">
                                             <div className="size-12 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>

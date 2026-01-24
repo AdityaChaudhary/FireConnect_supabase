@@ -109,6 +109,11 @@ const ProfilePreview: React.FC = () => {
     const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState<'UPGRADE' | 'OUT_OF_CREDITS'>('UPGRADE');
     const [isSpying, setIsSpying] = useState(false);
+    const [loadedAssets, setLoadedAssets] = useState<Record<string, boolean>>({});
+
+    useEffect(() => {
+        setLoadedAssets({});
+    }, [targetUserId, images.length]);
 
     useEffect(() => {
         if (initialSpied) {
@@ -308,6 +313,17 @@ const ProfilePreview: React.FC = () => {
 
                     // Also update spied-status for this specific user
                     queryClient.setQueryData(['spied-status', user.id, authUser.id], true);
+                    
+                    // Force refresh ONLY private images resolved URLs for this user
+                    // We use resetQueries instead of invalidateQueries to CLEAR the cache immediately.
+                    // This prevents 'useQuery' from returning the stale (unauthorized/expired) URL while fetching the new one.
+                    // Returning the stale URL causes the browser to try fetching it (Request 1 - 403/fail), 
+                    // before the new URL is ready (Request 2).
+                    // By resetting, we force 'data' to undefined and 'isLoading' to true instantly.
+                    const privateImages = images.filter(img => img.visibility === 'PRIVATE');
+                    await Promise.all(privateImages.map(img => 
+                        queryClient.resetQueries({ queryKey: ['resolved-image', img.url] })
+                    ));
                 }
 
                 setIsRevealed(true);
@@ -445,6 +461,7 @@ const ProfilePreview: React.FC = () => {
                                             className={`absolute inset-0 bg-cover bg-center transition-opacity duration-300 ${showImgSpyMode ? 'opacity-0' : 'opacity-100'}`}
                                             useAsBackground
                                             showSpinner={true}
+                                            onLoad={() => setLoadedAssets(prev => ({ ...prev, [img.id || idx]: true }))}
                                         />
 
                                         {showImgSpyMode && (
@@ -901,7 +918,15 @@ const ProfilePreview: React.FC = () => {
                                                         seed={targetUserId}
                                                         className="max-h-full max-w-full object-contain rounded-xl shadow-2xl transition-opacity duration-300 opacity-100"
                                                         showSpinner={true}
+                                                        onLoad={() => setLoadedAssets(prev => ({ ...prev, [img.id || previewIndex]: true }))}
                                                     />
+                                                )}
+
+                                                {/* Spinner Overlay for navigator */}
+                                                {!showImgSpyMode && !loadedAssets[img.id || previewIndex] && (
+                                                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm z-50">
+                                                        <div className="size-12 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
+                                                    </div>
                                                 )}
 
                                                 {/* Blurred Placeholder & Spy Overlay */}
@@ -919,9 +944,13 @@ const ProfilePreview: React.FC = () => {
                                                                 className="z-10 flex flex-col items-center gap-4 p-8 rounded-3xl bg-black/40 backdrop-[blur:2px] border border-white/10"
                                                                 onClick={handleRevealClick}
                                                             >
-                                                                <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center border border-primary/30 animate-pulse">
-                                                                    <Icon name="visibility_off" className="text-4xl text-primary" />
-                                                                </div>
+                                                                    <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center border border-primary/30 animate-pulse relative">
+                                                                        {isSpying ? (
+                                                                            <div className="size-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                                                                        ) : (
+                                                                            <Icon name="visibility_off" className="text-4xl text-primary" />
+                                                                        )}
+                                                                    </div>
                                                                 <div className="text-center">
                                                                     <h4 className="text-xl font-bold text-white mb-1">{isSpying ? 'Unlocking...' : 'Private Photo'}</h4>
                                                                     <p className="text-white/60 text-sm">{isSpying ? 'Please wait' : 'Tap to reveal this media'}</p>
