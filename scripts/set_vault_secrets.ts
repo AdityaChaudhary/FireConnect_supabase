@@ -12,10 +12,11 @@ async function main() {
     const args = process.argv.slice(2);
     const projectUrl = args[0] || process.env.PROJECT_URL;
     const anonKey = args[1] || process.env.ANON_KEY;
+    const stripe_wrapper_api_key_id = args[2] || process.env.STRIPE_WRAPPER_API_KEY_ID;
 
-    if (!projectUrl || !anonKey) {
+    if (!projectUrl || !anonKey || !stripe_wrapper_api_key_id) {
         console.error("❌ Error: Missing required arguments.");
-        console.error("Usage: npx tsx scripts/set_vault_secrets.ts <project_url> <anon_key>");
+        console.error("Usage: npx tsx scripts/set_vault_secrets.ts <project_url> <anon_key> <stripe_wrapper_api_key_id>");
         process.exit(1);
     }
 
@@ -25,6 +26,9 @@ async function main() {
 
     try {
         await client.connect();
+
+        console.log("   Deleting old secrets to ensure update...");
+        await client.query("delete from vault.secrets where name in ('project_url', 'anon_key', 'stripe_wrapper_api_key_id')");
 
         // 1. Set project_url
         console.log(`Setting secret: project_url = ${projectUrl}`);
@@ -37,6 +41,36 @@ async function main() {
         await client.query(`
             select vault.create_secret($1, 'anon_key', 'Anon Key for AI Engine');
         `, [anonKey]);
+
+        // 3. Set stripe_wrapper_api_key_id
+        console.log(`Setting secret: stripe_wrapper_api_key_id = ${stripe_wrapper_api_key_id}`);
+
+        // Update the secret for stripe_wrapper_api_key_id and then update the wrapper to set the new key
+        /*
+            CREATE SERVER stripe_server
+            FOREIGN DATA WRAPPER stripe_wrapper
+            OPTIONS (
+            api_key_id %L
+            );
+        */
+
+        await client.query(`
+            select vault.create_secret($1, 'stripe_wrapper_api_key_id', 'Stripe API Key for FDW');
+        `, [stripe_wrapper_api_key_id]);
+        
+        console.log(`Getting the ID for stripe_wrapper_api_key_id`)
+        // fetch the ID of stripe_wrapper_api_key_id
+        const v_secret_id = await client.query(`
+            select id from vault.secrets where name = 'stripe_wrapper_api_key_id';
+        `);
+
+        console.log(`ID for stripe_wrapper_api_key_id: ${v_secret_id.rows[0].id}`);
+        console.log(`Updating the stripe_wrapper to set the new key`)
+        // Update the stripe_wrapper to set the new key
+        console.log(`Updating stripe_server options...`);
+        await client.query(`
+            alter server stripe_server options (set api_key_id '${v_secret_id.rows[0].id}');
+        `);
 
         console.log("✅ Secrets set successfully in Vault.");
 
@@ -58,6 +92,7 @@ async function main() {
                 // Retry creation
                 await client.query(`select vault.create_secret($1, 'project_url', 'Project URL for AI Engine');`, [projectUrl]);
                 await client.query(`select vault.create_secret($1, 'anon_key', 'Anon Key for AI Engine');`, [anonKey]);
+                await client.query(`select vault.create_secret($1, 'stripe_wrapper_api_key_id', 'Stripe API Key for FDW');`, [stripe_wrapper_api_key_id]);
                 console.log("✅ Secrets updated successfully.");
              } catch (retryErr: any) {
                  console.error("❌ Failed to update secrets:", retryErr.message);

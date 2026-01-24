@@ -21,83 +21,47 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     // Get viewer user if any
     const { data: { user: authUser } } = await supabase.auth.getUser();
 
-    const [userRes, imagesRes, connRes, spiedRes, msgRes] = await Promise.all([
-        supabase
-            .from('users')
-            .select('*, user_online_status (last_seen_at)')
-            .eq('id', targetUserId)
-            .single(),
-        supabase
-            .from('profile_images')
-            .select('*')
-            .eq('user_id', targetUserId),
-        authUser ? supabase
-            .from('connections')
-            .select('*')
-            .or(`and(requester_id.eq.${authUser.id},recipient_id.eq.${targetUserId}),and(requester_id.eq.${targetUserId},recipient_id.eq.${authUser.id})`)
-            : Promise.resolve({ data: null, error: null }),
-        authUser ? supabase
-            .from('spied_profiles')
-            .select('*')
-            .eq('user_id', authUser.id)
-            .eq('target_user_id', targetUserId)
-            .maybeSingle()
-            : Promise.resolve({ data: null, error: null }),
-        authUser ? (async () => {
-             const { data: thread } = await supabase
-                .from('threads')
-                .select('id')
-                .contains('participants', [targetUserId, authUser.id])
-                .maybeSingle();
-            
-            if (!thread) return { data: null };
+    const { data: rpcData, error } = await supabase.rpc('get_profile_preview_data', {
+        p_viewer_id: authUser?.id || null,
+        p_target_user_id: targetUserId
+    });
 
-            return supabase
-                .from('messages')
-                .select('id')
-                .eq('thread_id', thread.id)
-                .eq('sender_id', targetUserId)
-                .limit(1)
-                .maybeSingle();
-        })() : Promise.resolve({ data: null })
-    ]);
+    if (error) {
+        console.error("RPC Error:", error);
+        return { user: null, images: [], connection: null, isSpied: false, hasReceivedMessage: false };
+    }
 
-    // Format connection data same as hook
+    const viewData = rpcData as unknown as import('../config/rpc').ProfilePreviewData;
+
+    // connection is already specific to (viewer, target) pair from RPC
+    // We just need to map it to the UI's expected status format
+    const conn = viewData.connection;
     let formattedConn = null;
-    if (connRes.data && connRes.data.length > 0) {
-        const data = connRes.data;
-        const connected = data.find((c: any) => c.status === 'CONNECTED');
-        if (connected) {
-            const isRequester = connected.requester_id === authUser?.id;
+
+    if (conn) {
+        if (conn.status === 'CONNECTED') {
+            const isRequester = conn.requester_id === authUser?.id;
             formattedConn = {
-                ...connected,
+                ...conn,
                 status: 'CONNECTED',
                 incomingStatus: isRequester ? null : 'CONNECTED',
                 outgoingStatus: isRequester ? 'CONNECTED' : null
             };
-        } else {
-            const incoming = data.find((c: any) => c.requester_id === targetUserId && c.status === 'PENDING');
-            if (incoming) {
-                formattedConn = { ...incoming, status: incoming.status, incomingStatus: incoming.status, outgoingStatus: null };
-            } else {
-                const outgoing = data.find((c: any) => c.requester_id === authUser?.id && c.status === 'PENDING');
-                if (outgoing) {
-                    formattedConn = { ...outgoing, status: outgoing.status, incomingStatus: null, outgoingStatus: outgoing.status };
-                }
+        } else if (conn.status === 'PENDING') {
+            if (conn.requester_id === targetUserId) {
+                 formattedConn = { ...conn, status: conn.status, incomingStatus: conn.status, outgoingStatus: null };
+            } else if (conn.requester_id === authUser?.id) {
+                 formattedConn = { ...conn, status: conn.status, incomingStatus: null, outgoingStatus: conn.status };
             }
         }
     }
 
     return { 
-        user: userRes.data,
-        images: (imagesRes.data || []).sort((a: any, b: any) => {
-            if (a.is_profile) return -1;
-            if (b.is_profile) return 1;
-            return (a.order || 0) - (b.order || 0);
-        }),
+        user: viewData.user,
+        images: viewData.images || [],
         connection: formattedConn,
-        isSpied: !!spiedRes.data,
-        hasReceivedMessage: !!(msgRes as any)?.data
+        isSpied: !!viewData.spied,
+        hasReceivedMessage: viewData.has_received_message
     };
 };
 

@@ -11,6 +11,7 @@
     "lint": "eslint .",
     "generate-personas": "env-cmd -f .env.local tsx scripts/generate_ai_personas.ts",
     "sync-personas": "env-cmd -f .env.local tsx scripts/sync_ai_personas.ts",
+    "set-vault-secrets": "env-cmd -f .env.local tsx scripts/set_vault_secrets.ts",
     "sync-personas:prod": "env-cmd -f .env tsx scripts/sync_ai_personas.ts",
     "vault:prod": "env-cmd -f .env tsx scripts/set_prod_vault_secrets.ts"
   },

@@ -15,27 +15,18 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
     if (!user) return { notifications: [] };
 
-    const [incomingRes, outgoingRes, spiedRes] = await Promise.all([
-        supabase
-            .from('connections')
-            .select('*, requester:users!connections_requester_id_fkey(*)')
-            .eq('recipient_id', user.id)
-            .eq('status', 'PENDING')
-            .order('created_at', { ascending: false }),
-        supabase
-            .from('connections')
-            .select('*, actor:users!connections_recipient_id_fkey(*)')
-            .eq('requester_id', user.id)
-            .eq('status', 'CONNECTED')
-            .order('updated_at', { ascending: false }),
-        supabase
-            .from('spied_profiles')
-            .select('*, user:users!spied_profiles_user_id_fkey(*)')
-            .eq('target_user_id', user.id)
-            .order('created_at', { ascending: false })
-    ]);
+    const { data: rpcData, error } = await supabase.rpc('get_notifications_view_data', { 
+        p_user_id: user.id 
+    });
 
-    const received = (incomingRes.data || []).map((n: any) => ({
+    if (error) {
+        console.error("RPC Error:", error);
+        return { notifications: [] };
+    }
+
+    const viewData = rpcData as unknown as import('../config/rpc').NotificationsViewData;
+
+    const received = (viewData.incoming_requests || []).map((n: any) => ({
         ...n,
         type: 'CONNECTION_REQUEST',
         actor: n.requester,
@@ -43,15 +34,15 @@ export async function loader({ request }: LoaderFunctionArgs) {
         time: new Date(n.created_at).getTime()
     }));
 
-    const accepted = (outgoingRes.data || []).map((n: any) => ({
+    const accepted = (viewData.accepted_connections || []).map((n: any) => ({
         ...n,
         type: 'CONNECTION_ACCEPTED',
         actor: n.actor,
-        actor_id: n.recipient_id,
+        actor_id: n.recipient_id, // For requester, recipient is the other person
         time: new Date(n.updated_at || n.created_at).getTime()
     }));
 
-    const spied = (spiedRes.data || []).map((n: any) => ({
+    const spied = (viewData.spied_alerts || []).map((n: any) => ({
         ...n,
         type: 'SPIED',
         actor: n.user,

@@ -22,12 +22,12 @@ BEGIN
             'requester', (SELECT json_build_object(
                 'id', u.id, 'username', u.username, 'display_name', u.display_name, 
                 'profile_picture_url', u.profile_picture_url, 'gender', u.gender, 'user_type', u.user_type, 'stripe_role', u.stripe_role,
-                'user_online_status', (SELECT json_agg(uos.*) FROM user_online_status uos WHERE uos.id = u.id)
+                'user_online_status', (SELECT json_agg(uos.*) FROM user_online_status uos WHERE uos.user_id = u.id)
             ) FROM users u WHERE u.id = c.requester_id),
             'recipient', (SELECT json_build_object(
                 'id', u.id, 'username', u.username, 'display_name', u.display_name, 
                 'profile_picture_url', u.profile_picture_url, 'gender', u.gender, 'user_type', u.user_type, 'stripe_role', u.stripe_role,
-                 'user_online_status', (SELECT json_agg(uos.*) FROM user_online_status uos WHERE uos.id = u.id)
+                 'user_online_status', (SELECT json_agg(uos.*) FROM user_online_status uos WHERE uos.user_id = u.id)
             ) FROM users u WHERE u.id = c.recipient_id)
         )
     ) INTO connections_data
@@ -46,16 +46,13 @@ BEGIN
         ) ORDER BY t.last_message_time DESC
     ) INTO threads_data
     FROM threads t
-    WHERE t.participants @> ARRAY[p_user_id::text]; -- participants is text[] or jsonb? Assuming text[] based on usage
+    WHERE t.participants @> ARRAY[p_user_id];
 
-    -- 3. Collect Participant IDs for threads (to avoid N+1)
-    -- This part is tricky in SQL if participants is a JSONB array or text array. 
-    -- Assuming text[] based on codebase usage: .contains("participants", [authUser.id])
-    
+    -- 3. Collect Participant IDs for threads
     WITH thread_participants AS (
         SELECT unnest(t.participants) as user_id_text
         FROM threads t
-        WHERE t.participants @> ARRAY[p_user_id::text]
+        WHERE t.participants @> ARRAY[p_user_id]
     )
     SELECT array_agg(DISTINCT tp.user_id_text::uuid)
     INTO all_participant_ids
@@ -74,7 +71,7 @@ BEGIN
                 'gender', u.gender,
                 'user_type', u.user_type,
                 'stripe_role', u.stripe_role,
-                'user_online_status', (SELECT json_agg(uos.*) FROM user_online_status uos WHERE uos.id = u.id)
+                'user_online_status', (SELECT json_agg(uos.*) FROM user_online_status uos WHERE uos.user_id = u.id)
             )
         ) INTO participants_data
         FROM users u
@@ -94,7 +91,7 @@ BEGIN
 END;
 $$;
 
--- RPC for Loading Profile Data (Self or Other)
+-- RPC for Loading Profile Data (Self or Other) - Already correct
 CREATE OR REPLACE FUNCTION get_profile_view_data(p_target_user_id uuid)
 RETURNS json
 LANGUAGE plpgsql
@@ -146,22 +143,7 @@ DECLARE
     products_data json;
     ai_users_data json;
 BEGIN
-    -- 1. Get Active Products (Re-using logic from get_active_plans if possible, or querying directly)
-    -- Assuming get_processed_stripe_products logic can be partly done here or just fetch raw products
-    -- Note: stripe-utils calls 'get_active_plans'. We can just include that data here.
-    
-    -- We can call the existing function if it exists and returns json, otherwise query tables.
-    -- Assuming logic from `get_active_plans` RPC if it exists, but let's just query products/prices if that's what's used.
-    -- Wait, the codebase calls `client.rpc('get_active_plans')`. Let's assume that exists.
-    -- But we can't call an RPC easily and bundle it into JSON without knowing its return type structure perfectly.
-    -- Let's just query the tables or call the function.
-    
-    -- Let's try to query querying the function? 
-    -- SELECT get_active_plans() INTO products_data; -- This works if it returns json.
-    
-    -- Checking `get_active_plans` usage -> `return fetchWithRetry<StripeProduct[]>(async () => await client.rpc('get_active_plans'));`
-    -- It likely returns a set of records.
-    
+    -- 1. Get Active Products
     SELECT json_agg(p) INTO products_data FROM get_active_plans() p;
 
     -- 2. Get AI Users
@@ -175,7 +157,7 @@ BEGIN
             'user_type', u.user_type,
             'interests', u.interests,
             'location', u.location,
-            'user_online_status', (SELECT json_agg(uos.*) FROM user_online_status uos WHERE uos.id = u.id)
+            'user_online_status', (SELECT json_agg(uos.*) FROM user_online_status uos WHERE uos.user_id = u.id)
         )
     ) INTO ai_users_data
     FROM users u

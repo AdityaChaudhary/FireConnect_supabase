@@ -27,6 +27,20 @@ export interface ProfileViewData {
 // Assuming the shape of products from get_active_plans matches StripeProduct interface roughly
 // We'll define a basic shape or import it if better
 export interface LandingPageData {
-    products: any[]; // We'll cast this to StripeProduct[] in usage
+    products: any[]; // We'll cast this to StripeProduct[]
     ai_users: UserProfile[];
+}
+
+export interface NotificationsViewData {
+    incoming_requests: ConnectionWithUser[];
+    accepted_connections: (ConnectionWithUser & { actor: UserProfile })[]; // outgoing
+    spied_alerts: (Database['public']['Tables']['spied_profiles']['Row'] & { user: UserProfile })[];
+}
+
+export interface ProfilePreviewData {
+    user: UserProfile;
+    images: ProfileImage[];
+    connection: Database['public']['Tables']['connections']['Row'] | null;
+    spied: { id: string, created_at: string } | null;
+    has_received_message: boolean;
 }
