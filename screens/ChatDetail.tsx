@@ -279,43 +279,51 @@ const ChatDetail: React.FC = () => {
     // Mark as read effect
     useEffect(() => {
         const markAsRead = async () => {
-            if (!threadId || !authUser) return;
+            if (!threadId || !authUser?.id) return;
 
             // Fetch latest thread state to get last_message_time and current last_read
-            const { data: thread } = await supabase
+            const { data: thread, error: fetchError } = await supabase
                 .from('threads')
                 .select('last_message_time, last_message_sender_id, last_read')
                 .eq('id', threadId)
                 .single();
 
-            if (!thread || !thread.last_message_time) return;
+            if (fetchError || !thread) return;
+            
+            // Only proceed if there is a message and we weren't the one who sent it
+            if (!thread.last_message_time || thread.last_message_sender_id === authUser.id) return;
 
-            // Don't mark as read if we were the last sender
-            if (thread.last_message_sender_id === authUser.id) return;
-
-            const lastRead = thread.last_read || {};
+            const lastRead = (thread.last_read as Record<string, string>) || {};
             const lastReadTime = lastRead[authUser.id];
 
             // If never read or last message is newer than our last read, update it
             if (!lastReadTime || new Date(thread.last_message_time) > new Date(lastReadTime)) {
+                console.log(`Marking thread ${threadId} as read for ${authUser.id}`);
                 const now = new Date().toISOString();
-                const { error } = await supabase
+                
+                const { error: updateError } = await supabase
                     .from('threads')
                     .update({
                         last_read: { ...lastRead, [authUser.id]: now }
                     })
                     .eq('id', threadId);
 
-                if (!error) {
-                    // Invalidate threads query so ChatList updates immediately
-                    queryClient.invalidateQueries({ queryKey: ['threads'] });
-                    queryClient.invalidateQueries({ queryKey: ['unread-badge', authUser.id] });
+                if (!updateError) {
+                    // Invalidate specific queries to ensure immediate UI feedback
+                    await Promise.all([
+                        queryClient.invalidateQueries({ queryKey: ['threads', authUser.id] }),
+                        queryClient.invalidateQueries({ queryKey: ['unread-badge', authUser.id] }),
+                        // Also invalidate messages for this thread just in case read receipts are ever added
+                        queryClient.invalidateQueries({ queryKey: ['messages', threadId] })
+                    ]);
+                } else {
+                    console.error("Error marking thread as read:", updateError);
                 }
             }
         };
 
         markAsRead();
-    }, [messages, threadId, authUser, queryClient]);
+    }, [messages.length, threadId, authUser?.id, queryClient]);
 
     // Prevent body bounce/scroll on mobile when chat is open
     useEffect(() => {
