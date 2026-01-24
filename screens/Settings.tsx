@@ -115,38 +115,6 @@ const Settings: React.FC = () => {
                     </div>
                 )}
 
-                {/* Account Settings Section */}
-                <div className="flex flex-col gap-2">
-                    <h3 className="text-white/50 text-[10px] font-black uppercase tracking-[0.2em] px-2 mb-1">Account</h3>
-                    <div className="flex flex-col rounded-[24px] bg-surface-dark overflow-hidden border border-white/5 shadow-xl">
-                        <button 
-                            onClick={() => safeNavigate('/settings/privacy')}
-                            className="flex w-full items-center justify-between p-4 px-5 active:bg-white/5 transition-colors text-left group"
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-white/60 group-hover:text-primary transition-colors">
-                                    <Icon name="lock" />
-                                </div>
-                                <span className="text-sm font-bold">Privacy Policy</span>
-                            </div>
-                            <Icon name="chevron_right" className="text-white/20" />
-                        </button>
-                        <div className="h-px w-full bg-white/5 mx-5"></div>
-                        <button 
-                            onClick={() => safeNavigate('/settings/terms')}
-                            className="flex w-full items-center justify-between p-4 px-5 active:bg-white/5 transition-colors text-left group"
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-white/60 group-hover:text-primary transition-colors">
-                                    <Icon name="description" />
-                                </div>
-                                <span className="text-sm font-bold">Terms & Conditions</span>
-                            </div>
-                            <Icon name="chevron_right" className="text-white/20" />
-                        </button>
-                    </div>
-                </div>
-
                 {/* Subscription Section */}
                 <div className="flex flex-col gap-2">
                     <h3 className="text-white/50 text-[10px] font-black uppercase tracking-[0.2em] px-2 mb-1">Subscription</h3>
@@ -190,6 +158,38 @@ const Settings: React.FC = () => {
                                 </div>
                                 <Icon name="chevron_right" className="text-white/20" />
                             </div>
+                        </button>
+                    </div>
+                </div>
+
+                {/* Policy Settings Section */}
+                <div className="flex flex-col gap-2">
+                    <h3 className="text-white/50 text-[10px] font-black uppercase tracking-[0.2em] px-2 mb-1">Policy</h3>
+                    <div className="flex flex-col rounded-[24px] bg-surface-dark overflow-hidden border border-white/5 shadow-xl">
+                        <button 
+                            onClick={() => safeNavigate('/settings/privacy')}
+                            className="flex w-full items-center justify-between p-4 px-5 active:bg-white/5 transition-colors text-left group"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-white/60 group-hover:text-primary transition-colors">
+                                    <Icon name="lock" />
+                                </div>
+                                <span className="text-sm font-bold">Privacy Policy</span>
+                            </div>
+                            <Icon name="chevron_right" className="text-white/20" />
+                        </button>
+                        <div className="h-px w-full bg-white/5 mx-5"></div>
+                        <button 
+                            onClick={() => safeNavigate('/settings/terms')}
+                            className="flex w-full items-center justify-between p-4 px-5 active:bg-white/5 transition-colors text-left group"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-white/60 group-hover:text-primary transition-colors">
+                                    <Icon name="description" />
+                                </div>
+                                <span className="text-sm font-bold">Terms & Conditions</span>
+                            </div>
+                            <Icon name="chevron_right" className="text-white/20" />
                         </button>
                     </div>
                 </div>

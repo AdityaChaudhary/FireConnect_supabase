@@ -5,7 +5,7 @@ import { useLoaderData } from 'react-router';
 import Landing from './Landing';
 import Discover from './Discover';
 import { createSupabaseServerClient } from '../lib/supabase.server';
-import { getStripeProducts } from '../lib/stripe-utils';
+import { processRawStripeProducts } from '../lib/stripe-utils';
 import type { Route } from './+types/Home';
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
@@ -34,20 +34,26 @@ export async function loader({ request }: Route.LoaderArgs) {
 
     if (!user) {
         // Fetch plans and AI users in parallel for SSR Landing page
-        const [products, aiUsersRes] = await Promise.all([
-            getStripeProducts(supabase),
-            supabase
-                .from('users')
-                .select('*, user_online_status(*)')
-                .eq('user_type', 'AI')
-                .order('created_at', { ascending: false })
-                .limit(20)
-        ]);
+        // Fetch landing page data via RPC
+        const { data: rpcData, error } = await supabase.rpc('get_landing_page_data');
+        
+        if (error) {
+            console.error("RPC Error:", error);
+            // Fallback empty
+            return {
+                user: null,
+                initialProducts: [],
+                initialAiUsers: []
+            };
+        }
+
+        const viewData = rpcData as unknown as import('../config/rpc').LandingPageData;
+        const products = processRawStripeProducts(viewData.products as any[] || []);
 
         return {
             user: null,
-            initialProducts: products || [],
-            initialAiUsers: aiUsersRes.data || []
+            initialProducts: products,
+            initialAiUsers: viewData.ai_users || []
         };
     }
 

@@ -105,48 +105,53 @@ export const mapProductToPlan = (product: StripeProduct): Plan => {
     };
 };
 
+
+export const processRawStripeProducts = (stripeProducts: StripeProduct[]): Plan[] => {
+    if (!stripeProducts) return [];
+
+    const validProducts = stripeProducts.filter(p => {
+        const name = p.name.toUpperCase();
+        return !name.includes('CREDIT') && !name.includes('SPY');
+    });
+
+    const mappedPlans = validProducts.map(mapProductToPlan);
+
+    const roleOrder = { FREE: 0, PRO: 1, MAX: 2 };
+    mappedPlans.sort((a, b) => {
+        const rA = roleOrder[a.id as keyof typeof roleOrder] ?? 1;
+        const rB = roleOrder[b.id as keyof typeof roleOrder] ?? 1;
+        return rA - rB;
+    });
+
+    // Ensure FREE plan is always present
+    if (!mappedPlans.find(p => p.id === 'FREE')) {
+        mappedPlans.unshift({
+            id: 'FREE',
+            name: 'LITE',
+            price: '$0',
+            period: '/ mo',
+            description: PLAN_DESCRIPTIONS.FREE,
+            features: PLAN_FEATURES.FREE,
+            ...PLAN_THEMES.FREE
+        });
+    }
+
+    const uniquePlans: Plan[] = [];
+    const seen = new Set();
+    mappedPlans.forEach(p => {
+        if (!seen.has(p.id)) {
+            uniquePlans.push(p);
+            seen.add(p.id);
+        }
+    });
+
+    return uniquePlans;
+};
+
 export const getProcessedStripeProducts = async (customSupabase?: any): Promise<Plan[]> => {
     try {
         const stripeProducts = await getStripeProducts(customSupabase);
-        if (!stripeProducts) return [];
-
-        const validProducts = stripeProducts.filter(p => {
-            const name = p.name.toUpperCase();
-            return !name.includes('CREDIT') && !name.includes('SPY');
-        });
-
-        const mappedPlans = validProducts.map(mapProductToPlan);
-
-        const roleOrder = { FREE: 0, PRO: 1, MAX: 2 };
-        mappedPlans.sort((a, b) => {
-            const rA = roleOrder[a.id as keyof typeof roleOrder] ?? 1;
-            const rB = roleOrder[b.id as keyof typeof roleOrder] ?? 1;
-            return rA - rB;
-        });
-
-        // Ensure FREE plan is always present
-        if (!mappedPlans.find(p => p.id === 'FREE')) {
-            mappedPlans.unshift({
-                id: 'FREE',
-                name: 'LITE',
-                price: '$0',
-                period: '/ mo',
-                description: PLAN_DESCRIPTIONS.FREE,
-                features: PLAN_FEATURES.FREE,
-                ...PLAN_THEMES.FREE
-            });
-        }
-
-        const uniquePlans: Plan[] = [];
-        const seen = new Set();
-        mappedPlans.forEach(p => {
-            if (!seen.has(p.id)) {
-                uniquePlans.push(p);
-                seen.add(p.id);
-            }
-        });
-
-        return uniquePlans;
+        return processRawStripeProducts(stripeProducts || []);
     } catch (err) {
         console.error("Failed to fetch or process plans:", err);
         return [{
@@ -160,6 +165,7 @@ export const getProcessedStripeProducts = async (customSupabase?: any): Promise<
         }];
     }
 };
+
 
 export const startStripeCheckout = async (priceId: string, mode: 'payment' | 'subscription' = 'subscription', options?: { planId?: string, credits?: number, oldBalance?: number }) => {
     let successPath = '/';

@@ -26,21 +26,20 @@ export async function loader({ request }: Route.LoaderArgs) {
 
     if (!user) return { images: [], spyCount: 0 };
 
-    const [imagesRes, spyCountRes] = await Promise.all([
-        supabase
-            .from('profile_images')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('display_order', { ascending: true }),
-        supabase
-            .from('spied_profiles')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id)
-    ]);
+    const { data: rpcData, error } = await supabase.rpc('get_profile_view_data', { 
+        p_target_user_id: user.id 
+    });
+
+    if (error) {
+        console.error("RPC Error:", error);
+        return { images: [], spyCount: 0 };
+    }
+
+    const viewData = rpcData as unknown as import('../config/rpc').ProfileViewData;
 
     return {
-        images: imagesRes.data || [],
-        spyCount: spyCountRes.count || 0
+        images: viewData.images || [],
+        spyCount: viewData.spy_count || 0
     };
 }
 

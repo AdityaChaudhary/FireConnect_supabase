@@ -22,52 +22,32 @@ export async function loader({ request }: Route.LoaderArgs) {
 
     if (!user) return { connections: null, threads: null };
 
-    const [threadsRes, connectionsRes] = await Promise.all([
-        supabase
-            .from("threads")
-            .select("*")
-            .contains("participants", [user.id])
-            .order("last_message_time", { ascending: false }),
-        supabase
-            .from('connections')
-            .select(`
-                *,
-                requester:users!connections_requester_id_fkey(*, user_online_status(last_seen_at)),
-                recipient:users!connections_recipient_id_fkey(*, user_online_status(last_seen_at))
-            `)
-            .or(`requester_id.eq.${user.id},recipient_id.eq.${user.id}`)
-    ]);
+    const { data: rpcData, error } = await supabase.rpc('get_chat_view_data', { 
+        p_user_id: user.id 
+    });
 
-    let threads = threadsRes.data || [];
-    if (threads.length > 0) {
-        const otherUserIds = threads
-            .map((t: any) => t.participants.find((p: string) => p !== user.id))
-            .filter((id): id is string => !!id);
-
-        if (otherUserIds.length > 0) {
-            const { data: usersData } = await supabase
-                .from("users")
-                .select("*, user_online_status(*)")
-                .in("id", otherUserIds);
-
-            const usersMap = (usersData || []).reduce((acc: any, u: any) => {
-                acc[u.id] = u;
-                return acc;
-            }, {});
-
-            threads = threads.map((thread: any) => ({
-                ...thread,
-                otherUser: usersMap[thread.participants.find((p: string) => p !== user.id)] || null
-            }));
-        }
+    if (error) {
+        console.error("RPC Error:", error);
+        return { connections: null, threads: null };
     }
 
-    const rawConnections = connectionsRes.data || [];
-    const connections = rawConnections.filter(r => r.status === 'CONNECTED').map(r =>
+    // Cast to expected type (defined in config/rpc.ts or locally if strictly needed, but let's assume usage of any or defined types)
+    const viewData = rpcData as unknown as import('../config/rpc').ChatViewData; 
+
+    // Reconstruct threads with "otherUser" attached
+    const participantsMap = viewData.participants || {};
+    const threads = (viewData.threads || []).map((t: any) => ({
+        ...t,
+        otherUser: participantsMap[t.participants.find((p: string) => p !== user.id)] || null
+    }));
+
+    // Reconstruct connections
+    const rawConnections = viewData.connections || [];
+    const connections = rawConnections.filter((r: any) => r.status === 'CONNECTED').map((r: any) =>
         r.requester_id === user.id ? r.recipient : r.requester
     );
-    const sentRequests = rawConnections.filter(r => r.requester_id === user.id && r.status === 'PENDING').map(r => r.recipient);
-    const receivedRequests = rawConnections.filter(r => r.recipient_id === user.id && r.status === 'PENDING').map(r => r.requester);
+    const sentRequests = rawConnections.filter((r: any) => r.requester_id === user.id && r.status === 'PENDING').map((r: any) => r.recipient);
+    const receivedRequests = rawConnections.filter((r: any) => r.recipient_id === user.id && r.status === 'PENDING').map((r: any) => r.requester);
 
     return {
         connections: {
