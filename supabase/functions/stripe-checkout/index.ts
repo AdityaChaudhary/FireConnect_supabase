@@ -99,6 +99,7 @@ Deno.serve(async (req) => {
                 },
             ],
             mode: mode || "subscription",
+            allow_promotion_codes: true,
             success_url: successUrl,
             cancel_url: cancelUrl,
             metadata: {
