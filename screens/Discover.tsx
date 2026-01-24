@@ -177,12 +177,23 @@ const Discover: React.FC = () => {
 
         const handleScroll = () => {
             if (!container) return;
-            //console.log("Scrolling Discover list...");
+            
+            // Check if we are on desktop (lg breakpoint is 1024px)
+            const isDesktop = window.innerWidth >= 1024;
+            
             const latest = container.scrollTop;
             const diff = latest - lastScrollY.current;
             
-            // Header hide logic (downward scroll)
-            // Even a small positive diff should hide if we are past the very top
+            if (isDesktop) {
+                // Ensure header is visible on desktop regardless of scroll
+                if (headerVisible.get() === 0) {
+                    animate(headerVisible, 1, { duration: 0.1 });
+                }
+                lastScrollY.current = latest;
+                return;
+            }
+
+            // Header hide logic (downward scroll) - Mobile only
             if (diff > 0.5 && latest > 15) {
                 if (headerVisible.get() === 1) {
                     animate(headerVisible, 0, { duration: 0.2, ease: "easeInOut" });
@@ -190,7 +201,7 @@ const Discover: React.FC = () => {
                 }
                 scrollUpDistance.current = 0;
             } 
-            // Header show logic (upward scroll)
+            // Header show logic (upward scroll) - Mobile only
             else if (diff < -0.5) {
                 scrollUpDistance.current += Math.abs(diff);
                 // Show if we've scrolled up enough or reached the top
@@ -208,8 +219,19 @@ const Discover: React.FC = () => {
             localStorage.setItem(scrollKey, latest.toString());
         };
 
+        // Add resize listener to ensure header shows up when switching from mobile to desktop
+        const handleResize = () => {
+            if (window.innerWidth >= 1024 && headerVisible.get() === 0) {
+                animate(headerVisible, 1, { duration: 0.1 });
+            }
+        };
+
         container.addEventListener('scroll', handleScroll, { passive: true });
-        return () => container.removeEventListener('scroll', handleScroll);
+        window.addEventListener('resize', handleResize);
+        return () => {
+            container.removeEventListener('scroll', handleScroll);
+            window.removeEventListener('resize', handleResize);
+        };
     }, [scrollKey, headerVisible, loading, users.length]);
 
     if (loading && users.length === 0) {
