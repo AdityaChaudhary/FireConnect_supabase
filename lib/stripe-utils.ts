@@ -169,7 +169,7 @@ export const getProcessedStripeProducts = async (customSupabase?: any): Promise<
 
 export const startStripeCheckout = async (priceId: string, mode: 'payment' | 'subscription' = 'subscription', options?: { planId?: string, credits?: number, oldBalance?: number, authToken?: string | null }) => {
     let successPath = '/';
-    console.log('Starting checkout for priceId: ', priceId);
+    console.log('StripeCheckout: Starting checkout for priceId: ', priceId);
 
     if (mode === 'subscription') {
         successPath = `/welcome?plan=${options?.planId || 'PRO'}&session_id={CHECKOUT_SESSION_ID}`;
@@ -181,11 +181,13 @@ export const startStripeCheckout = async (priceId: string, mode: 'payment' | 'su
 
     // If no token provided, try to get it from current session
     if (!token) {
+        console.log('StripeCheckout: No token provided, trying to get it from current session');
         // Get current session explicitly to ensure valid auth header
         const { data: { session } } = await supabase.auth.getSession();
         token = session?.access_token;
     }
     
+    console.log("StripeCheckout: Calling Edge Function with Token: ", token);
     // Call Edge Function to create checkout session
     const { data, error } = await supabase.functions.invoke('stripe-checkout', {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
@@ -198,8 +200,10 @@ export const startStripeCheckout = async (priceId: string, mode: 'payment' | 'su
         }
     });
 
+    console.log("StripeCheckout: Response: ", data, error);
+
     if (error || !data?.url) {
-        console.error("Error creating checkout session:", error);
+        console.error("StripeCheckout: Error creating checkout session:", error);
         throw new Error(error?.message || "Failed to start checkout.");
     }
 
