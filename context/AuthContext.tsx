@@ -48,7 +48,7 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children, initialSession, initialUser, initialProfile, initialThreads }) => {
-    const [user, setUser] = useState<User | null>(initialUser ?? initialSession?.user ?? null);
+    const [user, setUser] = useState<User | null>(initialUser ?? null);
     const [session, setSession] = useState<Session | null>(initialSession ?? null);
     const [profile, setProfile] = useState<Profile | null>(initialProfile ?? null);
     const [stripeRole, setStripeRole] = useState<string | null>(initialProfile?.stripe_role?.toLowerCase() ?? null);
@@ -145,33 +145,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, initialSes
 
         const initializeAuth = async () => {
             try {
-                console.log("AuthContext: Fetching session from cookie/storage...");
-                // Fetch session first (quickest, often local/cookie only)
-                const { data: { session: initialSession } } = await supabase.auth.getSession();
+                console.log("AuthContext: Fetching user from Supabase...");
+                // Always use getUser() for the most secure approach as it validates with the server
+                const { data: { user: verifiedUser }, error: userError } = await supabase.auth.getUser();
                 
                 if (!isMounted) return;
 
-                if (initialSession) {
-                    setSession(initialSession);
-                    setUser(initialSession.user);
+                if (!userError && verifiedUser) {
+                    setUser(verifiedUser);
                     
-                    // Now verify user with server (might 403 if token is invalid or local only)
-                    try {
-                        const { data: { user: verifiedUser }, error: userError } = await supabase.auth.getUser();
-                        if (!userError && verifiedUser) {
-                            setUser(verifiedUser);
-                        }
-                    } catch (e) {
-                        console.warn("AuthContext: getUser failed during initialization, sticking with session user", e);
-                    }
+                    // Get session for the token and other metadata
+                    const { data: { session: initialSession } } = await supabase.auth.getSession();
+                    if (initialSession) setSession(initialSession);
 
-                    console.log("AuthContext: Initial session found, refreshing profile...");
-                    await refreshProfile(initialSession.user);
+                    console.log("AuthContext: Verified user found, refreshing profile...");
+                    await refreshProfile(verifiedUser);
                     // Track login (initial session)
-                    trackEvent(EVENTS.LOGIN, { method: 'session_init', user_id: initialSession.user.id });
+                    trackEvent(EVENTS.LOGIN, { method: 'session_init', user_id: verifiedUser.id });
                     console.log("AuthContext: Profile refreshed.");
                 } else {
-                    console.log("AuthContext: No initial session found.");
+                    console.log("AuthContext: No verified user found on initialization.");
+                    setSession(null);
+                    setUser(null);
                 }
             } catch (err) {
                 console.error("AuthContext: Error during initialization:", err);
@@ -225,20 +220,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, initialSes
             if (!isMounted) return;
 
             setSession(currentSession);
-            // Validation step for security: double check user if event is SIGNED_IN or INITIAL_SESSION
-            if (currentSession?.user) {
-                // For SIGNED_IN, we want to be sure we have the latest user data
-                if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-                    // Only fetch if we don't already have the verified user (prevents refresh loop)
-                    if (!user || user.id !== currentSession.user.id) {
-                        const { data: { user: verifiedUser } } = await supabase.auth.getUser();
-                        const finalUser = verifiedUser ?? currentSession.user;
-                        setUser(finalUser);
-                        refreshProfile(finalUser);
+            // Validation step for security: always check user via getUser()
+            // This adheres to Supabase security best practices to avoid relying on local storage
+            // If currentSession is present, it means we have a session, but we should verify the user with the server
+            if (currentSession) {
+                const { data: { user: verifiedUser } } = await supabase.auth.getUser();
+                const finalUser = verifiedUser ?? null;
+                
+                if (finalUser && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'USER_UPDATED')) {
+                    setUser(finalUser);
+                    refreshProfile(finalUser);
+                    if (event === 'SIGNED_IN') {
                         trackEvent(EVENTS.LOGIN, { method: 'signed_in', user_id: finalUser.id });
                     }
+                } else if (finalUser) {
+                    setUser(finalUser);
                 } else {
-                    setUser(currentSession.user);
+                    // If getUser() fails or returns null, we should probably treat it as logged out if we want to be strict
+                    setUser(null);
+                    setProfile(null);
+                    setStripeRole(null);
+                    setSubscription(null);
                 }
             } else {
                 setUser(null);

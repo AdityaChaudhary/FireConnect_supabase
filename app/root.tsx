@@ -120,7 +120,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <body>
         <NavigationProgress />
         {children}
-        <Analytics />
+        {typeof window !== "undefined" && <Analytics />}
         <ScrollRestoration />
         <Scripts />
       </body>
