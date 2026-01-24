@@ -34,12 +34,14 @@ export async function loader({ request }: Route.LoaderArgs) {
     // Cast to expected type (defined in config/rpc.ts or locally if strictly needed, but let's assume usage of any or defined types)
     const viewData = rpcData as unknown as import('../config/rpc').ChatViewData; 
 
-    // Reconstruct threads with "otherUser" attached
+    // Reconstruct threads with "otherUser" attached and filter those without messages
     const participantsMap = viewData.participants || {};
-    const threads = (viewData.threads || []).map((t: any) => ({
-        ...t,
-        otherUser: participantsMap[t.participants.find((p: string) => p !== user.id)] || null
-    }));
+    const threads = (viewData.threads || [])
+        .filter((t: any) => t.last_message && t.last_message.trim() !== '')
+        .map((t: any) => ({
+            ...t,
+            otherUser: participantsMap[t.participants.find((p: string) => p !== user.id)] || null
+        }));
 
     // Reconstruct connections
     const rawConnections = viewData.connections || [];
@@ -112,12 +114,24 @@ const ChatList: React.FC = () => {
         );
     }, [onlineConnections, searchQuery]);
 
-    const filteredThreads = threads.filter((thread: any) => {
-        const otherUser = thread.otherUser;
-        if (!otherUser) return false;
-        const name = (otherUser.display_name || otherUser.username || '').toLowerCase();
-        return name.includes(searchQuery.toLowerCase());
-    });
+    const filteredThreads = useMemo(() => {
+        return threads
+            .filter((thread: any) => {
+                // Only show threads with actual messages
+                if (!thread.last_message || thread.last_message.trim() === '') return false;
+
+                const otherUser = thread.otherUser;
+                if (!otherUser) return false;
+                
+                const name = (otherUser.display_name || otherUser.username || '').toLowerCase();
+                return name.includes(searchQuery.toLowerCase());
+            })
+            .sort((a: any, b: any) => {
+                const timeA = new Date(a.last_message_time || 0).getTime();
+                const timeB = new Date(b.last_message_time || 0).getTime();
+                return timeB - timeA;
+            });
+    }, [threads, searchQuery]);
 
     const formatMessageTime = (timestamp: string) => {
         if (!timestamp) return '';

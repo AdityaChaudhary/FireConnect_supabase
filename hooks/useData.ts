@@ -536,6 +536,8 @@ export const useThreads = (userId?: string, initialData?: any[]) => {
                 .from('threads')
                 .select('*')
                 .contains('participants', [userId])
+                .not('last_message', 'is', null)
+                .neq('last_message', '')
                 .order('last_message_time', { ascending: false });
 
             if (error) throw error;
