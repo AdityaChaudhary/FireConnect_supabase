@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
         }
 
         if (!user) {
-             console.warn("Proceeding as guest checkout (no valid auth session found)");
+             console.warn("No valid auth session found", authHeader);
              // Optional: throw error if authentication is mandatory
              throw new Error("Unauthorized");
         }

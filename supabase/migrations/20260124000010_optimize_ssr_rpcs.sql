@@ -50,14 +50,14 @@ BEGIN
 
     -- 3. Collect Participant IDs for threads
     WITH thread_participants AS (
-        SELECT unnest(t.participants) as user_id_text
+        SELECT unnest(t.participants) as user_id_uuid
         FROM threads t
         WHERE t.participants @> ARRAY[p_user_id]
     )
-    SELECT array_agg(DISTINCT tp.user_id_text::uuid)
+    SELECT array_agg(DISTINCT tp.user_id_uuid)
     INTO all_participant_ids
     FROM thread_participants tp
-    WHERE tp.user_id_text <> p_user_id::text;
+    WHERE tp.user_id_uuid <> p_user_id;
 
     -- 4. Get Participants Data
     IF all_participant_ids IS NOT NULL THEN

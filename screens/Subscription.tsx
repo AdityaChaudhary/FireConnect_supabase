@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLoaderData } from 'react-router';
+import { motion, AnimatePresence } from 'framer-motion';
 import Icon from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
 import { useStripeProducts } from '../hooks/useData';
@@ -22,7 +23,15 @@ const Subscription: React.FC = () => {
     const navigate = useNavigate();
     const [updating, setUpdating] = useState(false);
     const [portalLoading, setPortalLoading] = useState(false);
+    const [notification, setNotification] = useState<string | null>(null);
     const { data: plans = [], isLoading: loadingProducts } = useStripeProducts(loaderData?.plans);
+
+    useEffect(() => {
+        if (notification) {
+            const timer = setTimeout(() => setNotification(null), 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [notification]);
 
     // Data is now processed in the hook/loader, so we don't need redundant effects
 
@@ -73,27 +82,27 @@ const Subscription: React.FC = () => {
             setUpdating(true);
             try {
                 await refreshProfile();
-                navigate('/profile');
+                setNotification("Subscription updated successfully!");
+                setTimeout(() => navigate('/profile'), 1500);
             } catch (error) {
                 console.error("Error updating subscription:", error);
-                alert("Failed to update subscription.");
-            } finally {
+                setNotification("Failed to update subscription.");
                 setUpdating(false);
             }
             return;
         }
 
         if (!plan.priceId) {
-            alert("This plan is currently unavailable.");
+            setNotification("This plan is currently unavailable.");
             return;
         }
 
         setUpdating(true);
         try {
             await startStripeCheckout(plan.priceId, 'subscription', { planId: plan.id });
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error starting checkout:", error);
-            alert("Could not initiate checkout. Please check your connection.");
+            setNotification("Could not initiate checkout. Please try again!");
             setUpdating(false);
         }
     };
@@ -102,10 +111,9 @@ const Subscription: React.FC = () => {
         setPortalLoading(true);
         try {
             await redirectToCustomerPortal();
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error redirecting to customer portal:", error);
-            alert("Failed to open subscription management. Please try again later.");
-        } finally {
+            setNotification(error?.message || "Failed to open subscription management.");
             setPortalLoading(false);
         }
     };
@@ -123,6 +131,20 @@ const Subscription: React.FC = () => {
 
     return (
         <div className="relative flex min-h-screen w-full flex-col bg-background-dark text-white pb-10">
+            {/* Notification */}
+            <AnimatePresence>
+                {notification && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -20, x: '-50%' }}
+                        animate={{ opacity: 1, y: 0, x: '-50%' }}
+                        exit={{ opacity: 0, y: -20, x: '-50%' }}
+                        className="fixed top-10 left-1/2 z-[100] bg-black/80 backdrop-blur-md border border-white/10 px-6 py-3 rounded-full shadow-2xl flex items-center gap-2"
+                    >
+                        <p className="text-white text-sm font-bold tracking-tight">{notification}</p>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Header */}
             <header className="sticky top-0 z-20 flex w-full items-center justify-between px-4 py-8">
                 <div className="w-10"></div> {/* Placeholder for symmetry */}

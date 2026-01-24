@@ -177,8 +177,13 @@ export const startStripeCheckout = async (priceId: string, mode: 'payment' | 'su
         successPath = `/credits-welcome?credits=${options?.credits || 0}&oldBalance=${options?.oldBalance || 0}&session_id={CHECKOUT_SESSION_ID}`;
     }
 
+    // Get current session explicitly to ensure valid auth header
+    const { data: { session } } = await supabase.auth.getSession();
+    
     // Call Edge Function to create checkout session
     const { data, error } = await supabase.functions.invoke('stripe-checkout', {
+        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
+
         body: {
             priceId,
             mode,
@@ -189,15 +194,18 @@ export const startStripeCheckout = async (priceId: string, mode: 'payment' | 'su
 
     if (error || !data?.url) {
         console.error("Error creating checkout session:", error);
-        alert("Failed to start checkout. Check console for details.");
-        return;
+        throw new Error(error?.message || "Failed to start checkout.");
     }
 
     window.location.assign(data.url);
 };
 
 export const redirectToCustomerPortal = async () => {
+    // Get current session explicitly to ensure valid auth header
+    const { data: { session } } = await supabase.auth.getSession();
+
     const { data, error } = await supabase.functions.invoke('stripe-portal', {
+        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
         body: {
             returnUrl: window.location.origin + "/subscription"
         }
@@ -205,8 +213,7 @@ export const redirectToCustomerPortal = async () => {
 
     if (error || !data?.url) {
         console.error("Error creating portal session:", error);
-        alert("Failed to redirect to portal.");
-        return;
+        throw new Error(error?.message || "Failed to redirect to portal.");
     }
 
     window.location.assign(data.url);

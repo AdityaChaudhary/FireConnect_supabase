@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
+import { motion, AnimatePresence } from 'framer-motion';
 import Icon from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
 import { getStripeProducts, startStripeCheckout } from '../lib/stripe-utils';
@@ -29,6 +30,14 @@ const PurchaseCredits: React.FC = () => {
     const [loadingPriceId, setLoadingPriceId] = useState<string | null>(null);
     const [prices, setPrices] = useState<CreditPrice[]>([]);
     const [loadingProducts, setLoadingProducts] = useState(true);
+    const [notification, setNotification] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (notification) {
+            const timer = setTimeout(() => setNotification(null), 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [notification]);
 
     useEffect(() => {
         const fetchCredits = async () => {
@@ -80,9 +89,9 @@ const PurchaseCredits: React.FC = () => {
                 credits,
                 oldBalance: profile?.spy_credits || 0
             });
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error starting checkout:", error);
-            alert("Failed to initiate purchase. Please try again.");
+            setNotification(error?.message || "Failed to initiate purchase. Please try again.");
         } finally {
             setLoadingPriceId(null);
         }
@@ -90,6 +99,20 @@ const PurchaseCredits: React.FC = () => {
 
     return (
         <div className="relative flex min-h-screen w-full flex-col bg-background-dark text-white pb-10">
+            {/* Notification */}
+            <AnimatePresence>
+                {notification && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -20, x: '-50%' }}
+                        animate={{ opacity: 1, y: 0, x: '-50%' }}
+                        exit={{ opacity: 0, y: -20, x: '-50%' }}
+                        className="fixed top-10 left-1/2 z-[100] bg-black/80 backdrop-blur-md border border-white/10 px-6 py-3 rounded-full shadow-2xl flex items-center gap-2"
+                    >
+                        <p className="text-white text-sm font-bold tracking-tight">{notification}</p>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Header */}
             <header className="sticky top-0 z-20 flex w-full items-center justify-between px-4 py-8 bg-background-dark/80 backdrop-blur-md">
                 <button
