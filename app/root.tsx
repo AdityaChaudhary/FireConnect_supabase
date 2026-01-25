@@ -15,20 +15,25 @@ import { trackEvent, EVENTS } from "./lib/analytics";
 import "./tailwind.css";
 
 export const meta: MetaFunction = () => {
+  const baseUrl = "https://fireconnect.me";
+  const imageUrl = `${baseUrl}/fireconnect-og-image.png?v=1`;
+
   return [
     { title: "FireConnect - Adult Chat, Dirty Chat & Intimate Connections" },
     { name: "description", content: "The most exclusive network for verified adults. Experience online intimacy, private adult chat, and sexting with strangers. Join FireConnect for uninhibited connection." },
     { name: "theme-color", content: "#22101a" },
-    { property: "og:title", content: "FireConnect -Exclusive Network for Adults. Intimacy all the way!" },
+    { property: "og:title", content: "FireConnect - Exclusive Network for Adults. Intimacy all the way!" },
     { property: "og:description", content: "Experience online intimacy, privacy, and uninhibited connection. Chat with strangers, explore private vaults and share intimate moments." },
     { property: "og:type", content: "website" },
-    { property: "og:image", content: "/fireconnect-og-image.png" },
+    { property: "og:url", content: baseUrl },
+    { property: "og:image", content: imageUrl },
+    { property: "og:image:secure_url", content: imageUrl },
     { property: "og:image:width", content: "1200" },
     { property: "og:image:height", content: "630" },
     { name: "twitter:card", content: "summary_large_image" },
     { name: "twitter:title", content: "FireConnect - Exclusive Network for Adults. Intimacy all the way!" },
     { name: "twitter:description", content: "Experience online intimacy, privacy, and uninhibited connection." },
-    { name: "twitter:image", content: "/fireconnect-og-image.png" },
+    { name: "twitter:image", content: imageUrl },
   ];
 };
 import { AuthProvider, useAuth } from "../context/AuthContext";
@@ -91,6 +96,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
         <link rel="icon" type="image/x-icon" href="/favicon.ico" />
         <link rel="shortcut icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" href="/fireconnect-logo-192x192.png" />
         {/* Preconnect to Font Servers */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
