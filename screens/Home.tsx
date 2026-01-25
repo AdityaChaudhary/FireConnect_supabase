@@ -12,7 +12,7 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => {
         return [
             { title: "FireConnect - Adult Chat, Dirty Chat & Intimate Connections" },
             { name: "description", content: "The most exclusive network for verified adults. Experience luxury, privacy, and adult chat with strangers. Join FireConnect for sexting and uninhibited connection." },
-            { property: "og:title", content: "FireConnect - Adult Chat & Sexting" },
+            { property: "og:title", content: "FireConnect - Exclusive Network for Adults. Intimacy all the way!" },
             { property: "og:description", content: "The most exclusive network for verified adults. Join FireConnect for dirty chat and intimate connections." },
             { property: "og:type", content: "website" },
         ];
