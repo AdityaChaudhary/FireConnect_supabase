@@ -785,7 +785,8 @@ const ChatDetail: React.FC = () => {
         hasReceivedMessage || // Always allow replying
         stripeRole === 'max' || 
         (stripeRole === 'pro' && isConnected) || 
-        (stripeRole === 'free' && isConnected && isTheyHuman);
+        //(stripeRole === 'free' && isConnected && isTheyHuman); // now free users can also send messages to AI
+        (stripeRole === 'free' && isConnected);
 
     const isInitialLoading = userLoading && !otherUser;
 
