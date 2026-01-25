@@ -26,7 +26,7 @@ export const meta: MetaFunction = () => {
     { property: "og:image:width", content: "1200" },
     { property: "og:image:height", content: "630" },
     { name: "twitter:card", content: "summary_large_image" },
-    { name: "twitter:title", content: "FireConnect - Adult Chat & Dirty Chat" },
+    { name: "twitter:title", content: "FireConnect - Exclusive Network for Adults. Intimacy all the way!" },
     { name: "twitter:description", content: "Experience online intimacy, privacy, and uninhibited connection." },
     { name: "twitter:image", content: "/fireconnect-og-image.png" },
   ];
