@@ -36,4 +36,9 @@ export function trackEvent(eventName: EventName, properties?: Record<string, str
   }
 
   track(eventName, cleanProperties as Record<string, string | number | boolean>);
+
+  // Track to Google Analytics
+  if (typeof window !== 'undefined' && (window as any).gtag) {
+    (window as any).gtag('event', eventName, cleanProperties);
+  }
 }
